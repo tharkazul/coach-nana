@@ -830,7 +830,7 @@
             const clientId = '208765'; // Replace with your actual numeric Client ID
             // Redirects them back to your app after they click "Authorize"
             const redirectUri = encodeURIComponent(window.location.origin); 
-            const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=activity:read_all`;
+            const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=activity:read_all,activity:write`;
             
             window.location.href = authUrl;
         }
