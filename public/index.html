@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coach Nana | Training HQ</title>
+    <title>Spark | Training HQ</title>
     <link rel="icon" type="image/png" href="/icon3.png">
     <link rel="apple-touch-icon" href="/icon3.png">
 
@@ -89,7 +89,7 @@
             <div id="form-login" class="space-y-4">
                 <div class="text-left">
                     <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Username</label>
-                    <input type="text" id="login-user" class="w-full p-3 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm" placeholder="e.g. Nana">
+                    <input type="text" id="login-user" class="w-full p-3 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm" placeholder="e.g. Spark">
                 </div>
                     <div class="text-left relative">
                     <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Password</label>
@@ -142,7 +142,7 @@
     <aside class="w-full md:w-64 bg-theme-card border-t md:border-t-0 md:border-r border-theme-border flex flex-row md:flex-col z-20 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] md:shadow-sm order-last md:order-first shrink-0 pb-safe transition-colors duration-300">
        <div class="hidden md:flex h-16 items-center px-6 border-b border-theme-border shrink-0">
             <div class="w-6 h-6 bg-theme-accent rounded mr-3 flex items-center justify-center text-white text-xs font-bold">N</div>
-            <h1 class="text-sm font-bold tracking-tight text-theme-text">Coach Nana</h1>
+            <h1 class="text-sm font-bold tracking-tight text-theme-text">Spark</h1>
         </div>
         <nav class="flex-1 flex flex-row md:flex-col py-0 md:py-4 relative h-full">
             <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-accent-hover bg-theme-accent-soft border-t-2 md:border-t-0 md:border-r-2 border-theme-accent transition-colors gap-1 md:gap-2">
@@ -179,7 +179,7 @@
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
        <header class="h-14 md:h-16 bg-theme-card border-b border-theme-border flex items-center justify-between px-4 md:px-8 z-10 shrink-0 transition-colors duration-300">
             <div class="flex items-center text-xs md:text-sm text-theme-muted space-x-1 md:space-x-2">
-                <span class="hidden md:inline">Coach Nana HQ</span>
+                <span class="hidden md:inline">Spark HQ</span>
                 <span class="hidden md:inline">/</span>
                 <span id="current-tab-title" class="text-theme-text font-medium truncate max-w-[120px] md:max-w-none">Dashboard</span>
             </div>
@@ -198,7 +198,7 @@
                  <div id="welcome-banner" class="bg-theme-card border border-theme-border rounded-xl shadow-sm p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
                     <div class="w-12 h-12 bg-theme-accent-soft text-theme-accent rounded-full flex items-center justify-center mb-4 text-xl">⚙️</div>
                     <h3 class="text-theme-text font-bold text-lg mb-2">Welcome to your Training HQ</h3>
-                    <p class="text-theme-muted text-sm max-w-md mx-auto">Please go to the <b>Settings</b> tab to configure your Coach Nana persona and connect your Garmin and Strava accounts to begin syncing data.</p>
+                    <p class="text-theme-muted text-sm max-w-md mx-auto">Please go to the <b>Settings</b> tab to configure your Spark coach persona and connect your Garmin and Strava accounts to begin syncing data.</p>
                  </div>
 
                  <!-- Data Content (Charts) -->
@@ -231,7 +231,7 @@
                     <div class="bg-theme-accent-soft border-l-4 border-theme-accent rounded-r-xl shadow-sm p-4 flex items-start space-x-3">
                         <div class="text-theme-accent text-xl leading-none mt-1">💡</div>
                         <div>
-                            <h4 class="text-[10px] uppercase tracking-wider text-theme-accent font-bold mb-1">Coach Nana's Analysis</h4>
+                            <h4 class="text-[10px] uppercase tracking-wider text-theme-accent font-bold mb-1">Spark's Analysis</h4>
                             <p id="daily-reflection" class="text-xs md:text-sm text-theme-text leading-relaxed">Calculating current training phase...</p>
                         </div>
                     </div>
@@ -380,7 +380,7 @@
                         <div>
                             <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">My Background (AI Context)</label>
                             <textarea id="set-athlete-context" class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[100px]" placeholder="e.g. Training for Gouda half-ironman, has a 1.5 year old daughter..."></textarea>
-                            <p class="text-[10px] text-theme-muted mt-1">Coach Nana will memorize this to personalize your advice.</p>
+                            <p class="text-[10px] text-theme-muted mt-1">Spark will memorize this to personalize your advice.</p>
                         </div>
                         <button onclick="saveSettings('coach')" class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save Persona</button>
                     </div>
@@ -459,7 +459,7 @@
                         
                         <!-- OAUTH UI FOR STRAVA -->
                         <div id="strava-connect-ui">
-                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Authorize Coach Nana</label>
+                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Authorize Spark</label>
                             <div class="flex flex-wrap gap-3">
                                 <button onclick="connectStravaOAuth()" class="bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-orange-600 transition flex items-center gap-2">
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
@@ -626,7 +626,7 @@
                 document.getElementById('form-login').classList.add('hidden');
                 document.getElementById('form-register').classList.remove('hidden');
                 document.getElementById('auth-title').innerText = "New Athlete";
-                document.getElementById('auth-subtitle').innerText = "Create your Coach Nana account.";
+                document.getElementById('auth-subtitle').innerText = "Create your Spark account.";
             } else {
                 document.getElementById('form-register').classList.add('hidden');
                 document.getElementById('form-login').classList.remove('hidden');
@@ -1281,14 +1281,50 @@
             loadMicroPlan(); 
         }
 
-        async function generateTemplate() { 
-            await fetch('/api/generate-plan', {
-                method:'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify({ targetDate: viewingWeekStart.toISOString().split('T')[0] })
-            });
-            loadMicroPlan(); 
+async function generateTemplate() { 
+    // 1. Scrape the current metrics from the DOM
+    const ctlText = document.getElementById('ctl-metric').innerText;
+    const atlText = document.getElementById('atl-metric').innerText;
+    
+    // 2. Parse them into numbers
+    const currentFitness = parseFloat(ctlText) || 0;
+    const currentFatigue = parseFloat(atlText) || 0;
+    const targetDate = viewingWeekStart.toISOString().split('T')[0];
+
+    // 3. Prepare the payload object
+    const payload = { 
+        targetDate: targetDate,
+        fitness: currentFitness,
+        fatigue: currentFatigue
+    };
+
+    // 4. Log the message/payload to the console
+    console.log("🚀 Generating Spark plan for:", targetDate);
+    console.log("📊 Sending metrics payload:", payload);
+
+    // 5. Send to the backend
+    try {
+        const response = await fetch('/api/generate-plan', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json' // Ensure this is set
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.error("Backend error response:", await response.text());
+        } else {
+            console.log("✅ Spark plan generated successfully!");
         }
+    } catch (error) {
+        console.error("❌ Fetch error:", error);
+    }
+    
+    // 6. Reload the plan
+    loadMicroPlan(); 
+}
 
         // --- MAP & HISTORY MODAL ---
         function decodePolyline(str) {
@@ -1473,7 +1509,7 @@
                                 <img src="${getCoachAvatar('default')}" alt="Coach" class="w-full h-full object-cover">
                             </div>
                             <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
-                                <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Coach Nana</span>
+                                <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
                                 <span class="whitespace-pre-wrap">Systems nominal. I have synchronized your latest profile settings. Ready to get to work?</span>
                             </div>
                         </div>`;
@@ -1498,7 +1534,7 @@
                                     <img src="${avatarImg}" alt="Coach" class="w-full h-full object-cover">
                                 </div>
                                 <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
-                                    <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Coach Nana</span>
+                                    <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
                                     <span class="whitespace-pre-wrap">${formattedContent}</span>
                                 </div>
                             </div>`;
@@ -1560,7 +1596,7 @@
                             <img src="${finalAvatar}" alt="Coach" class="w-full h-full object-cover">
                         </div>
                         <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
-                            <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Coach Nana</span>
+                            <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
                             <span class="whitespace-pre-wrap">${formattedContent}</span>
                         </div>
                     </div>`;

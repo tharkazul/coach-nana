@@ -511,53 +511,67 @@ app.post('/api/micro-plan', authenticateToken, (req, res) => {
 app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     const { targetDate } = req.body;
     
-    db.get(`SELECT coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    // Notice we are now selecting the new advanced metrics
+    db.get(`SELECT coach_tone, athlete_context, training_phase, current_ctl, current_atl FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Athlete context not found." });
 
-        const prompt = `
-            You are Coach Nana. 
-            Tone: ${user.coach_tone}
-            Athlete Context: ${user.athlete_context}
-            
-            Generate a 7-day training plan starting exactly on ${targetDate}.
-            Use metric measurements exclusively (km, kg).
-            
-            Return ONLY a valid JSON array of objects. Do not include markdown formatting or backticks. 
-            Each object must contain:
-            - "date" (Format: YYYY-MM-DD)
-            - "sport" (Must be exactly one of: Swim, Bike, Run, Brick, Rest)
-            - "description" (Short title)
-            - "target_tss" (Number)
-            - "details" (Text description of the workout)
-            - "steps_json" (A stringified JSON array of interval blocks, or "[]" if none)
-        `;
+        const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
+        Tone: ${user.coach_tone || 'empathetic'}
+        Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+        
+        CRITICAL RULES:
+        1. You are generating a 7-day training plan starting exactly on ${targetDate}.
+        2. You must append a JSON code block at the very end of your response containing the schedule.
+        3. Use metric measurements exclusively (km, kg, km/h, min/km). Never use imperial units.
+        4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
+        
+        JSON FORMAT REQUIRED AT THE END OF YOUR RESPONSE:
+        \`\`\`json
+        [
+          {
+            "date": "YYYY-MM-DD",
+            "sport": "Swim" | "Bike" | "Run" | "Rest", 
+            "description": "Short title",
+            "target_tss": 50,
+            "details": "Workout execution details",
+            "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
+          }
+        ]
+        \`\`\``;
+
+        // Calculate Form (Training Stress Balance)
+        // TSB = Fitness (CTL) - Fatigue (ATL)
+        const ctl = user.current_ctl || 0;
+        const atl = user.current_atl || 0;
+        const tsb = ctl - atl;
+        const phase = user.training_phase || 'Base';
+
+        // The dynamic prompt that feeds Spark the exact physiological state
+        const userPrompt = `Please generate a 7-day training plan for me starting on ${targetDate}. 
+        
+        Here are my current physiological metrics to govern the volume and intensity of this block:
+        - Training Phase: ${phase}
+        - Fitness (CTL): ${ctl}
+        - Fatigue (ATL): ${atl}
+        - Form (TSB): ${tsb}
+
+        Analyze my Form (TSB). If I am highly fatigued (negative TSB), prioritize recovery. If I am fresh (positive TSB), you can push the intensity. Give me a quick encouraging summary of the week's focus based on these metrics, and then provide the JSON block.`;
 
        try {
-            // 1. Initialize Model WITH Nana's Persona
             const model = genAI.getGenerativeModel({ 
                 model: "gemini-2.5-flash", 
                 systemInstruction: systemPrompt 
             });
 
-            // 2. SANITIZE HISTORY (Fixes the crash you just saw)
-            while (formattedHistory.length > 0 && formattedHistory[0].role !== 'user') {
-                formattedHistory.shift();
-            }
-
-            // 3. Send Message
-            const chat = model.startChat({ history: formattedHistory });
-            const result = await chat.sendMessage(message);
-            
+            const result = await model.generateContent(userPrompt);
             let aiReply = result.response.text();
             let planUpdated = false;
 
-            // 4. Safely Extract & Save JSON if present
             const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
             if (jsonMatch) {
                 try {
                     const planData = JSON.parse(jsonMatch[1]);
                     
-                    // FIXED: Includes 'sport' in the ON CONFLICT for Brick workouts
                     const stmt = db.prepare(`
                         INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
                         VALUES (?, ?, ?, ?, ?, ?, ?) 
@@ -570,21 +584,19 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                     stmt.finalize();
                     planUpdated = true;
                     
-                    // Strip the raw code block from the chat UI
                     aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim(); 
                 } catch(e) { console.error("Failed to parse AI JSON block", e); }
             }
             
-            // 5. Determine Mood and Save to Chat History
             let mood = 'default';
             const lowerReply = aiReply.toLowerCase();
             if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
             if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
 
-            db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, message]);
+            const simulatedUserMessage = `Can you generate my ${phase} phase training plan starting ${targetDate}?`;
+            db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
             db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
 
-            // 6. Return response to Frontend
             res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
 
         } catch (e) {
