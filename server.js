@@ -674,7 +674,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                     // Map steps to Garmin's ExecutableStepDTO
                     const garminSteps = stepsArray.map((step, index) => {
                         // FIX: Use the normalized type for the map lookup
-                        const garminStepType = (step.type === 'drill') ? 'recovery' : step.type;
+                        const garminStepType = (step.type === 'drill') ? 'interval' : step.type;
                         
                         const stepDef = STEP_TYPE_MAP[garminStepType] || STEP_TYPE_MAP['interval'];
                         const targetDef = TARGET_TYPE_MAP[step.target_type] || TARGET_TYPE_MAP['no.target'];
