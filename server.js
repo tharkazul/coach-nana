@@ -647,8 +647,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                 const workoutsToSync = workouts.filter(w => 
                     selectedWorkouts.some(sw => sw.date === w.date && sw.sport === w.sport)
                 );
-                // Convert Spark's "drill" to a Garmin-friendly type
-                const garminStepType = (step.type === 'drill') ? 'recovery' : step.type;
+                
                 if (workoutsToSync.length === 0) {
                     return res.status(400).json({ error: "Selected workouts could not be found in the database." });
                 }
@@ -672,6 +671,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
 
                     // Map steps to Garmin's ExecutableStepDTO
                     const garminSteps = stepsArray.map((step, index) => {
+                        const garminStepType = (step.type === 'drill') ? 'recovery' : step.type;
                         const stepDef = STEP_TYPE_MAP[step.type] || STEP_TYPE_MAP['interval'];
                         const targetDef = TARGET_TYPE_MAP[step.target_type] || TARGET_TYPE_MAP['no.target'];
                         const conditionDef = CONDITION_TYPE_MAP[step.condition_type] || CONDITION_TYPE_MAP['time'];
