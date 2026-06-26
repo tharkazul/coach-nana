@@ -1223,10 +1223,11 @@
                             : ``;
 
                         // NEW: Checkbox HTML (Hidden for Rest days)
-                        let cbHtml = p.sport !== 'Rest' 
+                        let isPastDate = (dateStr < todayStr);
+                        let cbHtml = (p.sport !== 'Rest' && !isPastDate) 
                             ? `<input type="checkbox" class="garmin-sync-cb cursor-pointer w-4 h-4 accent-theme-accent" data-date="${dateStr}" data-sport="${p.sport}" onchange="toggleGarminBtn()">` 
-                            : ``;
-
+                            : (p.sport !== 'Rest' ? `<span class="w-4 h-4 block opacity-20 cursor-not-allowed"></span>` : ``);
+                
                         html += `
                             <div class="flex items-center px-4 md:px-6 py-2 w-full">
                                 <div class="w-8 shrink-0 flex items-center">${cbHtml}</div>
@@ -1423,10 +1424,6 @@ async function generateTemplate() {
                 let item = globalHistoryData[cb.value];
                 let cleanTitle = item.name ? item.name.replace(/,/g, '') : "Activity";
                 let dist = 0, time = 0, elev = 0, hr = 0, cadence = 0;
-                let isPastDate = (dateStr < todayStr);
-                let cbHtml = (p.sport !== 'Rest' && !isPastDate) 
-                ? `<input type="checkbox" class="garmin-sync-cb cursor-pointer w-4 h-4 accent-theme-accent" data-date="${dateStr}" data-sport="${p.sport}" onchange="toggleGarminBtn()">` 
-                : (p.sport !== 'Rest' ? `<span class="w-4 h-4 block opacity-20 cursor-not-allowed"></span>` : ``);
                 
                 try {
                     const res = await fetch(`/api/activity/${item.id}`, { headers: getAuthHeaders() });
