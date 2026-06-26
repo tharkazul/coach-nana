@@ -608,6 +608,8 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
 // --- MULTI-TENANT GARMIN SYNC ROUTE ---
 app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
+    try {
+        console.log("DEBUG: Route entered");
     // FORCE LOGGING - This will show up even if the rest of the function crashes
     console.log("DEBUG: Sync route triggered for user:", req.user.id);
     console.log("DEBUG: Request body:", JSON.stringify(req.body));
@@ -626,7 +628,10 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
         try {
             // 2. Decrypt the password and initialize the Garmin client
             const decryptedPassword = decrypt(user.garmin_password);
-            const GCClient = new GarminConnect({});
+            const GCClient = new GarminConnect({ 
+            username: user.garmin_username, 
+            password: decryptedPassword 
+            });
             
             console.log("DEBUG: Attempting login for user:", user.garmin_username);
             await GCClient.login(user.garmin_username, decryptedPassword);
@@ -735,6 +740,10 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
             res.status(500).json({ error: "Failed to authenticate or sync with Garmin." });
         }
     });
+} catch (err) {
+        console.error("CRITICAL ERROR in sync-garmin:", err);
+        return res.status(500).json({ error: "Server crashed in sync-garmin", details: err.message });
+    }
 });
 
 // --- MILESTONES CALENDAR ROUTES ---
