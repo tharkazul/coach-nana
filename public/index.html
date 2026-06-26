@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Coach Nana | Training HQ</title>
+    <link rel="icon" type="image/png" href="/icon3.png">
+    <link rel="apple-touch-icon" href="/icon3.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            bg: 'var(--bg-main)',
+                            card: 'var(--bg-card)',
+                            border: 'var(--border-color)',
+                            text: 'var(--text-main)',
+                            muted: 'var(--text-muted)',
+                            accent: 'var(--accent)',
+                            'accent-hover': 'var(--accent-hover)',
+                            'accent-soft': 'var(--accent-soft)',
+                            'accent-border': 'var(--accent-border)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+   
+    <style>
+        /* ☀️ OFFICE STEALTH (LIGHT MODE) */
+        :root {
+            --bg-main: #f9fafb; 
+            --bg-card: #ffffff; 
+            --border-color: #e5e7eb; 
+            --text-main: #1f2937; 
+            --text-muted: #6b7280; 
+            --accent: #14b8a6; 
+            --accent-hover: #0d9488; 
+            --accent-soft: #f0fdfa; 
+            --accent-border: #ccfbf1; 
+        }
+
+        /* 🌙 PERFORMANCE APP (DARK MODE) */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-main: #121212; 
+                --bg-card: #1e1e1e; 
+                --border-color: #333333; 
+                --text-main: #f3f4f6; 
+                --text-muted: #9ca3af; 
+                --accent: #f97316; 
+                --accent-hover: #ea580c; 
+                --accent-soft: #2a1a10; 
+                --accent-border: #3d2514; 
+            }
+            .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
+                filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+            }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        html, body { height: 100%; height: 100dvh; width: 100%; overflow: hidden; overscroll-behavior-y: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .today-marker { transition: left 1s ease-in-out; }
+    </style>
+</head>
+<body class="bg-theme-bg text-theme-text font-sans flex flex-col md:flex-row relative transition-colors duration-300">
+    
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 bg-theme-bg/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="bg-theme-card w-full max-w-[350px] p-8 text-center rounded-sm shadow-2xl border border-theme-border relative overflow-hidden">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-sm shadow-sm flex items-center justify-center bg-theme-accent-soft text-theme-accent text-2xl font-bold">N</div>
+            <h2 class="text-xl font-bold text-theme-text mb-1" id="auth-title">Welcome Back</h2>
+            <p class="text-xs text-theme-muted mb-6" id="auth-subtitle">Sign in to your training plan.</p>
+            
+            <div id="form-login" class="space-y-4">
+                <div class="text-left">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Username</label>
+                    <input type="text" id="login-user" class="w-full p-3 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm" placeholder="e.g. Nana">
+                </div>
+                    <div class="text-left relative">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Password</label>
+                    <input type="password" id="login-pass" class="w-full p-3 pr-10 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm" placeholder="••••••••" onkeypress="if(event.key === 'Enter') attemptAuth('login')">
+                    <button type="button" onclick="togglePassword('login-pass')" class="absolute bottom-3 right-3 text-theme-muted hover:text-theme-accent"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
+                </div>
+                <button onclick="attemptAuth('login')" class="w-full bg-theme-accent hover:bg-theme-accent-hover text-white font-medium p-3 rounded-sm transition shadow-sm mt-2">Unlock Dashboard</button>
+                <p class="text-xs text-theme-muted mt-4 cursor-pointer hover:text-theme-accent" onclick="toggleAuthMode('register')">Need an account? Register here.</p>
+            </div>
+
+            <div id="form-register" class="space-y-4 hidden">
+                <div class="text-left">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Choose Username</label>
+                    <input type="text" id="reg-user" class="w-full p-3 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm">
+                </div>
+                <div class="text-left relative">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Create Password</label>
+                    <input type="password" id="reg-pass" class="w-full p-3 pr-10 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm">
+                    <button type="button" onclick="togglePassword('reg-pass')" class="absolute bottom-3 right-3 text-theme-muted hover:text-theme-accent"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
+                </div>
+                <button onclick="attemptAuth('register')" class="w-full bg-theme-text hover:opacity-80 text-theme-bg font-medium p-3 rounded-sm transition shadow-sm mt-2">Create Account</button>
+                <p class="text-xs text-theme-muted mt-4 cursor-pointer hover:text-theme-accent" onclick="toggleAuthMode('login')">Already have an account? Log in.</p>
+            </div>
+
+            <p id="auth-error" class="text-red-500 text-xs mt-4 hidden font-medium bg-red-50 p-2 rounded border border-red-200">Error</p>
+        </div>
+    </div>
+
+    <!-- ACTIVITY MODAL (Maps & Telemetry) -->
+    <div id="activity-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 md:p-8 backdrop-blur-sm transition-opacity">
+        <div class="bg-theme-card rounded-sm shadow-2xl w-full max-w-4xl h-full md:h-[80vh] flex flex-col overflow-hidden relative border border-theme-border">
+            <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg shrink-0">
+                <h2 id="modal-title" class="text-sm font-bold text-theme-text truncate pr-4">Loading Telemetry...</h2>
+                <button onclick="closeModal()" class="text-theme-muted hover:text-theme-text transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 bg-theme-card relative">
+                <div id="modal-loader" class="absolute inset-0 flex flex-col justify-center items-center bg-theme-card z-10">
+                    <div class="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin mb-3"></div>
+                    <span class="text-xs uppercase tracking-widest text-theme-accent font-bold animate-pulse">Syncing Strava...</span>
+                </div>
+                <div id="modal-content" class="hidden flex-col h-full gap-4 md:gap-6">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 shrink-0" id="modal-stats"></div>
+                    <div class="flex-1 bg-theme-bg rounded-sm border border-theme-border relative min-h-[250px] md:min-h-[400px]"><div id="actual-map" class="absolute inset-0 z-0"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDE NAVIGATION -->
+    <aside class="w-full md:w-64 bg-theme-card border-t md:border-t-0 md:border-r border-theme-border flex flex-row md:flex-col z-20 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] md:shadow-sm order-last md:order-first shrink-0 pb-safe transition-colors duration-300">
+       <div class="hidden md:flex h-16 items-center px-6 border-b border-theme-border shrink-0">
+            <div class="w-6 h-6 bg-theme-accent rounded mr-3 flex items-center justify-center text-white text-xs font-bold">N</div>
+            <h1 class="text-sm font-bold tracking-tight text-theme-text">Coach Nana</h1>
+        </div>
+        <nav class="flex-1 flex flex-row md:flex-col py-0 md:py-4 relative h-full">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-accent-hover bg-theme-accent-soft border-t-2 md:border-t-0 md:border-r-2 border-theme-accent transition-colors gap-1 md:gap-2">
+                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span class="hidden md:inline">Dashboard</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text border-t-2 md:border-t-0 md:border-r-2 border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                <span class="hidden md:inline">Log</span>
+            </button>
+            <button onclick="switchTab('coach')" id="nav-coach" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text border-t-2 md:border-t-0 md:border-r-2 border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                <span class="hidden md:inline">Coach</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text border-t-2 md:border-t-0 md:border-r-2 border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span class="hidden md:inline">Settings</span>
+            </button>
+            <button onclick="window.location.reload()" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text border-t-2 md:border-t-0 md:border-r-2 border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span class="hidden md:inline">Refresh</span>
+            </button>
+            
+            <div class="hidden md:block absolute bottom-4 w-full">
+                <button onclick="logout()" class="w-full flex flex-row items-center justify-start px-6 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50/10 border-r-2 border-transparent transition-colors gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span>Log Out</span>
+                </button>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+       <header class="h-14 md:h-16 bg-theme-card border-b border-theme-border flex items-center justify-between px-4 md:px-8 z-10 shrink-0 transition-colors duration-300">
+            <div class="flex items-center text-xs md:text-sm text-theme-muted space-x-1 md:space-x-2">
+                <span class="hidden md:inline">Coach Nana HQ</span>
+                <span class="hidden md:inline">/</span>
+                <span id="current-tab-title" class="text-theme-text font-medium truncate max-w-[120px] md:max-w-none">Dashboard</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-[10px] md:text-xs text-theme-muted font-mono" id="header-date"></div>
+                <button class="md:hidden text-red-500 text-[10px] font-bold uppercase tracking-wider" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6 pb-6">
+            
+            <!-- DASHBOARD VIEW -->
+            <div id="view-dashboard" class="max-w-7xl mx-auto space-y-5 md:space-y-6">
+                 
+                 <!-- Welcome Banner -->
+                 <div id="welcome-banner" class="bg-theme-card border border-theme-border rounded-xl shadow-sm p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
+                    <div class="w-12 h-12 bg-theme-accent-soft text-theme-accent rounded-full flex items-center justify-center mb-4 text-xl">⚙️</div>
+                    <h3 class="text-theme-text font-bold text-lg mb-2">Welcome to your Training HQ</h3>
+                    <p class="text-theme-muted text-sm max-w-md mx-auto">Please go to the <b>Settings</b> tab to configure your Coach Nana persona and connect your Garmin and Strava accounts to begin syncing data.</p>
+                 </div>
+
+                 <!-- Data Content (Charts) -->
+                 <div id="dashboard-content" class="space-y-5 md:space-y-6 hidden">
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm flex divide-x divide-theme-border overflow-hidden">
+                        <div class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition">
+                            <h3 class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold">Fitness</h3>
+                            <p id="ctl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                        </div>
+                        <div class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition">
+                            <h3 class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold">Fatigue</h3>
+                            <p id="atl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                        </div>
+                        <div class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition bg-theme-accent-soft/30">
+                            <h3 class="text-theme-accent text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold">Weight</h3>
+                            <p id="latest-weight-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--<span class="text-sm text-theme-muted ml-0.5">kg</span></p>
+                        </div>
+                    </div>
+
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                        <div class="px-4 md:px-6 py-3 border-b border-theme-border bg-theme-bg flex justify-between items-center shrink-0">
+                            <h2 class="text-xs md:text-sm font-bold text-theme-text">Performance Management</h2>
+                            <button onclick="resetChartZoom()" class="text-[10px] md:text-xs text-theme-accent hover:bg-theme-accent-soft px-2 py-1 rounded border border-theme-accent-border transition">Reset Zoom</button>
+                        </div>
+                        <div class="p-3 md:p-5 relative w-full flex-1">
+                            <div class="h-[250px] md:h-80 w-full relative"><canvas id="pmcChart"></canvas></div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-theme-accent-soft border-l-4 border-theme-accent rounded-r-xl shadow-sm p-4 flex items-start space-x-3">
+                        <div class="text-theme-accent text-xl leading-none mt-1">💡</div>
+                        <div>
+                            <h4 class="text-[10px] uppercase tracking-wider text-theme-accent font-bold mb-1">Coach Nana's Analysis</h4>
+                            <p id="daily-reflection" class="text-xs md:text-sm text-theme-text leading-relaxed">Calculating current training phase...</p>
+                        </div>
+                    </div>
+
+                    <div id="macro-block" class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden hidden">
+                        <div class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg">
+                            <div>
+                                <h2 class="text-xs md:text-sm font-bold text-theme-text">Macro Periodization <span class="text-theme-muted font-normal ml-1 hidden md:inline">| 16-Week Block</span></h2>
+                                <div id="macro-fueling" class="text-[10px] text-theme-muted mt-1 hidden"></div>
+                            </div>
+                            <span id="macro-countdown" class="text-[10px] md:text-xs font-mono text-theme-accent font-bold bg-theme-card px-2 py-1 rounded-md border border-theme-border shadow-sm">--</span>
+                        </div>
+                        <div class="p-4 md:p-6">
+                            <div class="relative w-full h-10 md:h-12 border border-theme-border rounded-lg flex bg-theme-bg overflow-visible shadow-inner">
+                                <div id="phase-base" class="h-full flex items-center justify-center text-[9px] md:text-[10px] font-bold text-theme-muted uppercase tracking-widest border-r border-theme-border z-10"><span class="bg-theme-bg px-1 rounded">Base</span></div>
+                                <div id="phase-build" class="h-full flex items-center justify-center text-[9px] md:text-[10px] font-bold text-theme-muted uppercase tracking-widest border-r border-theme-border z-10"><span class="bg-theme-bg px-1 rounded">Build</span></div>
+                                <div id="phase-peak" class="h-full flex items-center justify-center text-[9px] md:text-[10px] font-bold text-theme-muted uppercase tracking-widest border-r border-theme-border z-10"><span class="bg-theme-bg px-1 rounded">Peak</span></div>
+                                <div id="phase-taper" class="h-full flex items-center justify-center text-[9px] md:text-[10px] font-bold text-theme-muted uppercase tracking-widest z-10"><span class="bg-theme-bg px-1 rounded">Taper</span></div>
+                                <div id="macro-progress" class="absolute top-0 left-0 h-full bg-theme-accent-soft border-b-2 border-theme-accent z-0 transition-all duration-1000 w-0 rounded-l-lg opacity-80"></div>
+                                <div id="today-marker" class="absolute top-0 bottom-0 w-[2px] bg-theme-accent z-20 today-marker drop-shadow-md">
+                                    <div class="absolute -top-6 -translate-x-1/2 left-1/2 text-[10px] font-bold text-theme-text bg-theme-card border border-theme-border px-2 py-0.5 rounded shadow-sm">Today</div>
+                                    <div class="absolute top-0 -translate-x-1/2 -translate-y-1/2 w-3 h-3 border-2 border-theme-accent bg-theme-card rounded-full"></div>
+                                    <div class="absolute bottom-0 -translate-x-1/2 translate-y-1/2 w-3 h-3 border-2 border-theme-accent bg-theme-card rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+                        <div class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex flex-col md:flex-row md:justify-between md:items-center bg-theme-bg gap-3 md:gap-0">
+                            <div class="flex items-center justify-between md:justify-start w-full md:w-auto space-x-4">
+                                <h2 class="text-xs md:text-sm font-bold text-theme-text">Micro Plan</h2>
+                                <div class="flex items-center space-x-1 bg-theme-card border border-theme-border rounded-md px-1 py-1 shadow-sm">
+                                    <button onclick="changeWeek(-1)" class="text-theme-muted hover:text-theme-accent hover:bg-theme-bg px-2 py-1 rounded transition">&larr;</button>
+                                    <span id="week-range-label" class="text-[10px] md:text-xs font-mono text-theme-text w-28 md:w-32 text-center font-medium">...</span>
+                                    <button onclick="changeWeek(1)" class="text-theme-muted hover:text-theme-accent hover:bg-theme-bg px-2 py-1 rounded transition">&rarr;</button>
+                                </div>
+                            </div>
+                            <button onclick="generateTemplate()" class="w-full md:w-auto text-theme-accent hover:opacity-80 text-[10px] md:text-xs font-medium px-3 py-2 border border-theme-accent-border bg-theme-card rounded-md shadow-sm transition">Auto-Generate Week</button>
+                            <p id="garmin-sync-message" class="text-xs font-bold mt-3 text-theme-accent hidden"></p>
+                            <button id="garmin-sync-btn" disabled onclick="pushToGarmin(event)" class="bg-theme-bg border border-theme-border text-theme-text text-xs font-bold px-4 py-2 rounded shadow-sm opacity-50 cursor-not-allowed transition">
+                                Push Selected to Garmin
+                            </button>
+                            
+                        </div>
+                        <div class="overflow-x-auto w-full">
+                            <div id="micro-plan-container" class="divide-y divide-theme-border min-w-[600px] md:min-w-0 w-full"></div>
+                        </div>
+                    </div>
+
+                    <!-- BIOMETRICS LOG -->
+            <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-8">
+                <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                    <h3 class="text-sm font-bold text-theme-text">Biometrics Log</h3>
+                </div>
+                
+                <!-- NEW: Quick Entry Form -->
+                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg flex flex-wrap items-end gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-1">Weight (kg)</label>
+                                <input type="number" step="0.1" id="log-weight" class="w-20 p-2 pr-1 border border-theme-border rounded-md text-xs focus:outline-none focus:border-theme-accent bg-theme-card text-theme-text" placeholder="0.0">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-1">Body Fat %</label>
+                                <input type="number" step="0.1" id="log-bf" class="w-20 p-2 pr-1 border border-theme-border rounded-md text-xs focus:outline-none focus:border-theme-accent bg-theme-card text-theme-text" placeholder="--">
+                            </div>
+                            <button onclick="submitManualWeight()" class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition h-[34px]">Log Today</button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-theme-bg/50 border-b border-theme-border text-theme-muted text-[10px] uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-3 md:p-4 font-semibold">Date</th>
+                                        <th class="p-3 md:p-4 font-semibold text-right">Weight (kg)</th>
+                                        <th class="p-3 md:p-4 font-semibold text-right">Body Fat %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="biometrics-table-body" class="divide-y divide-theme-border text-xs md:text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- HISTORY VIEW -->
+            <div id="view-history" class="hidden max-w-4xl mx-auto space-y-6">
+                <div class="flex justify-between items-end mb-2 px-1">
+                    <div>
+                        <h2 class="text-xl font-bold text-theme-text">Activity Log</h2>
+                        <p class="text-xs text-theme-muted mt-1">Tap any activity to view map and telemetry.</p>
+                    </div>
+                    <button onclick="downloadSelectedCSV()" class="text-theme-accent hover:bg-theme-accent-soft text-[10px] md:text-xs font-semibold px-4 py-2 border border-theme-accent-border bg-theme-card rounded-lg shadow-sm transition flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export CSV
+                    </button>
+                </div>
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="px-4 py-3 border-b border-theme-border bg-theme-bg flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="selectAllLog" onclick="toggleAllLog(this)" class="w-4 h-4 text-theme-accent bg-theme-card border-theme-border rounded cursor-pointer accent-theme-accent">
+                            <label for="selectAllLog" class="text-xs font-semibold text-theme-muted uppercase tracking-wider cursor-pointer">Select All</label>
+                        </div>
+                    </div>
+                    <div id="history-list-container" class="divide-y divide-theme-border flex-1"></div>
+                </div>
+            </div>
+
+            <!-- COACH VIEW -->
+            <div id="view-coach" class="hidden max-w-4xl mx-auto h-[calc(100vh-10rem)] md:h-[700px] flex flex-col">
+                 <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm h-full flex flex-col overflow-hidden">
+                    <div id="chat-window" class="flex-1 overflow-y-auto p-4 md:p-6 bg-theme-bg/50 space-y-4 md:space-y-6 flex flex-col"></div>
+                    <div class="p-3 md:p-4 bg-theme-card border-t border-theme-border shrink-0">
+                        <div class="flex items-end space-x-2 md:space-x-3 bg-theme-bg border border-theme-border rounded-2xl p-1 shadow-inner focus-within:border-theme-accent transition-colors">
+                            <textarea onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }" id="chat-input" placeholder="Ask about your training..." class="flex-1 bg-transparent border-none px-3 md:px-4 py-2.5 text-sm focus:outline-none focus:ring-0 text-theme-text resize-none max-h-32 min-h-[44px]" rows="1"></textarea>
+                            <button onclick="sendMessage()" class="bg-theme-accent hover:bg-theme-accent-hover text-white w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition shadow-sm mb-0.5 mr-0.5">
+                                <svg class="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19V5m0 0l-7 7m7-7l7 7"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS VIEW -->
+            <div id="view-settings" class="hidden max-w-4xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-theme-text">Athlete Profile & Settings</h2>
+                    <p class="text-xs text-theme-muted mt-1">Configure your AI Coach and connect your devices.</p>
+                </div>
+
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                        <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Coach Persona
+                        </h3>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach Tone & Style</label>
+                            <select id="set-coach-tone" class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text">
+                                <option value="Empathetic but demanding elite endurance coach.">Empathetic but Demanding (Default)</option>
+                                <option value="Strict, data-obsessed drill sergeant. Direct and blunt.">Strict Data Nerd</option>
+                                <option value="Enthusiastic cheerleader, extremely positive and forgiving.">Enthusiastic Cheerleader</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">My Background (AI Context)</label>
+                            <textarea id="set-athlete-context" class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[100px]" placeholder="e.g. Training for Gouda half-ironman, has a 1.5 year old daughter..."></textarea>
+                            <p class="text-[10px] text-theme-muted mt-1">Coach Nana will memorize this to personalize your advice.</p>
+                        </div>
+                        <button onclick="saveSettings('coach')" class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save Persona</button>
+                    </div>
+                </div>
+                <!-- RACE CALENDAR & MILESTONES -->
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                    <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Race Calendar & Goals
+                        </h3>
+                        <button onclick="addMilestoneRow()" class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-2 py-1 rounded hover:opacity-80 transition">+ Add Race</button>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <!-- NEW: Collapsible CTL Reference Guide -->
+                        <details class="text-xs text-theme-muted bg-theme-bg p-3 rounded border border-theme-border cursor-pointer group">
+                            <summary class="font-bold flex items-center gap-1 select-none hover:text-theme-accent transition">
+                                <svg class="w-4 h-4 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                CTL Target Reference Guide
+                            </summary>
+                            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] sm:text-xs">
+                                <div class="p-2 border border-theme-border rounded bg-theme-card"><strong class="text-theme-text block">5K Run / Sprint Tri</strong> Target: 30 - 45 CTL</div>
+                                <div class="p-2 border border-theme-border rounded bg-theme-card"><strong class="text-theme-text block">10K Run / Olympic Tri</strong> Target: 45 - 60 CTL</div>
+                                <div class="p-2 border border-theme-border rounded bg-theme-card"><strong class="text-theme-text block">Half Marathon (21.1km)</strong> Target: 60 - 80 CTL</div>
+                                <div class="p-2 border border-theme-border rounded bg-theme-card"><strong class="text-theme-text block">Half Ironman (70.3)</strong> Target: 80 - 110 CTL</div>
+                                <div class="p-2 border border-theme-border rounded bg-theme-card"><strong class="text-theme-text block">Marathon (42.2km)</strong> Target: 80 - 100+ CTL</div>
+                                <div class="p-2 border border-theme-border rounded bg-theme-card"><strong class="text-theme-text block">Full Ironman (140.6)</strong> Target: 110 - 150+ CTL</div>
+                            </div>
+                            <p class="mt-3 text-[10px] italic leading-relaxed">
+                                *CTL (Fitness) is a rolling 42-day average of your daily TSS (Training Stress Score). Higher targets require more weekly training hours. Beginners should aim for the lower end of the range.
+                            </p>
+                        </details>
+
+                        <!-- Existing Table Headers & Editor -->
+                        <p class="text-[10px] text-theme-muted uppercase tracking-wider font-bold mt-4 mb-2">A-Race (Main) | Date | Event Name | Target Fitness (CTL)</p>
+                        <div id="milestones-container" class="space-y-3">
+                            <!-- Rows injected by JS -->
+                        </div>
+                        <div class="pt-4 border-t border-theme-border">
+                            <button onclick="saveMilestones()" class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save Calendar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-theme-text">Garmin Connect Integration</h3>
+                        <span id="garmin-status" class="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-600 border border-red-200">Disconnected</span>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <p class="text-xs text-theme-muted mb-4">Required to automatically push micro-plan blocks to your watch calendar. Credentials are encrypted.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-1">Garmin Email</label>
+                                <input type="text" id="set-garmin-user" class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text">
+                            </div>
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-1">Garmin Password</label>
+                                <input type="password" id="set-garmin-pass" class="w-full p-3 pr-10 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text" placeholder="••••••••">
+                                <button type="button" onclick="togglePassword('set-garmin-pass')" class="absolute bottom-3 right-3 text-theme-muted hover:text-theme-accent"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
+                            </div>
+                        </div>
+                        <button onclick="saveSettings('garmin')" class="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-blue-700 transition">Connect Garmin</button>
+                    </div>
+                </div>
+
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-8">
+                    <!-- OAUTH UI FOR STRAVA -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-8">
+                    <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-theme-text">Strava Integration</h3>
+                        <span id="strava-status" class="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-600 border border-red-200">Disconnected</span>
+                    </div>
+                    
+                    <!-- Restored padding wrapper: p-6 space-y-4 -->
+                    <div class="p-6 space-y-4">
+                        <p class="text-xs text-theme-muted mb-4">Required to pull completed activities and update Strava descriptions.</p>
+                        
+                        <!-- OAUTH UI FOR STRAVA -->
+                        <div id="strava-connect-ui">
+                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Authorize Coach Nana</label>
+                            <div class="flex flex-wrap gap-3">
+                                <button onclick="connectStravaOAuth()" class="bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-orange-600 transition flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                                    Connect with Strava
+                                </button>
+                                <button onclick="forceStravaSync()" class="bg-theme-bg border border-theme-border text-theme-text text-xs font-bold px-4 py-2 rounded shadow-sm hover:bg-theme-border transition">Pull Latest Activities</button>
+                            </div>
+                            <p id="strava-sync-message" class="text-xs font-bold mt-3 text-theme-accent hidden"></p>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- MEGA SCRIPT BLOCK -->
+    <script>
+        // --- GLOBAL VARIABLES ---
+        let currentPlan = {};
+        let pmcChartInstance = null;
+        let activityMap = null;
+        let globalHistoryData = [];
+        let currentCoachTone = "Empathetic but demanding elite endurance coach."; // NEW Tracker
+        
+        function getMonday(d) {
+            d = new Date(d);
+            var day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1); 
+            return new Date(d.setDate(diff));
+        }
+        let viewingWeekStart = getMonday(new Date());
+
+        let globalMilestones = [];
+
+        // --- MILESTONE UI LOGIC ---
+        function renderMilestoneEditor() {
+            const container = document.getElementById('milestones-container');
+            if (globalMilestones.length === 0) {
+                container.innerHTML = `<p class="text-xs text-theme-muted italic">No races planned. The yellow target line and training phases will be hidden.</p>`;
+                return;
+            }
+
+            container.innerHTML = globalMilestones.map((m, idx) => `
+                <div class="flex items-center gap-2 md:gap-4 bg-theme-bg p-2 rounded border border-theme-border milestone-row">
+                    <input type="radio" name="main_goal" value="${idx}" ${m.is_main ? 'checked' : ''} class="w-4 h-4 text-theme-accent accent-theme-accent cursor-pointer" title="Set as Main Goal">
+                    <input type="date" class="ms-date w-32 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text" value="${m.date}">
+                    <input type="text" class="ms-name flex-1 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text" value="${m.name}" placeholder="Race Name">
+                    <input type="number" class="ms-ctl w-16 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text text-right" value="${m.target_ctl}" placeholder="CTL">
+                    <button onclick="removeMilestoneRow(${idx})" class="text-red-500 hover:text-red-700 font-bold px-2">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function addMilestoneRow() {
+            globalMilestones.push({ name: '', date: '', target_ctl: 50, is_main: globalMilestones.length === 0 });
+            renderMilestoneEditor();
+        }
+
+        function removeMilestoneRow(idx) {
+            globalMilestones.splice(idx, 1);
+            renderMilestoneEditor();
+        }
+
+        async function saveMilestones() {
+            const rows = document.querySelectorAll('.milestone-row');
+            const updated = Array.from(rows).map((row, idx) => {
+                return {
+                    is_main: row.querySelector('input[type="radio"]').checked,
+                    date: row.querySelector('.ms-date').value,
+                    name: row.querySelector('.ms-name').value,
+                    target_ctl: parseFloat(row.querySelector('.ms-ctl').value)
+                };
+            }).filter(m => m.date && m.name); // Drop empty rows
+
+            try {
+                const res = await fetch('/api/milestones', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ milestones: updated }) });
+                if (res.ok) {
+                    alert("Calendar saved!");
+                    window.location.reload(); // Reload to redraw charts and macros
+                }
+            } catch(e) { alert("Failed to save calendar."); }
+        }
+
+        async function pushToGarmin(event) {
+            const checkboxes = document.querySelectorAll('.garmin-sync-cb:checked');
+            if (checkboxes.length === 0) return;
+
+            // Gather the exact date & sport for each checked box
+            const selectedWorkouts = Array.from(checkboxes).map(cb => ({
+                date: cb.getAttribute('data-date'),
+                sport: cb.getAttribute('data-sport')
+            }));
+
+            const btn = document.getElementById('garmin-sync-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "Syncing...";
+            btn.disabled = true;
+
+            const msgEl = document.getElementById('garmin-sync-message');
+            if (msgEl) {
+                msgEl.innerText = "Syncing selected workouts... Please wait.";
+                msgEl.classList.remove('hidden', 'text-red-500');
+                msgEl.classList.add('text-theme-accent');
+            }
+
+            try {
+                const res = await fetch('/api/sync-garmin', { 
+                    method: 'POST', 
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workouts: selectedWorkouts }) // <-- Sending the payload
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    if (msgEl) msgEl.innerText = data.message;
+                    // Uncheck boxes on success
+                    checkboxes.forEach(cb => cb.checked = false);
+                    toggleGarminBtn(); 
+                } else {
+                    if (msgEl) {
+                        msgEl.innerText = "Error: " + data.error;
+                        msgEl.classList.replace('text-theme-accent', 'text-red-500');
+                    }
+                }
+            } catch (e) { 
+                if (msgEl) {
+                    msgEl.innerText = "Server Error while connecting to Garmin."; 
+                    msgEl.classList.replace('text-theme-accent', 'text-red-500');
+                }
+            } finally {
+                btn.innerText = originalText;
+                // Button state will be handled by toggleGarminBtn() if boxes were cleared
+                if (msgEl) setTimeout(() => msgEl.classList.add('hidden'), 5000);
+            }
+        }
+
+        // --- AUTHENTICATION LOGIC ---
+        function getAuthHeaders() {
+            const token = localStorage.getItem('nana_token');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function checkLogin() {
+            const token = localStorage.getItem('nana_token');
+            if (token) {
+                document.getElementById('login-overlay').style.display = 'none';
+                loadSettings(); 
+                buildDashboard();
+                loadChatHistory();
+            } else {
+                document.getElementById('login-overlay').style.display = 'flex';
+            }
+        }
+
+        function toggleAuthMode(mode) {
+            const err = document.getElementById('auth-error');
+            err.classList.add('hidden');
+            
+            if (mode === 'register') {
+                document.getElementById('form-login').classList.add('hidden');
+                document.getElementById('form-register').classList.remove('hidden');
+                document.getElementById('auth-title').innerText = "New Athlete";
+                document.getElementById('auth-subtitle').innerText = "Create your Coach Nana account.";
+            } else {
+                document.getElementById('form-register').classList.add('hidden');
+                document.getElementById('form-login').classList.remove('hidden');
+                document.getElementById('auth-title').innerText = "Welcome Back";
+                document.getElementById('auth-subtitle').innerText = "Sign in to your training plan.";
+            }
+        }
+
+        async function attemptAuth(action) {
+            const errEl = document.getElementById('auth-error');
+            errEl.classList.add('hidden');
+            
+            let url, payload;
+
+            if (action === 'login') {
+                url = '/api/auth/login';
+                payload = {
+                    username: document.getElementById('login-user').value,
+                    password: document.getElementById('login-pass').value
+                };
+            } else {
+                url = '/api/auth/register';
+                payload = {
+                    username: document.getElementById('reg-user').value,
+                    password: document.getElementById('reg-pass').value
+                };
+            }
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+
+                if (res.ok) {
+                    if (action === 'login') {
+                        localStorage.setItem('nana_token', data.token);
+                        window.location.reload(); 
+                    } else {
+                        toggleAuthMode('login');
+                        document.getElementById('login-user').value = payload.username;
+                        errEl.innerText = "Account created! Please log in.";
+                        errEl.className = "text-theme-accent text-xs mt-4 block font-medium bg-theme-accent-soft p-2 rounded border border-theme-accent-border";
+                    }
+                } else {
+                    errEl.innerText = data.error || "Authentication failed.";
+                    errEl.className = "text-red-500 text-xs mt-4 block font-medium bg-red-50 p-2 rounded border border-red-200";
+                }
+            } catch (e) {
+                errEl.innerText = "Server connection error.";
+                errEl.className = "text-red-500 text-xs mt-4 block font-medium bg-red-50 p-2 rounded border border-red-200";
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('nana_token');
+            window.location.reload();
+        }
+
+        // --- SETTINGS LOGIC ---
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/user/settings', { headers: getAuthHeaders() });
+                if (res.status === 401 || res.status === 403) return logout(); 
+                
+                const data = await res.json();
+
+                // NEW: Admin Check
+                if (data.username && data.username.toLowerCase() === 'rutger') {
+                    const select = document.getElementById('set-coach-tone');
+                    if (!select.querySelector('option[value*="madison"]')) {
+                        select.innerHTML += `<option value="Flirty, Horny, Thirsty, supportive, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
+                    }
+                }
+                
+                currentCoachTone = data.coachTone || ''; // Save to global memory
+                
+                document.getElementById('set-coach-tone').value = data.coachTone || '';
+                document.getElementById('set-athlete-context').value = data.athleteContext || '';
+                document.getElementById('set-garmin-user').value = data.garminUsername || '';
+                
+                if (data.hasGarmin) {
+                    const b = document.getElementById('garmin-status');
+                    b.innerText = "Connected";
+                    b.className = "text-[10px] font-bold px-2 py-1 rounded bg-theme-accent-soft text-theme-accent border border-theme-accent-border";
+                }
+                if (data.hasStrava) {
+                    const b = document.getElementById('strava-status');
+                    b.innerText = "Connected";
+                    b.className = "text-[10px] font-bold px-2 py-1 rounded bg-theme-accent-soft text-theme-accent border border-theme-accent-border";
+                }
+
+                // If user is connected, hide the banner and show the dashboard!
+                if (data.hasGarmin || data.hasStrava) {
+                    const banner = document.getElementById('welcome-banner');
+                    const content = document.getElementById('dashboard-content');
+                    if(banner) banner.classList.add('hidden');
+                    if(content) content.classList.remove('hidden');
+                }
+            } catch (e) { console.error("Failed to load settings."); }
+        }
+
+        async function saveSettings(type) {
+            let url = `/api/user/settings/${type}`;
+            let payload = {};
+
+            if (type === 'coach') {
+                payload = {
+                    coachTone: document.getElementById('set-coach-tone').value,
+                    athleteContext: document.getElementById('set-athlete-context').value
+                };
+            } else if (type === 'garmin') {
+                payload = {
+                    garminUsername: document.getElementById('set-garmin-user').value,
+                    garminPassword: document.getElementById('set-garmin-pass').value
+                };
+            } else if (type === 'strava') {
+                payload = {
+                    stravaRefreshToken: document.getElementById('set-strava-token').value
+                };
+            }
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    alert("Settings saved successfully!");
+                    loadSettings(); 
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + (err.error || "Failed to save."));
+                }
+            } catch(e) { alert("Server error."); }
+        }
+
+        async function forceStravaSync() {
+            const msgEl = document.getElementById('strava-sync-message');
+            msgEl.innerText = "Syncing with Strava...";
+            msgEl.classList.remove('hidden');
+            msgEl.className = "text-xs font-bold mt-3 text-theme-muted block animate-pulse";
+
+            try {
+                const res = await fetch('/api/sync-strava', { method: 'POST', headers: getAuthHeaders() });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    msgEl.innerText = data.message + " Refreshing dashboard...";
+                    msgEl.className = "text-xs font-bold mt-3 text-theme-accent block";
+                    setTimeout(() => window.location.reload(), 1500); // Reload to draw the charts
+                } else {
+                    msgEl.innerText = data.error;
+                    msgEl.className = "text-xs font-bold mt-3 text-red-500 block";
+                }
+            } catch (e) {
+                msgEl.innerText = "Network error connecting to server.";
+                msgEl.className = "text-xs font-bold mt-3 text-red-500 block";
+            }
+        }
+
+        // --- UI NAVIGATION ---
+        function switchTab(t) {
+            // Safely toggle visibility to prevent missing ID crashes
+            const views = ['dashboard', 'coach', 'settings', 'history'];
+            views.forEach(view => {
+                const el = document.getElementById(`view-${view}`);
+                if (el) el.classList.toggle('hidden', t !== view);
+            });
+            
+            document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log' }[t];
+            
+            views.forEach(tab => {
+                const btn = document.getElementById(`nav-${tab}`);
+                if (!btn) return;
+                if (tab === t) {
+                    btn.classList.add('text-theme-accent-hover', 'bg-theme-accent-soft', 'border-theme-accent');
+                    btn.classList.remove('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+                } else {
+                    btn.classList.remove('text-theme-accent-hover', 'bg-theme-accent-soft', 'border-theme-accent');
+                    btn.classList.add('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+                }
+            });
+
+            if(t === 'history') loadHistory();
+            if(t === 'coach') {
+                setTimeout(() => {
+                    const chatWindow = document.getElementById('chat-window');
+                    if(chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
+                }, 10);
+            } 
+        }
+
+        // 1. Sends the user to Strava's login screen
+        function connectStravaOAuth() {
+            const clientId = '208765'; // Replace with your actual numeric Client ID
+            // Redirects them back to your app after they click "Authorize"
+            const redirectUri = encodeURIComponent(window.location.origin); 
+            const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=activity:read_all`;
+            
+            window.location.href = authUrl;
+        }
+
+        // 2. Checks if Strava just sent them back with a code
+        async function checkStravaCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            
+            if (code) {
+                // Clear the URL so it looks clean
+                window.history.replaceState({}, document.title, "/");
+                
+                // Make sure they are logged in before trading the code
+                const token = localStorage.getItem('nana_token');
+                if (!token) return;
+
+                // Send the code to the new backend route
+                try {
+                    const res = await fetch('/api/user/settings/strava-exchange', {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    if (res.ok) {
+                        alert("Strava successfully connected!");
+                        loadSettings(); // Refresh UI badges
+                    } else {
+                        alert("Strava connection failed. Please try again.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        // --- DASHBOARD HELPERS ---
+        function changeWeek(offset) {
+            viewingWeekStart.setDate(viewingWeekStart.getDate() + (offset * 7));
+            loadMicroPlan();
+        }
+
+        function resetChartZoom() {
+            if (pmcChartInstance) pmcChartInstance.resetZoom();
+        }
+
+        function renderMacroPlan() {
+            const macroBlock = document.getElementById('macro-block');
+            
+            // 1. Hide if no goals
+            if (!globalMilestones || globalMilestones.length === 0) {
+                if(macroBlock) macroBlock.classList.add('hidden');
+                return;
+            }
+            
+            // 2. Find the main A-Race (fallback to the last race if none selected)
+            const mainRace = globalMilestones.find(m => m.is_main) || globalMilestones[globalMilestones.length - 1];
+            
+            if(macroBlock) macroBlock.classList.remove('hidden');
+
+            const today = new Date();
+            const raceDate = new Date(mainRace.date);
+            const totalDays = 112; 
+            const planStartDate = new Date(raceDate);
+            planStartDate.setDate(planStartDate.getDate() - totalDays);
+
+            const taperDays = 14; 
+            const peakDays = 21;  
+            const buildDays = 28; 
+            const baseDays = totalDays - (taperDays + peakDays + buildDays); 
+
+            document.getElementById('phase-base').style.width = `${(baseDays/totalDays)*100}%`;
+            document.getElementById('phase-build').style.width = `${(buildDays/totalDays)*100}%`;
+            document.getElementById('phase-peak').style.width = `${(peakDays/totalDays)*100}%`;
+            document.getElementById('phase-taper').style.width = `${(taperDays/totalDays)*100}%`;
+
+            const daysRemaining = Math.ceil((raceDate - today) / (1000 * 60 * 60 * 24));
+            
+            const countdownEl = document.getElementById('macro-countdown');
+            if (daysRemaining > 0) {
+                countdownEl.innerText = `${daysRemaining} Days to ${mainRace.name}`;
+                countdownEl.className = "text-[10px] md:text-xs font-mono text-theme-accent font-bold bg-theme-card px-2 py-1 rounded-md border border-theme-border shadow-sm";
+            } else if (daysRemaining === 0) {
+                countdownEl.innerText = "RACE DAY!";
+                countdownEl.className = "text-[10px] md:text-xs font-mono text-white font-bold bg-theme-accent px-2 py-1 rounded-sm shadow-sm";
+            } else {
+                countdownEl.innerText = "RACE COMPLETED";
+                countdownEl.className = "text-[10px] md:text-xs font-mono text-theme-muted font-bold bg-theme-card px-2 py-1 rounded-md border border-theme-border shadow-sm";
+            }
+
+            const daysElapsed = totalDays - daysRemaining;
+            let percentElapsed = (daysElapsed / totalDays) * 100;
+            if (percentElapsed < 0) percentElapsed = 0;
+            if (percentElapsed > 100) percentElapsed = 100;
+            
+            setTimeout(() => { 
+                document.getElementById('today-marker').style.left = `${percentElapsed}%`; 
+                document.getElementById('macro-progress').style.width = `${percentElapsed}%`;
+            }, 300);
+        }
+
+        function updateDailyReflection(currentCtl, currentAtl) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const tsb = currentCtl - currentAtl;
+            let quote = "";
+
+            if (tsb < -30) quote = "You are in the red. High fatigue detected. Prioritize active recovery and fueling today, or risk overtraining.";
+            else if (tsb >= -30 && tsb < -10) quote = "Optimal training zone! You are accumulating fatigue and your fitness is increasing exactly according to plan. Keep pushing.";
+            else if (tsb >= -10 && tsb <= 5) quote = "You are in a transitional phase. You are shedding fatigue, but you need to push a bit harder to trigger new fitness adaptations.";
+            else if (tsb > 5 && tsb <= 25) quote = "You are fresh and primed! Your body is fully recovered, highly fit, and ready for a race or a massive test effort.";
+            else quote = "Detraining warning. Your fatigue is very low, meaning you need to consistently increase your volume to recover your fitness level.";
+
+            const refEl = document.getElementById('daily-reflection');
+            if (refEl) refEl.innerText = quote;
+        }
+
+        function estimateWorkoutDetails(sport, desc, tss) {
+            if (!tss || tss === 0 || sport === 'Rest') return '<span class="text-theme-muted">Rest</span>';
+            let d = desc.toLowerCase(), tssPerHour = 55, zone = 'Z2';
+            if (d.includes('recovery') || d.includes('easy')) { tssPerHour = 35; zone = 'Z1'; } 
+            else if (d.includes('threshold') || d.includes('tempo')) { tssPerHour = 80; zone = 'Z3/Z4'; } 
+            else if (d.includes('interval') || d.includes('sprint') || d.includes('test')) { tssPerHour = 90; zone = 'Z4/Z5'; }
+            let mins = Math.round((tss / tssPerHour) * 60), h = Math.floor(mins / 60), m = mins % 60; let timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+            return `<div class="flex flex-col items-end"><div class="whitespace-nowrap"><span class="text-theme-text font-medium">~${timeStr}</span> <span class="text-[10px] uppercase bg-theme-bg text-theme-muted px-1 py-0.5 rounded-sm border border-theme-border hidden md:inline-block">${zone}</span></div></div>`;
+        }
+
+        function getWeatherEmoji(code) {
+            if (code === 0) return '☀️'; if (code >= 1 && code <= 3) return '⛅'; if (code >= 45 && code <= 48) return '🌫️'; if (code >= 51 && code <= 67) return '🌧️'; if (code >= 71 && code <= 77) return '❄️'; if (code >= 80 && code <= 82) return '🌦️'; if (code >= 95) return '⛈️'; return '☁️';
+        }
+
+        // --- CORE DATA FUNCTIONS ---
+        async function buildDashboard() {
+            try {
+                // 1. Fetch TSS, Weight, AND Milestones
+                const [tssRes, weightRes, msRes] = await Promise.all([
+                    fetch('/api/dashboard-data', { headers: getAuthHeaders() }), 
+                    fetch('/api/weight', { headers: getAuthHeaders() }),
+                    fetch('/api/milestones', { headers: getAuthHeaders() })
+                ]);
+                
+                if (!tssRes.ok || !weightRes.ok) return; // Prevent crash if backend is not ready
+                
+                const data = await tssRes.json(); 
+                const weightData = await weightRes.json();
+                
+                // 2. Store milestones globally for charts & editor
+                globalMilestones = msRes.ok ? await msRes.json() : [];
+                renderMilestoneEditor(); // Populate the settings tab
+                
+                // 3. Process Weight & Biometrics Table
+                if (weightData && weightData.length > 0) {
+                    const sortedData = [...weightData].sort((a,b) => new Date(b.date) - new Date(a.date));
+                    const latest = sortedData[0];
+                    document.getElementById('latest-weight-metric').innerHTML = `${latest.weight_kg.toFixed(1)} <span class="text-sm text-theme-muted">kg</span>`;
+
+                    let bioHtml = '';
+                    sortedData.slice(0, 10).forEach(w => {
+                        bioHtml += `<tr class="hover:bg-theme-bg transition">
+                            <td class="p-3 md:p-4 text-theme-text">${w.date}</td>
+                            <td class="p-3 md:p-4 font-mono text-theme-text text-right">${w.weight_kg ? w.weight_kg.toFixed(1) : '--'}</td>
+                            <td class="p-3 md:p-4 font-mono text-theme-muted text-right">${w.body_fat_percent ? w.body_fat_percent.toFixed(1) : '--'}</td>                            
+                        </tr>`;
+                    });
+                    document.getElementById('biometrics-table-body').innerHTML = bioHtml;
+                }
+
+                // 4. Prepare dictionaries and set start date
+                const tssDict = Object.fromEntries(data.map(d => [d.date, d.daily_tss])); 
+                const weightMap = Object.fromEntries(weightData.map(w => [w.date, w.weight_kg]));
+                
+                let minTssDate = data.length > 0 ? data[0].date : new Date().toISOString().split('T')[0];
+                let minWeightDate = weightData.length > 0 ? weightData[0].date : new Date().toISOString().split('T')[0];
+                let startDateStr = minTssDate < minWeightDate ? minTssDate : minWeightDate;
+                
+                let ctl=0, atl=0, d = new Date(startDateStr); 
+                const today = new Date();
+                const dates=[], ctlData=[], atlData=[], tsbData=[], weightPlot=[], targetData=[], eventMarkerData=[];
+                
+                // 5. Loop 1: Calculate historical Form, Fitness, and Fatigue up to TODAY
+                while(d <= today) {
+                    let str = d.toISOString().split('T')[0]; 
+                    let tss = tssDict[str] || 0; 
+                    
+                    // Standard rolling averages (CTL = 42 days, ATL = 7 days)
+                    ctl += (tss - ctl) / 42; 
+                    atl += (tss - atl) / 7;
+                    
+                    dates.push(str); 
+                    ctlData.push(ctl); 
+                    atlData.push(atl); 
+                    tsbData.push(ctl - atl); 
+                    weightPlot.push(weightMap[str] || null); 
+                    
+                    // We don't draw the target line in the past, so push nulls
+                    targetData.push(null); 
+                    eventMarkerData.push(null); 
+                    d.setDate(d.getDate() + 1);
+                }
+                
+                // Update Top Dashboard Metrics
+                document.getElementById('ctl-metric').innerText = Math.round(ctl*10)/10; 
+                document.getElementById('atl-metric').innerText = Math.round(atl*10)/10;
+                updateDailyReflection(ctl, atl);
+                
+                // 6. Loop 2: Dynamic Target Line & Future Projection
+                let lastDate = new Date();
+                
+                if (globalMilestones.length > 0) {
+                    // Set chart end date to 7 days past the final milestone
+                    lastDate = new Date(globalMilestones[globalMilestones.length - 1].date);
+                    lastDate.setDate(lastDate.getDate() + 7);
+                    
+                    // Map points starting from today's actual CTL
+                    let controlPoints = [ 
+                        { date: new Date(today.toISOString().split('T')[0]), ctl: ctl }, 
+                        ...globalMilestones.map(m => ({ date: new Date(m.date), ctl: m.target_ctl })) 
+                    ].sort((a,b) => a.date - b.date); 
+                    
+                    let currentIdx = 0;
+                    
+                    while(d <= lastDate) {
+                        let str = d.toISOString().split('T')[0]; 
+                        
+                        // Push empty data for actuals since this is the future
+                        dates.push(str); 
+                        ctlData.push(null); 
+                        atlData.push(null); 
+                        tsbData.push(null); 
+                        weightPlot.push(weightMap[str] || null); 
+                        
+                        // Linear interpolation for the target line
+                        while (currentIdx < controlPoints.length - 1 && d > controlPoints[currentIdx+1].date) currentIdx++;
+                        let p1 = controlPoints[currentIdx], p2 = controlPoints[currentIdx+1] || p1, targetCtl = p1.ctl;
+                        if (p1.date < p2.date) { 
+                            targetCtl = p1.ctl + ((p2.ctl - p1.ctl) * ((d - p1.date) / (p2.date - p1.date))); 
+                        }
+                        
+                        targetData.push(targetCtl); 
+                        eventMarkerData.push(globalMilestones.find(m => m.date === str) ? targetCtl : null); 
+                        d.setDate(d.getDate() + 1);
+                    }
+                }
+                
+                // 7. Render Chart.js
+                if (pmcChartInstance) pmcChartInstance.destroy();
+                const canvas = document.getElementById('pmcChart');
+                
+                if (canvas) {
+                    pmcChartInstance = new Chart(canvas.getContext('2d'), { 
+                        type: 'line', 
+                        data: { 
+                            labels: dates, 
+                            datasets: [ 
+                                { label: 'Form', data: tsbData, type: 'bar', backgroundColor: ctx => ctx.raw > 0 ? 'rgba(250, 204, 21, 0.4)' : 'rgba(239, 68, 68, 0.4)', yAxisID: 'y' }, 
+                                { label: 'Fitness', data: ctlData, borderColor: '#0ea5e9', borderWidth: 2, tension: 0.4, pointRadius: 0, yAxisID: 'y' }, 
+                                { label: 'Fatigue', data: atlData, borderColor: '#f43f5e', borderDash: [5, 5], borderWidth: 1.5, tension: 0.4, pointRadius: 0, yAxisID: 'y' }, 
+                                { label: 'Target', data: targetData, borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, tension: 0, pointRadius: 0, yAxisID: 'y' }, 
+                                { label: 'Milestone', data: eventMarkerData, type: 'line', showLine: false, pointStyle: 'star', pointBackgroundColor: '#f59e0b', pointBorderColor: '#d97706', pointRadius: 10, pointHoverRadius: 12, yAxisID: 'y' }, 
+                                { label: 'Weight', data: weightPlot, borderColor: '#10b981', borderDash: [2, 2], borderWidth: 2, tension: 0.2, pointRadius: 2, yAxisID: 'yWeight', spanGaps: true } 
+                            ] 
+                        }, 
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, 
+                            scales: { 
+                                y: { type: 'linear', position: 'left', grid: { color: 'rgba(156, 163, 175, 0.2)' }, ticks: { color: '#9ca3af', font: { size: 10 } } }, 
+                                yWeight: { type: 'linear', position: 'right', min: 85, max: 110, grid: { drawOnChartArea: false }, ticks: { color: '#10b981', font: { size: 10 } } }, 
+                                x: { grid: { display: false }, ticks: { maxTicksLimit: 6, color: '#9ca3af', font: { size: 10 } } } 
+                            }, 
+                            plugins: { 
+                                legend: { position: 'bottom', labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 6, font: { size: 11 } } }, 
+                                tooltip: { 
+                                    callbacks: { 
+                                        label: function(context) { 
+                                            // Check dynamic global milestones for the tooltip text
+                                            if (context.dataset.label === 'Milestone') { 
+                                                let ms = globalMilestones.find(m => m.date === context.label); 
+                                                if (ms) return `🏁 ${ms.name}`; 
+                                            } 
+                                            return context.dataset.label + ': ' + (typeof context.raw === 'number' ? Math.round(context.raw*10)/10 : context.raw); 
+                                        } 
+                                    } 
+                                },
+                                zoom: { pan: { enabled: true, mode: 'x', modifierKey: 'ctrl' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } }
+                            }
+                        } 
+                    });
+                }
+            } catch (e) { 
+                console.error("Dashboard Build Error:", e); 
+            } 
+            
+            // 8. Fire dependent modules
+            loadMicroPlan(); 
+            renderMacroPlan(); 
+        }
+
+        async function loadMicroPlan() {
+            try {
+                const [planRes, tssRes, weatherRes] = await Promise.all([
+                    fetch('/api/micro-plan', { headers: getAuthHeaders(), cache: 'no-store' }), 
+                    fetch('/api/dashboard-data', { headers: getAuthHeaders(), cache: 'no-store' }), 
+                    fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&daily=weather_code,temperature_2m_max,precipitation_sum&timezone=Europe%2FAmsterdam')
+                ]);
+                if (!planRes.ok || !tssRes.ok) return;
+
+                const data = await planRes.json(); 
+                const actualData = await tssRes.json(); 
+                const weatherObj = await weatherRes.json();
+                
+                // 1. Group workouts into arrays by date (Prevents Overwriting!)
+                const currentPlan = {};
+                data.forEach(d => {
+                    if (!currentPlan[d.date]) currentPlan[d.date] = [];
+                    currentPlan[d.date].push(d);
+                });
+                
+                const actualTssMap = Object.fromEntries(actualData.map(d => [d.date, Math.round(d.daily_tss)]));
+                const weatherMap = {}; 
+                if (weatherObj && weatherObj.daily && weatherObj.daily.time) { 
+                    weatherObj.daily.time.forEach((wDate, idx) => { 
+                        weatherMap[wDate] = { 
+                            temp: Math.round(weatherObj.daily.temperature_2m_max[idx]), 
+                            precip: weatherObj.daily.precipitation_sum[idx], 
+                            emoji: getWeatherEmoji(weatherObj.daily.weather_code[idx]) 
+                        }; 
+                    }); 
+                }
+                
+                const container = document.getElementById('micro-plan-container'); 
+                if (!container) return;
+
+                let weekEnd = new Date(viewingWeekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                const opts = { month: 'short', day: 'numeric' };
+                document.getElementById('week-range-label').innerText = `${viewingWeekStart.toLocaleDateString('en-US', opts)} - ${weekEnd.toLocaleDateString('en-US', opts)}`;
+
+                let html = '';
+                let todayStr = new Date().toISOString().split('T')[0];
+                
+                // 2. Loop through all 7 days of the week view
+                for(let i=0; i<7; i++) {
+                    let d = new Date(viewingWeekStart); 
+                    d.setDate(d.getDate()+i); 
+                    let dateStr = d.toISOString().split('T')[0]; 
+                    let dayName = d.toLocaleDateString('en-US', { weekday: 'short' }); 
+                    
+                    // Get array of workouts, or default to Rest if empty
+                    let workoutsForDay = currentPlan[dateStr] || [{sport:'Rest', description:'Active recovery', target_tss:0, details:''}];
+                    
+                    let isToday = (dateStr === todayStr);
+                    let rowClasses = isToday ? "bg-theme-accent-soft" : "hover:bg-theme-bg";
+
+                    // Open Day Container
+                    html += `<div id="row-${dateStr}" class="flex flex-col border-b border-theme-border group ${rowClasses} transition py-1">`;
+                    
+                    // 3. Nested Loop: Draw each sport for this day
+                    workoutsForDay.forEach((p, wIdx) => {
+                        let humanData = estimateWorkoutDetails(p.sport, p.description, p.target_tss); 
+                        let actualTss = actualTssMap[dateStr] || 0; 
+                        let actColor = actualTss > 0 ? (actualTss >= (p.target_tss * 0.9) ? 'text-theme-accent font-bold' : 'text-amber-500 font-bold') : 'text-theme-muted';
+                        
+                        // Only show weather on the first row of the day
+                        let weatherHtml = `<div class="w-12 md:w-16 shrink-0"></div>`;
+                        if (wIdx === 0 && weatherMap[dateStr]) { 
+                            const w = weatherMap[dateStr]; 
+                            const precipAlert = w.precip > 0 ? `<span class="text-blue-400">${w.precip}mm</span>` : `<span class="text-theme-muted opacity-50">0mm</span>`; 
+                            weatherHtml = `<div class="w-12 md:w-16 flex flex-col items-center justify-center shrink-0 border-l border-theme-border pl-2"><span class="text-lg leading-none">${w.emoji}</span><span class="text-[9px] md:text-[10px] font-mono text-theme-muted mt-1">${w.temp}°C</span><span class="text-[8px] md:text-[9px] font-mono">${precipAlert}</span></div>`; 
+                        }
+                        
+                        let detailsHtml = '';
+                        if (p.steps_json && p.steps_json !== '[]' && p.steps_json !== 'null') {
+                            try {
+                                let steps = JSON.parse(p.steps_json);
+                                let stepsList = steps.map(step => {
+                                    let dur = step.condition_type === 'time' ? `${step.condition_value} min` : `${step.condition_value}m`;
+                                    let tgt = step.zone ? `Zone ${step.zone}` : (step.target_type === 'no.target' ? 'Open' : step.target_type.replace('.zone', ''));
+                                    return `<div class="flex justify-between items-center border-b border-theme-border last:border-0 py-1.5"><span class="capitalize font-bold text-theme-text">${step.type}</span><span class="text-theme-muted">${dur} @ <span class="font-bold">${tgt}</span></span></div>`;
+                                }).join('');
+                                
+                                detailsHtml = `<div class="w-full pl-28 md:pl-40 pr-4 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-2 bg-theme-card shadow-sm rounded-r-sm border border-theme-border flex flex-col">${p.details && p.details.trim() !== '' ? `<div class="mb-2 pb-2 border-b border-theme-border italic">${p.details.replace(/\n/g, '<br>')}</div>` : ''}<div class="space-y-0.5">${stepsList}</div></div></div>`;
+                            } catch(e) {}
+                        } else if (p.details && p.details.trim() !== '') {
+                            detailsHtml = `<div class="w-full pl-28 md:pl-40 pr-4 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-1.5 bg-theme-card shadow-sm rounded-r-sm border border-theme-border">${p.details.replace(/\n/g, '<br>')}</div></div>`;
+                        }
+                        
+                        // Only show the Date text on the first row of the day
+                        let dateDisplay = wIdx === 0 
+                            ? `<span class="text-xs md:text-sm font-medium ${isToday ? 'text-theme-accent font-bold' : 'text-theme-text'}">${dateStr.slice(5)}</span><span class="text-[9px] md:text-[10px] uppercase font-bold ${isToday ? 'text-theme-accent' : 'text-theme-muted'} tracking-wider">${dayName}</span>` 
+                            : ``;
+
+                        // NEW: Checkbox HTML (Hidden for Rest days)
+                        let cbHtml = p.sport !== 'Rest' 
+                            ? `<input type="checkbox" class="garmin-sync-cb cursor-pointer w-4 h-4 accent-theme-accent" data-date="${dateStr}" data-sport="${p.sport}" onchange="toggleGarminBtn()">` 
+                            : ``;
+
+                        html += `
+                            <div class="flex items-center px-4 md:px-6 py-2 w-full">
+                                <div class="w-8 shrink-0 flex items-center">${cbHtml}</div>
+                                <div class="w-24 md:w-32 flex items-center space-x-2 md:space-x-3 shrink-0">${dateDisplay}</div>
+                                <span class="w-16 md:w-24 text-xs md:text-sm font-medium ${p.sport==='Rest' ? 'text-theme-muted' : 'text-theme-accent'} shrink-0">${p.sport}</span>
+                                <span class="flex-1 text-xs md:text-sm text-theme-text truncate pr-2 md:pr-4 min-w-[120px]">${p.description}</span>
+                                <span class="w-28 md:w-36 text-xs md:text-sm text-right pr-2 md:pr-4 shrink-0">${humanData}</span>
+                                <div class="w-16 md:w-20 flex flex-col items-end pr-2 md:pr-4 shrink-0 font-mono text-[10px] md:text-xs"><span class="text-theme-muted">Tgt: ${p.target_tss}</span><span class="${actColor}">Act: ${actualTss}</span></div>
+                                ${weatherHtml}
+                                <button onclick="editDay('${dateStr}', '${dayName}')" class="text-xs text-theme-muted hover:text-theme-accent font-medium md:opacity-0 group-hover:opacity-100 transition shrink-0 p-2 md:p-0 ml-2">Edit</button>
+                            </div>
+                            ${detailsHtml}
+                        `;
+                    });
+
+                    // Close Day Container
+                    html += `</div>`;
+                }
+                container.innerHTML = html;
+            } catch (e) { console.error("Micro Plan Load Error:", e); }
+        }
+
+        function editDay(dateStr, dayName) {
+            let p = currentPlan[dateStr] || {sport:'Rest', description:'', target_tss:0, details:''};
+            document.getElementById(`row-${dateStr}`).innerHTML = `
+                <div class="flex flex-col px-4 md:px-6 py-3 w-full bg-theme-bg border-b border-theme-border">
+                    <div class="flex items-center w-full">
+                        <div class="w-28 md:w-40 flex items-center space-x-2 md:space-x-3 shrink-0"><span class="text-xs md:text-sm font-medium text-theme-accent">${dateStr.slice(5)}</span><span class="text-[9px] md:text-[10px] uppercase font-bold text-theme-accent tracking-wider">${dayName}</span></div>
+                        <select id="s-${dateStr}" class="w-20 md:w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent shrink-0"><option ${p.sport==='Swim'?'selected':''}>Swim</option><option ${p.sport==='Bike'?'selected':''}>Bike</option><option ${p.sport==='Run'?'selected':''}>Run</option><option ${p.sport==='Brick'?'selected':''}>Brick</option><option ${p.sport==='Rest'?'selected':''}>Rest</option></select>
+                        <input id="d-${dateStr}" value="${p.description}" placeholder="Title..." class="flex-1 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent min-w-[100px]">
+                        <input id="t-${dateStr}" type="number" value="${p.target_tss}" class="w-14 md:w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm text-right mr-2 md:mr-6 focus:border-theme-accent shrink-0">
+                        <div class="flex space-x-1 md:space-x-2 shrink-0"><button onclick="saveDay('${dateStr}')" class="bg-theme-accent text-white text-[10px] md:text-xs px-2 py-1.5 rounded-sm">Save</button><button onclick="loadMicroPlan()" class="bg-theme-border text-theme-text text-[10px] md:text-xs px-2 py-1.5 rounded-sm">X</button></div>
+                    </div>
+                    <div class="pl-28 md:pl-40 pr-16 mt-2 w-full">
+                        <textarea id="det-${dateStr}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[60px]" placeholder="Workout drills/structure...">${p.details || ''}</textarea>
+                    </div>
+                </div>`;
+        }
+        
+        async function saveDay(dateStr) { 
+            await fetch('/api/micro-plan', { 
+             method: 'POST', 
+               headers: getAuthHeaders(), 
+              body: JSON.stringify({ 
+             date: dateStr, 
+             sport: document.getElementById(`s-${dateStr}`).value, 
+                description: document.getElementById(`d-${dateStr}`).value, 
+               target_tss: parseFloat(document.getElementById(`t-${dateStr}`).value),
+               details: document.getElementById(`det-${dateStr}`).value
+            })
+        });
+            loadMicroPlan(); 
+        }
+
+        async function generateTemplate() { 
+            await fetch('/api/generate-plan', {
+                method:'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ targetDate: viewingWeekStart.toISOString().split('T')[0] })
+            });
+            loadMicroPlan(); 
+        }
+
+        // --- MAP & HISTORY MODAL ---
+        function decodePolyline(str) {
+            let index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, latitude_change, longitude_change, factor = 1e5;
+            while (index < str.length) {
+                byte = null; shift = 0; result = 0;
+                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+                latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1)); shift = result = 0;
+                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+                longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                lat += latitude_change; lng += longitude_change; coordinates.push([lat / factor, lng / factor]);
+            }
+            return coordinates;
+        }
+
+        async function openActivityModal(id) {
+            document.getElementById('activity-modal').classList.remove('hidden'); document.getElementById('modal-loader').classList.remove('hidden'); document.getElementById('modal-content').classList.add('hidden'); document.getElementById('modal-title').innerText = "Connecting to Strava...";
+            try {
+                const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
+                document.getElementById('modal-title').innerText = data.name || "Activity Details";
+                let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--'; let distStr = data.distance ? `${(data.distance / 1000).toFixed(2)} km` : '--';
+                document.getElementById('modal-stats').innerHTML = `<div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Distance</div><div class="text-lg md:text-xl font-light text-theme-text">${distStr}</div></div><div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg HR</div><div class="text-lg md:text-xl font-light text-theme-text">${hrStr}</div></div><div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Elevation</div><div class="text-lg md:text-xl font-light text-theme-text">${elevStr}</div></div><div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div><div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div></div>`;
+                if (activityMap) activityMap.remove(); document.getElementById('actual-map').innerHTML = '';
+                activityMap = L.map('actual-map', { zoomControl: false }); L.control.zoom({ position: 'bottomright' }).addTo(activityMap); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(activityMap);
+                if (data.map && data.map.summary_polyline) { const coords = decodePolyline(data.map.summary_polyline); if (coords.length > 0) { const polyline = L.polyline(coords, { color: '#0d9488', weight: 4, opacity: 0.8, lineJoin: 'round' }).addTo(activityMap); activityMap.fitBounds(polyline.getBounds(), { padding: [30, 30] }); } } else { activityMap.setView([52.3676, 4.9041], 13); }
+                document.getElementById('modal-loader').classList.add('hidden'); document.getElementById('modal-content').classList.remove('hidden'); document.getElementById('modal-content').classList.add('flex');
+                setTimeout(() => { activityMap.invalidateSize(); }, 100);
+            } catch (e) { document.getElementById('modal-title').innerText = "Error Fetching Data"; document.getElementById('modal-loader').innerHTML = `<span class="text-red-500 font-bold uppercase tracking-widest text-xs">Connection Failed</span>`; }
+        }
+        
+        function closeModal() { document.getElementById('activity-modal').classList.add('hidden'); }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history', { headers: getAuthHeaders() });
+                if(!res.ok) return;
+                globalHistoryData = await res.json();
+                
+                const container = document.getElementById('history-list-container');
+                if(!container) return;
+
+                container.innerHTML = globalHistoryData.map((x, idx) => {
+                    let sportBadge = '';
+                    let s = x.sport_type ? x.sport_type.toLowerCase() : '';
+                    if (s.includes('run')) sportBadge = `<span class="bg-orange-100 text-orange-700 border border-orange-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Run</span>`;
+                    else if (s.includes('swim')) sportBadge = `<span class="bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Swim</span>`;
+                    else if (s.includes('ride') || s.includes('bike')) sportBadge = `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Bike</span>`;
+                    else sportBadge = `<span class="bg-gray-100 text-gray-700 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">${x.sport_type || 'Activity'}</span>`;
+
+                    let dateObj = new Date(x.start_date);
+                    let dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+                    return `
+                    <div class="flex items-center p-4 hover:bg-theme-bg transition group cursor-pointer" onclick="openActivityModal('${x.id}')">
+                        <div class="mr-4 shrink-0" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="log-checkbox w-4 h-4 text-theme-accent bg-theme-card border-theme-border rounded cursor-pointer accent-theme-accent" value="${idx}">
+                        </div>
+                        <div class="flex-1 min-w-0 flex flex-col justify-center">
+                            <div class="flex justify-between items-baseline mb-1">
+                                <h3 class="text-sm md:text-base font-bold text-theme-text truncate pr-4 group-hover:text-theme-accent transition">${x.name || 'Untitled Activity'}</h3>
+                                <span class="text-[10px] md:text-xs text-theme-muted whitespace-nowrap font-medium">${dateStr}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                ${sportBadge}
+                                <div class="text-[10px] md:text-xs text-theme-muted flex items-center gap-1 font-mono">
+                                    <span class="uppercase tracking-wider font-semibold">TSS:</span>
+                                    <span class="text-theme-text">${x.tss || '--'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ml-3 shrink-0 text-theme-border group-hover:text-theme-accent transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                    </div>`
+                }).join('');
+            } catch (e) { console.error("History Load Error:", e); }
+        }
+
+        function toggleAllLog(source) {
+            const checkboxes = document.querySelectorAll('.log-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        }
+
+        async function downloadSelectedCSV() {
+            const checkboxes = document.querySelectorAll('.log-checkbox:checked');
+            if (checkboxes.length === 0) return alert("Please select at least one activity to export.");
+            
+            const exportBtn = document.querySelector('button[onclick="downloadSelectedCSV()"]');
+            const originalText = exportBtn.innerText;
+            exportBtn.innerText = "Exporting...";
+            exportBtn.disabled = true;
+
+            let csvContent = "Date,Sport,Title,TSS,Distance (meters),Moving Time (seconds),Elevation (meters),Avg Heart Rate (bpm),Avg Cadence (spm/rpm)\n";
+            
+            for (const cb of checkboxes) {
+                let item = globalHistoryData[cb.value];
+                let cleanTitle = item.name ? item.name.replace(/,/g, '') : "Activity";
+                let dist = 0, time = 0, elev = 0, hr = 0, cadence = 0;
+                
+                try {
+                    const res = await fetch(`/api/activity/${item.id}`, { headers: getAuthHeaders() });
+                    const deepData = await res.json();
+                    
+                    dist = deepData.distance || 0;
+                    time = deepData.moving_time || 0;
+                    elev = deepData.total_elevation_gain || 0;
+                    hr = deepData.has_heartrate ? Math.round(deepData.average_heartrate) : 0;
+                    
+                    let rawCadence = deepData.average_cadence || 0;
+                    if (item.sport_type === 'Run' && rawCadence > 0) rawCadence = rawCadence * 2;
+                    cadence = Math.round(rawCadence);
+                } catch (e) {}
+                
+                let row = [item.start_date.split('T')[0], item.sport_type, cleanTitle, item.tss || 0, dist, time, elev, hr, cadence];
+                csvContent += row.join(",") + "\n";
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `ironman_log_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            exportBtn.innerText = originalText;
+            exportBtn.disabled = false;
+        }
+
+        // --- AI COACH CHAT LOGIC ---
+        function togglePassword(id) {
+            const el = document.getElementById(id);
+            if (el.type === "password") { el.type = "text"; } else { el.type = "password"; }
+        }
+
+        function getCoachAvatar(mood) {
+            // Determine the active persona category
+            let persona = 'empathetic';
+            const toneCheck = currentCoachTone.toLowerCase();
+            if (toneCheck.includes('madison')) persona = 'madison';
+            else if (toneCheck.includes('strict')) persona = 'strict';
+            else if (toneCheck.includes('cheerleader')) persona = 'cheer';
+
+            // IMPORTANT: Create a folder in your 'public' directory called 'avatars'.
+            // Save your 12 images there using this naming convention:
+            // e.g., 'empathetic-default.png', 'madison-hype.png', 'strict-disappointed.png'
+            
+            const moodKey = (mood === 'thinking' || !mood) ? 'default' : mood;
+            const imagePath = `/avatars/${persona}-${moodKey}.png`;
+
+            // Optional Fallback logic if the real images are missing
+            const fallbackColors = {
+                'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e' },
+                'strict':     { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626' },
+                'cheer':      { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e' },
+                'madison':      { default: '374151', hype: '111827', disappointed: '7f1d1d' }
+            };
+            const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
+            const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
+
+            // Try to load the local image; if you haven't uploaded it yet, it will fail silently in the browser 
+            // and you can use an onerror attribute in the HTML, but for now we'll just return the path.
+            // When you create the images, uncomment the imagePath return!
+            
+            return imagePath; 
+            return fallbackUrl; 
+        }
+
+        async function loadChatHistory() {
+            try {
+                const res = await fetch('/api/chat/history', { headers: getAuthHeaders() });
+                if (!res.ok) return;
+                const history = await res.json();
+                const chatWindow = document.getElementById('chat-window');
+                if(!chatWindow) return;
+                
+                if (!history || history.length === 0) {
+                    chatWindow.innerHTML = `
+                        <div class="flex items-end gap-2 md:gap-3">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
+                                <img src="${getCoachAvatar('default')}" alt="Coach" class="w-full h-full object-cover">
+                            </div>
+                            <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
+                                <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Coach Nana</span>
+                                <span class="whitespace-pre-wrap">Systems nominal. I have synchronized your latest profile settings. Ready to get to work?</span>
+                            </div>
+                        </div>`;
+                    return;
+                }
+
+                let html = '';
+                history.forEach(msg => {
+                    if (msg.role === 'user') {
+                        html += `
+                            <div class="flex justify-end">
+                                <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
+                                    <span class="whitespace-pre-wrap">${msg.content}</span>
+                                </div>
+                            </div>`;
+                    } else {
+                        let avatarImg = getCoachAvatar(msg.mood || 'default');
+                        let formattedContent = msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        html += `
+                            <div class="flex items-end gap-2 md:gap-3">
+                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
+                                    <img src="${avatarImg}" alt="Coach" class="w-full h-full object-cover">
+                                </div>
+                                <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
+                                    <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Coach Nana</span>
+                                    <span class="whitespace-pre-wrap">${formattedContent}</span>
+                                </div>
+                            </div>`;
+                    }
+                });
+                chatWindow.innerHTML = html;
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            } catch (e) { console.error("Chat History Load Error:", e); }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input'); 
+            const message = input.value.trim(); 
+            if(!message) return;
+            
+            const chatWindow = document.getElementById('chat-window');
+            
+            chatWindow.innerHTML += `
+                <div class="flex justify-end">
+                    <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
+                        <span class="whitespace-pre-wrap">${message}</span>
+                    </div>
+                </div>`;
+            
+            input.value = ''; 
+            input.style.height = '44px';
+            chatWindow.scrollTop = chatWindow.scrollHeight; 
+            
+            const loadId = 'loading-' + Date.now();
+            let thinkingAvatar = getCoachAvatar('thinking');
+            
+            chatWindow.innerHTML += `
+                <div class="flex items-end gap-2 md:gap-3" id="${loadId}">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
+                        <img src="${thinkingAvatar}" alt="Coach" class="w-full h-full object-cover opacity-70">
+                    </div>
+                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm shadow-sm text-theme-text flex items-center gap-1.5 h-[44px]">
+                        <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce"></span>
+                        <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
+                        <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+                    </div>
+                </div>`;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat', { 
+                    method: 'POST', 
+                    headers: getAuthHeaders(), 
+                    body: JSON.stringify({ message }) 
+                });
+                const data = await res.json();
+                
+                let finalAvatar = getCoachAvatar(data.mood || 'default');
+                let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                
+                document.getElementById(loadId).outerHTML = `
+                    <div class="flex items-end gap-2 md:gap-3">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
+                            <img src="${finalAvatar}" alt="Coach" class="w-full h-full object-cover">
+                        </div>
+                        <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
+                            <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Coach Nana</span>
+                            <span class="whitespace-pre-wrap">${formattedContent}</span>
+                        </div>
+                    </div>`;
+                    
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                if (data.planUpdated) { loadMicroPlan(); }
+                
+            } catch (error) { 
+                document.getElementById(loadId).outerHTML = `
+                    <div class="flex justify-center my-4">
+                        <div class="bg-red-900 border border-red-700 text-xs px-3 py-1.5 rounded-full text-red-100 shadow-sm">
+                            Connection interrupted. Please try again.
+                        </div>
+                    </div>`; 
+            }
+        }
+
+// --- MANUAL WEIGHT LOGGING (UPDATED FOR COMMAS) ---
+        async function submitManualWeight() {
+            // Replace commas with periods to make JavaScript happy
+            const weightInput = document.getElementById('log-weight').value.replace(',', '.');
+            const bfInput = document.getElementById('log-bf').value.replace(',', '.');
+            
+            if (!weightInput || isNaN(parseFloat(weightInput))) {
+                alert("Please enter a valid weight in kg.");
+                return;
+            }
+
+            const dateStr = new Date().toLocaleDateString('en-CA'); 
+
+            const payload = {
+                date: dateStr,
+                weight_kg: parseFloat(weightInput),
+                body_fat_percent: bfInput ? parseFloat(bfInput) : null
+            };
+
+            try {
+                const res = await fetch('/api/weight', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    document.getElementById('log-weight').value = '';
+                    document.getElementById('log-bf').value = '';
+                    buildDashboard(); 
+                } else {
+                    alert("Failed to save weight. Check server console.");
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function toggleGarminBtn() {
+            const checkboxes = document.querySelectorAll('.garmin-sync-cb:checked');
+            const btn = document.getElementById('garmin-sync-btn');
+            if (btn) {
+                if (checkboxes.length === 0) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.classList.remove('hover:bg-theme-border');
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.classList.add('hover:bg-theme-border');
+                }
+            }
+        }
+
+        // Initialize App
+        document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        checkLogin();
+        checkStravaCallback();
+    </script>
+</body>
+</html>
