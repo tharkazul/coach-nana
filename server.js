@@ -643,18 +643,20 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                 if (err) return res.status(500).json({ error: "Database error." });
                 if (!workouts || workouts.length === 0) return res.status(400).json({ error: "No upcoming workouts to sync." });
                 
-                // NEW: Filter the database results to ONLY include the ones the user checked
+                // Now safely filtering inside the callback
                 const workoutsToSync = workouts.filter(w => 
                     selectedWorkouts.some(sw => sw.date === w.date && sw.sport === w.sport)
                 );
                 
+                console.log("DEBUG: Total workouts found:", workouts.length);
+                console.log("DEBUG: Workouts to sync after filter:", workoutsToSync.length);
+
                 if (workoutsToSync.length === 0) {
                     return res.status(400).json({ error: "Selected workouts could not be found in the database." });
                 }
 
                 let syncedCount = 0;
 
-                // 4. Iterate and push each workout SEQUENTIALLY
                 for (const workout of workoutsToSync) {
                     if (workout.sport === 'Rest' || !SPORT_MAP[workout.sport]) continue;
 
@@ -671,8 +673,10 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
 
                     // Map steps to Garmin's ExecutableStepDTO
                     const garminSteps = stepsArray.map((step, index) => {
+                        // FIX: Use the normalized type for the map lookup
                         const garminStepType = (step.type === 'drill') ? 'recovery' : step.type;
-                        const stepDef = STEP_TYPE_MAP[step.type] || STEP_TYPE_MAP['interval'];
+                        
+                        const stepDef = STEP_TYPE_MAP[garminStepType] || STEP_TYPE_MAP['interval'];
                         const targetDef = TARGET_TYPE_MAP[step.target_type] || TARGET_TYPE_MAP['no.target'];
                         const conditionDef = CONDITION_TYPE_MAP[step.condition_type] || CONDITION_TYPE_MAP['time'];
 
@@ -694,19 +698,19 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                         return stepDTO;
                     });
 
+                    // ... rest of your wkt object and client.post logic ...
                     const wkt = {
-                        workoutName: `Coach Nana: ${workout.sport}`,
+                        workoutName: `Coach Spark: ${workout.sport}`,
                         description: workout.description,
                         sportType: sportDef,
                         workoutSegments: [{ segmentOrder: 1, sportType: sportDef, workoutSteps: garminSteps }]
                     };
-
+                    
                     if (workout.sport === 'Swim') {
                         wkt.poolLength = 25; 
                         wkt.poolLengthUnit = { unitId: 1, unitKey: "meter", factor: 100 };
                     }
 
-                    // Push to Garmin
                     try {
                         const response = await client.post('https://connectapi.garmin.com/workout-service/workout', wkt);
                         const workoutId = response?.workoutId || response?.data?.workoutId;
@@ -718,12 +722,10 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                         console.error(`❌ Sync Failed for ${workout.sport} on ${workout.date}`);
                     }
                     
-                    // Crucial: Wait 1 second before next request
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
-                // SUCCESS: This only triggers once the loop is finished
-                res.json({ message: `Successfully pushed ${syncedCount} structured workouts to your Garmin calendar!` });
+                res.json({ message: `Successfully pushed ${syncedCount} structured workouts!` });
             });
         } catch (error) {
             console.error("Garmin Sync Error:", error);
