@@ -608,6 +608,9 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
 // --- MULTI-TENANT GARMIN SYNC ROUTE ---
 app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
+    // FORCE LOGGING - This will show up even if the rest of the function crashes
+    console.log("DEBUG: Sync route triggered for user:", req.user.id);
+    console.log("DEBUG: Request body:", JSON.stringify(req.body));
     // 0. NEW: Grab the user's selected workouts from the request body
     const selectedWorkouts = req.body.workouts;
     if (!selectedWorkouts || selectedWorkouts.length === 0) {
