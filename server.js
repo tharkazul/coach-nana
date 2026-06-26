@@ -53,7 +53,14 @@ db.serialize(() => {
         coach_tone TEXT DEFAULT 'Empathetic but demanding elite endurance coach.', 
         athlete_context TEXT DEFAULT 'No context provided yet.'
     )`);
-
+    db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
+        user_id INTEGER PRIMARY KEY,
+        access_token TEXT NOT NULL,
+        refresh_token TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        strava_id TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`);    
     // 2. Multi-Tenant Activity Tables (Notice the UNIQUE constraints combining user_id and date)
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, UNIQUE(user_id, date))`);
@@ -126,6 +133,15 @@ const CONDITION_TYPE_MAP = {
 };
 
 // --- AUTH ROUTES ---
+app.post('/webhook/strava', (req, res) => {
+    const { aspect_type, object_id, owner_id } = req.body;
+    // If it's a new activity, trigger the sync
+    if (aspect_type === 'create') {
+        getStravaActivity(owner_id, object_id);
+    }
+    res.status(200).send('EVENT_RECEIVED');
+});
+
 // Register a new friend
 app.post('/api/auth/register', async (req, res) => {
     const { username, password, context } = req.body;
@@ -764,6 +780,52 @@ app.get('/api/weight', authenticateToken, (req, res) => {
         }
     );
 });
+
+async function getStravaActivity(userId, activityId) {
+    try {
+        // 1. Get token for THIS specific user
+        const token = await getStravaTokenForUser(userId); // You'll need this helper
+        
+        // Fetch activity
+        const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        const data = await res.json();
+        
+        // Calculate TSS
+        const tss = Math.round((data.moving_time / 3600) * Math.pow((data.average_heartrate || 165) / 165, 2) * 100);
+        
+        // 2. Save/Update activity for this specific user
+        db.run(`INSERT INTO activities (user_id, id, name, sport_type, tss, start_date) 
+                VALUES (?, ?, ?, ?, ?, ?) 
+                ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
+            [userId, data.id, data.name, data.sport_type, tss, data.start_date]);
+
+        const activityDate = data.start_date.split('T')[0];
+        
+        // 3. Fetch plan for THIS user on THAT date
+        db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ?", 
+            [userId, activityDate], async (err, plan) => {
+            
+            if (err || !plan) return; 
+
+            // ... (Keep your existing newDescription formatting logic here) ...
+            
+            // 4. Update Strava
+            await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ description: newDescription })
+            });
+        });
+
+    } catch (e) { 
+        console.error(`Activity Fetch/Update Error for User ${userId}:`, e); 
+    }
+}
 
 app.listen(process.env.PORT || 3001, () => {
     console.log('🚀 Coach Nana HQ Multi-Tenant Engine live on port 3001...');
