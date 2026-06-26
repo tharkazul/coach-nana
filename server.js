@@ -272,7 +272,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     \`\`\`
                     *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the example.*`;
 
-                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: systemPrompt });
+                const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash", systemInstruction: systemPrompt });
                 
                 // Initialize the chat safely with our scrubbed history
                 const chat = model.startChat({ history: cleanHistory });
