@@ -608,141 +608,116 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
 // --- MULTI-TENANT GARMIN SYNC ROUTE ---
 app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
-    try {
-        console.log("DEBUG: Route entered");
-    // FORCE LOGGING - This will show up even if the rest of the function crashes
     console.log("DEBUG: Sync route triggered for user:", req.user.id);
-    console.log("DEBUG: Request body:", JSON.stringify(req.body));
-    // 0. NEW: Grab the user's selected workouts from the request body
     const selectedWorkouts = req.body.workouts;
+
     if (!selectedWorkouts || selectedWorkouts.length === 0) {
         return res.status(400).json({ error: "No workouts selected for sync." });
     }
-    
-    // 1. Get the user's encrypted credentials
-    db.get(`SELECT garmin_username, garmin_password FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
-        if (err || !user || !user.garmin_username || !user.garmin_password) {
-            return res.status(400).json({ error: "Garmin credentials not found in settings." });
+
+    try {
+        // 1. Get and Decrypt credentials
+        const user = await new Promise((resolve, reject) => {
+            db.get(`SELECT garmin_username, garmin_password FROM users WHERE id = ?`, [req.user.id], (err, row) => {
+                if (err || !row) reject(new Error("User credentials not found"));
+                else resolve(row);
+            });
+        });
+
+        // 2. Initialize Garmin Client
+        const decryptedPassword = decrypt(user.garmin_password);
+        const GCClient = new GarminConnect({ username: user.garmin_username, password: decryptedPassword });
+        
+        console.log("DEBUG: Attempting login for user:", user.garmin_username);
+        await GCClient.login(user.garmin_username, decryptedPassword);
+        const client = GCClient.client || GCClient.http;
+        if (!client) throw new Error("Garmin client initialization failed.");
+
+        // 3. Fetch workouts using a Promise (No more callback nesting)
+        const todayStr = new Date().toISOString().split('T')[0];
+        const workouts = await new Promise((resolve, reject) => {
+            db.all(`SELECT date, sport, description, target_tss, steps_json FROM micro_plan WHERE user_id = ? AND date >= ?`, 
+            [req.user.id, todayStr], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows || []);
+            });
+        });
+
+        // 4. Filter and Validate
+        const workoutsToSync = workouts.filter(w => 
+            selectedWorkouts.some(sw => sw.date === w.date && sw.sport === w.sport)
+        );
+
+        if (workoutsToSync.length === 0) return res.status(400).json({ error: "No valid workouts found to sync." });
+
+        let syncedCount = 0;
+
+        // 5. Sequential Sync Loop
+        for (const workout of workoutsToSync) {
+            if (workout.sport === 'Rest' || !SPORT_MAP[workout.sport]) continue;
+
+            const sportDef = SPORT_MAP[workout.sport];
+            let stepsArray = [];
+            try { stepsArray = JSON.parse(workout.steps_json); } catch(e) { stepsArray = []; }
+
+            if (stepsArray.length === 0) {
+                let durationMins = Math.max(5, Math.round((workout.target_tss / 55) * 60));
+                stepsArray = [{ type: 'interval', condition_type: 'time', condition_value: durationMins, target_type: 'no.target' }];
+            }
+
+            const garminSteps = stepsArray.map((step, index) => {
+                const normalizedType = (step.type === 'drill') ? 'interval' : step.type;
+                const stepDef = STEP_TYPE_MAP[normalizedType] || STEP_TYPE_MAP['interval'];
+                const targetDef = TARGET_TYPE_MAP[step.target_type] || TARGET_TYPE_MAP['no.target'];
+                const conditionDef = CONDITION_TYPE_MAP[step.condition_type] || CONDITION_TYPE_MAP['time'];
+
+                const stepDTO = {
+                    type: "ExecutableStepDTO",
+                    stepOrder: index + 1,
+                    stepType: { stepTypeId: stepDef.id, stepTypeKey: stepDef.key },
+                    endCondition: { conditionTypeId: conditionDef.id, conditionTypeKey: conditionDef.key },
+                    endConditionValue: step.condition_type === 'time' ? step.condition_value * 60 : step.condition_value,
+                    targetType: { workoutTargetTypeId: targetDef.id, workoutTargetTypeKey: targetDef.key },
+                    targetValueOne: null, targetValueTwo: null,
+                    zoneNumber: step.zone ? parseInt(step.zone, 10) : null 
+                };
+
+                if (step.condition_type === 'distance') {
+                    stepDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
+                }
+                return stepDTO;
+            });
+
+            const wkt = {
+                workoutName: `Coach Spark: ${workout.sport}`,
+                description: workout.description,
+                sportType: sportDef,
+                workoutSegments: [{ segmentOrder: 1, sportType: sportDef, workoutSteps: garminSteps }]
+            };
+
+            if (workout.sport === 'Swim') {
+                wkt.poolLength = 25; 
+                wkt.poolLengthUnit = { unitId: 1, unitKey: "meter", factor: 100 };
+            }
+
+            try {
+                const response = await client.post('https://connectapi.garmin.com/workout-service/workout', wkt);
+                const workoutId = response?.workoutId || response?.data?.workoutId;
+                if (workoutId) {
+                    await client.post(`https://connectapi.garmin.com/workout-service/schedule/${workoutId}`, { date: workout.date });
+                    syncedCount++;
+                }
+            } catch (err) {
+                console.error(`❌ Sync Failed for ${workout.sport} on ${workout.date}:`, err.message);
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        try {
-            // 2. Decrypt the password and initialize the Garmin client
-            const decryptedPassword = decrypt(user.garmin_password);
-            const GCClient = new GarminConnect({ 
-            username: user.garmin_username, 
-            password: decryptedPassword 
-            });
-            
-            console.log("DEBUG: Attempting login for user:", user.garmin_username);
-            await GCClient.login(user.garmin_username, decryptedPassword);
-            const client = GCClient.client || GCClient.http;
+        res.json({ message: `Successfully pushed ${syncedCount} structured workouts!` });
 
-            // 3. Fetch the athlete's upcoming workouts
-            const todayStr = new Date().toISOString().split('T')[0];
-            
-            // We use a promise here to keep the DB call clean
-            db.all(
-                `SELECT date, sport, description, target_tss, steps_json 
-                 FROM micro_plan 
-                 WHERE user_id = ? AND date >= ? 
-                 ORDER BY date ASC, id ASC`, 
-                [req.user.id, todayStr], 
-                async (err, workouts) => {
-                if (err) return res.status(500).json({ error: "Database error." });
-                if (!workouts || workouts.length === 0) return res.status(400).json({ error: "No upcoming workouts to sync." });
-                
-                // Now safely filtering inside the callback
-                const workoutsToSync = workouts.filter(w => 
-                    selectedWorkouts.some(sw => sw.date === w.date && sw.sport === w.sport)
-                );
-                
-                console.log("DEBUG: Total workouts found:", workouts.length);
-                console.log("DEBUG: Workouts to sync after filter:", workoutsToSync.length);
-
-                if (workoutsToSync.length === 0) {
-                    return res.status(400).json({ error: "Selected workouts could not be found in the database." });
-                }
-
-                let syncedCount = 0;
-
-                for (const workout of workoutsToSync) {
-                    if (workout.sport === 'Rest' || !SPORT_MAP[workout.sport]) continue;
-
-                    const sportDef = SPORT_MAP[workout.sport];
-                    let stepsArray = [];
-
-                    try { stepsArray = JSON.parse(workout.steps_json); } catch(e) { stepsArray = []; }
-
-                    // Fallback for empty steps
-                    if (stepsArray.length === 0) {
-                        let durationMins = Math.max(5, Math.round((workout.target_tss / 55) * 60));
-                        stepsArray = [{ type: 'interval', condition_type: 'time', condition_value: durationMins, target_type: 'no.target' }];
-                    }
-
-                    // Map steps to Garmin's ExecutableStepDTO
-                    const garminSteps = stepsArray.map((step, index) => {
-                        // FIX: Use the normalized type for the map lookup
-                        const garminStepType = (step.type === 'drill') ? 'interval' : step.type;
-                        
-                        const stepDef = STEP_TYPE_MAP[garminStepType] || STEP_TYPE_MAP['interval'];
-                        const targetDef = TARGET_TYPE_MAP[step.target_type] || TARGET_TYPE_MAP['no.target'];
-                        const conditionDef = CONDITION_TYPE_MAP[step.condition_type] || CONDITION_TYPE_MAP['time'];
-
-                        const stepDTO = {
-                            type: "ExecutableStepDTO",
-                            stepOrder: index + 1,
-                            stepType: { stepTypeId: stepDef.id, stepTypeKey: stepDef.key },
-                            endCondition: { conditionTypeId: conditionDef.id, conditionTypeKey: conditionDef.key },
-                            endConditionValue: step.condition_type === 'time' ? step.condition_value * 60 : step.condition_value,
-                            targetType: { workoutTargetTypeId: targetDef.id, workoutTargetTypeKey: targetDef.key },
-                            targetValueOne: null,
-                            targetValueTwo: null,
-                            zoneNumber: step.zone ? parseInt(step.zone, 10) : null 
-                        };
-
-                        if (step.condition_type === 'distance') {
-                            stepDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
-                        }
-                        return stepDTO;
-                    });
-
-                    // ... rest of your wkt object and client.post logic ...
-                    const wkt = {
-                        workoutName: `Coach Spark: ${workout.sport}`,
-                        description: workout.description,
-                        sportType: sportDef,
-                        workoutSegments: [{ segmentOrder: 1, sportType: sportDef, workoutSteps: garminSteps }]
-                    };
-                    
-                    if (workout.sport === 'Swim') {
-                        wkt.poolLength = 25; 
-                        wkt.poolLengthUnit = { unitId: 1, unitKey: "meter", factor: 100 };
-                    }
-
-                    try {
-                        const response = await client.post('https://connectapi.garmin.com/workout-service/workout', wkt);
-                        const workoutId = response?.workoutId || response?.data?.workoutId;
-                        if (workoutId) {
-                            await client.post(`https://connectapi.garmin.com/workout-service/schedule/${workoutId}`, { date: workout.date });
-                            syncedCount++;
-                        }
-                    } catch (err) {
-                        console.error(`❌ Sync Failed for ${workout.sport} on ${workout.date}`);
-                    }
-                    
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-
-                res.json({ message: `Successfully pushed ${syncedCount} structured workouts!` });
-            });
-        } catch (error) {
-            console.error("Garmin Sync Error:", error);
-            res.status(500).json({ error: "Failed to authenticate or sync with Garmin." });
-        }
-    });
-} catch (err) {
+    } catch (err) {
         console.error("CRITICAL ERROR in sync-garmin:", err);
-        return res.status(500).json({ error: "Server crashed in sync-garmin", details: err.message });
+        return res.status(500).json({ error: "Server sync failed", details: err.message });
     }
 });
 
