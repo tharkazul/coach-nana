@@ -593,10 +593,12 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
             if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
 
-            //const simulatedUserMessage = `Can you generate my ${phase} phase training plan starting ${targetDate}?`;
-            //db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
-            //db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
+            // Replace with a more natural, shorter message
+            const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
+            const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
 
+            db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
+            db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, coachAcknowledgement, mood]);
             res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
 
         } catch (e) {
