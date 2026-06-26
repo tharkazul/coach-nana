@@ -593,9 +593,9 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
             if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
 
-            const simulatedUserMessage = `Can you generate my ${phase} phase training plan starting ${targetDate}?`;
-            db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
-            db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
+            //const simulatedUserMessage = `Can you generate my ${phase} phase training plan starting ${targetDate}?`;
+            //db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
+            //db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
 
             res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
 
