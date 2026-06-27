@@ -477,7 +477,15 @@
         </div>
     </main>
 
-
+<div id="image-modal" class="fixed inset-0 z-[10000] hidden flex items-center justify-center bg-black/80" onclick="this.classList.add('hidden')">
+    <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
+</div>
+<script>
+    function enlargeAvatar(src) {
+        document.getElementById('enlarged-img').src = src;
+        document.getElementById('image-modal').classList.remove('hidden');
+    }
+</script>
 <script src="/script.js"></script>
 </body>
 </html>

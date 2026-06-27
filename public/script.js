@@ -1051,7 +1051,7 @@ async function generateTemplate() {
                         html += `
                             <div class="flex items-end gap-2 md:gap-3">
                                 <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
-                                    <img src="${avatarImg}" alt="Coach" class="w-full h-full object-cover">
+                                    <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 ...">
                                 </div>
                                 <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
                                     <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
