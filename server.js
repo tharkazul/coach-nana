@@ -643,6 +643,27 @@ app.post('/api/feedback', authenticateToken, upload.single('feedbackImage'), (re
     );
 });
 
+// --- ADMIN FEEDBACK ROUTE ---
+app.get('/api/admin/feedback', authenticateToken, (req, res) => {
+    // 1. Security Check: Ensure the requester is exactly 'rutger'
+    db.get(`SELECT username FROM users WHERE id = ?`, [req.user.id], (err, user) => {
+        if (err || !user || user.username !== 'rutger') {
+            return res.status(403).json({ error: "Access denied. Admins only." });
+        }
+
+        // 2. Fetch feedback and join with the users table
+        db.all(`
+            SELECT f.id, f.text, f.image_path, f.created_at, u.username
+            FROM feedback f
+            LEFT JOIN users u ON f.user_id = u.id
+            ORDER BY f.created_at DESC
+        `, [], (err, rows) => {
+            if (err) return res.status(500).json({ error: "Database error." });
+            res.json(rows);
+        });
+    });
+});
+
 // --- MULTI-TENANT GARMIN SYNC ROUTE ---
 app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
     console.log("DEBUG: Sync route triggered for user:", req.user.id);
@@ -863,6 +884,51 @@ async function getStravaActivity(userId, activityId) {
 
     } catch (e) { 
         console.error(`Activity Fetch/Update Error for User ${userId}:`, e); 
+    }
+}
+
+// --- ADMIN FEEDBACK LOGIC ---
+async function loadAdminFeedback() {
+    try {
+        const response = await fetch('/api/admin/feedback', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+
+        // If the server rejects us (403), do nothing
+        if (!response.ok) return; 
+
+        const data = await response.json();
+        const tbody = document.getElementById('admin-feedback-table');
+        
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-theme-muted">No feedback yet. You're doing great!</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.map(f => {
+            // Format the date nicely
+            const date = new Date(f.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            
+            // Format the image link if an image exists
+            let imageHtml = '<span class="text-theme-muted text-[10px]">None</span>';
+            if (f.image_path) {
+                // We use replace to ensure Windows backslashes are converted to web forward-slashes just in case
+                const imgUrl = `/${f.image_path.replace(/\\/g, '/')}`; 
+                // We reuse your enlargeAvatar function to make it pop up beautifully!
+                imageHtml = `<button onclick="enlargeAvatar('${imgUrl}')" class="text-theme-accent hover:underline text-xs font-bold transition">🖼️ View</button>`;
+            }
+
+            return `
+                <tr class="hover:bg-theme-bg transition">
+                    <td class="px-4 py-3 text-xs whitespace-nowrap text-theme-muted">${date}</td>
+                    <td class="px-4 py-3 font-medium text-xs">${f.username || 'Unknown'}</td>
+                    <td class="px-4 py-3 text-xs leading-relaxed opacity-90">${f.text}</td>
+                    <td class="px-4 py-3 text-center">${imageHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error("Failed to load admin feedback", error);
     }
 }
 
