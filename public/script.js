@@ -218,9 +218,15 @@
 
                 // NEW: Admin Check
                 if (data.username && data.username.toLowerCase() === 'rutger') {
-                    document.getElementById('nav-admin').classList.remove('hidden');
+                    // 1. Unhide the Admin Panel button in the sidebar
+                    const adminNav = document.getElementById('nav-admin');
+                    if (adminNav) {
+                        adminNav.classList.remove('hidden');
+                    }
+
+                    // 2. Unhide the secret Admin-Only coach tone
                     const select = document.getElementById('set-coach-tone');
-                    if (!select.querySelector('option[value*="madison"]')) {
+                    if (select && !select.querySelector('option[value*="madison"]')) {
                         select.innerHTML += `<option value="Flirty, Horny, Thirsty, supportive, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
                     }
                 }
