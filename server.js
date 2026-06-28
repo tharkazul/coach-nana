@@ -8,15 +8,18 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const crypto = require('crypto');
 const { GarminConnect } = require('@flow-js/garmin-connect');
+const multer = require('multer');
+const app = express();
+const upload = multer({ dest: 'uploads/' });
 
 // This key MUST be exactly 32 bytes (256 bits). 
 // In production, move this to your .env file!
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'; 
 const IV_LENGTH = 16; // For AES, this is always 16 bytes
 
-const multer = require('multer');
-// Configure multer to save files in the 'uploads' directory
-const upload = multer({ dest: 'uploads/' }); 
+
+
+ 
 
 // Optional but recommended: Serve the uploads folder so you (the admin) can view the images later
 app.use('/uploads', express.static('uploads'));
@@ -42,7 +45,7 @@ function decrypt(text) {
     return decrypted.toString();
 }
 
-const app = express();
+
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
