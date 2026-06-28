@@ -218,13 +218,10 @@
 
                 // NEW: Admin Check
                 if (data.username && data.username.toLowerCase() === 'rutger') {
+                    document.getElementById('nav-admin').classList.remove('hidden');
                     const select = document.getElementById('set-coach-tone');
                     if (!select.querySelector('option[value*="madison"]')) {
                         select.innerHTML += `<option value="Flirty, Horny, Thirsty, supportive, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
-                    }
-                    // Add this line where you process the user's data on load
-                    if (userData.username === 'rutger') {
-                        document.getElementById('nav-admin').classList.remove('hidden');
                     }
                 }
                 
