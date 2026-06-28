@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spark | Training HQ</title>
-    <link rel="icon" type="image/png" href="/icon3.png">
-    <link rel="apple-touch-icon" href="/icon3.png">
+    <link rel="icon" type="image/png" href="/icon4.png">
+    <link rel="apple-touch-icon" href="/icon4.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -470,6 +470,27 @@
                             <p id="strava-sync-message" class="text-xs font-bold mt-3 text-theme-accent hidden"></p>
                         </div>
                     </div>
+                    <div class="bg-theme-card border border-theme-border rounded-md p-4 mt-6">
+                        <h3 class="text-sm font-bold text-theme-text mb-2">Beta Feedback</h3>
+                        <p class="text-xs text-theme-muted mb-4">Find a bug? Have an idea? Let us know!</p>
+                        
+                        <form id="feedback-form" onsubmit="submitFeedback(event)" class="space-y-3">
+                            <textarea name="text" id="feedback-text" rows="3" required placeholder="Describe the issue or feature request..." class="w-full bg-theme-bg border border-theme-border rounded-md p-2 text-xs text-theme-text focus:outline-none focus:border-theme-accent resize-none"></textarea>
+                            
+                            <div class="flex items-center space-x-3">
+                                <label for="feedback-image" class="cursor-pointer text-xs bg-theme-bg border border-theme-border text-theme-text py-1.5 px-3 rounded hover:border-theme-accent transition">
+                                    📎 Attach Screenshot
+                                </label>
+                                <input type="file" id="feedback-image" name="feedbackImage" accept="image/png, image/jpeg" class="hidden" onchange="document.getElementById('file-name').innerText = this.files[0] ? this.files[0].name : ''">
+                                <span id="file-name" class="text-[10px] text-theme-muted truncate max-w-[150px]"></span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pt-2">
+                                <span id="feedback-status" class="text-xs font-medium"></span>
+                                <button type="submit" class="bg-theme-accent text-white text-xs font-bold py-1.5 px-4 rounded hover:opacity-90 transition">Send Feedback</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
                 </div>
 
@@ -480,12 +501,7 @@
 <div id="image-modal" class="fixed inset-0 z-[10000] hidden flex items-center justify-center bg-black/80" onclick="this.classList.add('hidden')">
     <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
 </div>
-<script>
-    function enlargeAvatar(src) {
-        document.getElementById('enlarged-img').src = src;
-        document.getElementById('image-modal').classList.remove('hidden');
-    }
-</script>
+
 <script src="/script.js"></script>
 </body>
 </html>

@@ -14,6 +14,14 @@ const { GarminConnect } = require('@flow-js/garmin-connect');
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'; 
 const IV_LENGTH = 16; // For AES, this is always 16 bytes
 
+const multer = require('multer');
+// Configure multer to save files in the 'uploads' directory
+const upload = multer({ dest: 'uploads/' }); 
+
+// Optional but recommended: Serve the uploads folder so you (the admin) can view the images later
+app.use('/uploads', express.static('uploads'));
+
+
 function encrypt(text) {
     if (!text) return null;
     const iv = crypto.randomBytes(IV_LENGTH);
@@ -606,6 +614,30 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             res.status(500).json({ error: "AI failed to respond." });
         }
     });
+});
+
+// --- FEEDBACK UPLOAD ROUTE ---
+app.post('/api/feedback', authenticateToken, upload.single('feedbackImage'), (req, res) => {
+    const feedbackText = req.body.text;
+    // If the user uploaded a file, multer puts it in req.file
+    const imagePath = req.file ? req.file.path : null;
+    const createdAt = new Date().toISOString();
+
+    if (!feedbackText) {
+        return res.status(400).json({ error: "Feedback text is required." });
+    }
+
+    db.run(
+        `INSERT INTO feedback (user_id, text, image_path, created_at) VALUES (?, ?, ?, ?)`, 
+        [req.user.id, feedbackText, imagePath, createdAt],
+        function(err) {
+            if (err) {
+                console.error("Failed to save feedback:", err);
+                return res.status(500).json({ error: "Failed to save feedback." });
+            }
+            res.json({ message: "Feedback received loud and clear! Thank you." });
+        }
+    );
 });
 
 // --- MULTI-TENANT GARMIN SYNC ROUTE ---

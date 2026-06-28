@@ -1026,7 +1026,7 @@ async function generateTemplate() {
                     chatWindow.innerHTML = `
                         <div class="flex items-end gap-2 md:gap-3">
                             <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
-                                <img src="${getCoachAvatar('default')}" alt="Coach" class="w-full h-full object-cover">
+                                <img onclick="enlargeAvatar(this.src)" src="${getCoachAvatar('default')}" alt="Coach" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                             </div>
                             <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
                                 <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
@@ -1051,7 +1051,7 @@ async function generateTemplate() {
                         html += `
                             <div class="flex items-end gap-2 md:gap-3">
                                 <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
-                                    <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 ...">
+                                    <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                                 </div>
                                 <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
                                     <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
@@ -1063,6 +1063,63 @@ async function generateTemplate() {
                 chatWindow.innerHTML = html;
                 chatWindow.scrollTop = chatWindow.scrollHeight;
             } catch (e) { console.error("Chat History Load Error:", e); }
+        }
+
+        async function submitFeedback(event) {
+            event.preventDefault(); // Stop page reload
+            
+            const form = document.getElementById('feedback-form');
+            const statusEl = document.getElementById('feedback-status');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            // Package the text and file into a FormData object
+            const formData = new FormData(form);
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Sending...";
+            statusEl.innerText = "";
+
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        // Notice: We DO NOT set 'Content-Type' when sending FormData.
+                        // The browser automatically sets it to multipart/form-data with the correct boundary.
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusEl.innerText = "✅ Sent! Thank you.";
+                    statusEl.className = "text-xs font-medium text-green-500";
+                    form.reset(); // Clear the form
+                    document.getElementById('file-name').innerText = ""; // Clear file label
+                } else {
+                    statusEl.innerText = `❌ Error: ${data.error}`;
+                    statusEl.className = "text-xs font-medium text-red-500";
+                }
+            } catch (error) {
+                statusEl.innerText = "❌ Network error. Try again.";
+                statusEl.className = "text-xs font-medium text-red-500";
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Send Feedback";
+                // Clear success message after 5 seconds
+                setTimeout(() => { if(statusEl.innerText.includes('✅')) statusEl.innerText = ''; }, 5000);
+            }
+        }
+
+        // --- AVATAR MODAL LOGIC ---
+        function enlargeAvatar(src) {
+            const modal = document.getElementById('image-modal');
+            const img = document.getElementById('enlarged-img');
+            if (modal && img) {
+                img.src = src;
+                modal.classList.remove('hidden');
+            }
         }
 
         async function sendMessage() {
