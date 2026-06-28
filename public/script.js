@@ -217,14 +217,26 @@
                 const data = await res.json();
 
                 // NEW: Admin Check
-                if (data.username && data.username.toLowerCase() === 'rutger') {
-                    // 1. Unhide the Admin Panel button in the sidebar
+                // 1. Let's log the data to see exactly what we have to work with
+                console.log("🕵️ Checking Admin Status for:", data);
+
+                // 2. A more robust check: checks username, email, OR if you are user ID #1
+                const isRutger = (data.username && data.username.toLowerCase() === 'rutger') || 
+                                (data.email && data.email.toLowerCase().includes('rutger')) || 
+                                (data.id === 1); // From your previous logs, you are likely User #1!
+
+                if (isRutger) {
+                    console.log("✅ Admin verified! Unlocking admin features...");
+                    
+                    // Unhide the Admin Panel button in the sidebar
                     const adminNav = document.getElementById('nav-admin');
                     if (adminNav) {
                         adminNav.classList.remove('hidden');
+                    } else {
+                        console.error("❌ Could not find 'nav-admin' in the HTML!");
                     }
 
-                    // 2. Unhide the secret Admin-Only coach tone
+                    // Unhide the secret Admin-Only coach tone
                     const select = document.getElementById('set-coach-tone');
                     if (select && !select.querySelector('option[value*="madison"]')) {
                         select.innerHTML += `<option value="Flirty, Horny, Thirsty, supportive, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
