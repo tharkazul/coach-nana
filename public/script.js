@@ -271,8 +271,9 @@
         }
 
         async function saveSettings(type) {
+            const statusEl = document.getElementById('settings-status');
             let url = `/api/user/settings/${type}`;
-            let payload = {};
+            let payload = {};  
 
             if (type === 'coach') {
                 payload = {
@@ -298,13 +299,30 @@
                 });
                 
                 if (res.ok) {
-                    alert("Settings saved successfully!");
+                    // Show the status message
+                    statusEl.textContent = "Settings saved successfully!";
+                    statusEl.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200');
+                    statusEl.classList.add('bg-theme-accent-soft', 'text-theme-accent', 'border-theme-accent-border');
+                    statusEl.classList.remove('hidden');
+
+                    // Hide it after 5 seconds
+                    setTimeout(() => {
+                        statusEl.classList.add('hidden');
+                    }, 5000);
+
                     loadSettings(); 
                 } else {
                     const err = await res.json();
-                    alert("Error: " + (err.error || "Failed to save."));
+                    // Show error state
+                    statusEl.textContent = "Error: " + (err.error || "Failed to save.");
+                    statusEl.classList.remove('hidden', 'bg-theme-accent-soft', 'text-theme-accent', 'border-theme-accent-border');
+                    statusEl.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+                    statusEl.classList.remove('hidden');
                 }
-            } catch(e) { alert("Server error."); }
+            } catch(e) { 
+                statusEl.textContent = "Server error. Please try again.";
+                statusEl.classList.remove('hidden');
+            }
         }
 
         async function forceStravaSync() {
@@ -1059,7 +1077,7 @@ async function generateTemplate() {
             // and you can use an onerror attribute in the HTML, but for now we'll just return the path.
             // When you create the images, uncomment the imagePath return!
             
-            return imagePath; 
+            // return imagePath; 
             return fallbackUrl; 
         }
 
