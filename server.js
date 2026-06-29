@@ -499,6 +499,54 @@ app.post('/api/sync-strava', authenticateToken, async (req, res) => {
     });
 });
 
+// --- GET SINGLE ACTIVITY DETAILS (For Modal & Map) ---
+app.get('/api/activity/:id', authenticateToken, (req, res) => {
+    const activityId = req.params.id;
+
+    db.get('SELECT strava_refresh_token FROM users WHERE id = ?', [req.user.id], async (err, user) => {
+        if (err || !user || !user.strava_refresh_token) {
+            return res.status(400).json({ error: "Strava token missing from settings." });
+        }
+
+        try {
+            // 1. Refresh the Strava token (just like in the manual sync route)
+            const tokenRes = await fetch('https://www.strava.com/oauth/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    client_id: process.env.STRAVA_CLIENT_ID,
+                    client_secret: process.env.STRAVA_CLIENT_SECRET,
+                    grant_type: 'refresh_token',
+                    refresh_token: user.strava_refresh_token
+                })
+            });
+
+            const tokenData = await tokenRes.json();
+            if (!tokenData.access_token) {
+                return res.status(401).json({ error: "Strava rejected the token." });
+            }
+
+            // 2. Fetch the rich activity data directly from Strava
+            const actRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+                headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+            });
+
+            if (!actRes.ok) {
+                return res.status(actRes.status).json({ error: "Activity not found on Strava." });
+            }
+
+            const activityData = await actRes.json();
+            
+            // 3. Send the rich data back to the frontend modal
+            res.json(activityData);
+
+        } catch (err) {
+            console.error("Single Activity Fetch Error:", err);
+            res.status(500).json({ error: "Failed to fetch activity details." });
+        }
+    });
+});
+
 // --- OAUTH: EXCHANGE STRAVA CODE FOR TOKEN ---
 app.post('/api/user/settings/strava-exchange', authenticateToken, async (req, res) => {
     const { code } = req.body;
