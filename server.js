@@ -4,16 +4,28 @@ const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// const { GoogleGenerativeAI } = require("@google/generative-ai");
+// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// --- GEMINI LOAD BALANCER REGISTRY ---
+const geminiConfigs = [
+    { 
+        name: "Primary",
+        model: "gemini-3.5-flash", 
+        apiKey: process.env.GEMINI_API_KEY // Your main key
+    },
+    { 
+        name: "Backup",
+        model: "gemini-2.5-flash", 
+        apiKey: process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY // Uses backup key if it exists, otherwise re-uses the main one
+    }
+];
 const crypto = require('crypto');
 const { GarminConnect } = require('@flow-js/garmin-connect');
 const multer = require('multer');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-
-// This key MUST be exactly 32 bytes (256 bits). 
-// In production, move this to your .env file!
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'; 
 const IV_LENGTH = 16; // For AES, this is always 16 bytes
 
@@ -24,6 +36,48 @@ const IV_LENGTH = 16; // For AES, this is always 16 bytes
 // Optional but recommended: Serve the uploads folder so you (the admin) can view the images later
 app.use('/uploads', express.static('uploads'));
 
+async function generateWithFallback(prompt, systemInstruction = null, chatHistory = null) {
+    let lastError = null;
+
+    for (let i = 0; i < geminiConfigs.length; i++) {
+        const config = geminiConfigs[i];
+        
+        try {
+            console.log(`🤖 Attempting AI generation with ${config.name} (${config.model})...`);
+            
+            const genAI = new GoogleGenerativeAI(config.apiKey);
+            
+            // Build model options
+            const modelOptions = { model: config.model };
+            if (systemInstruction) {
+                modelOptions.systemInstruction = systemInstruction;
+            }
+            
+            const model = genAI.getGenerativeModel(modelOptions);
+            
+            let result;
+            if (chatHistory) {
+                // If history is provided, use the Chat interface
+                const chat = model.startChat({ history: chatHistory });
+                result = await chat.sendMessage(prompt);
+            } else {
+                // Otherwise, use a standard single-shot prompt
+                result = await model.generateContent(prompt);
+            }
+            
+            console.log(`✅ AI Success using ${config.name}!`);
+            return result.response.text(); 
+
+        } catch (error) {
+            console.warn(`⚠️ ${config.name} failed. Reason: ${error.message}`);
+            lastError = error;
+            // The loop continues to the next config automatically
+        }
+    }
+
+    console.error("❌ CRITICAL: All Gemini fallback models failed.");
+    throw new Error("Coach Spark is currently catching their breath. Please try again in a moment.");
+}
 
 function encrypt(text) {
     if (!text) return null;
@@ -283,13 +337,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     \`\`\`
                     *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the example.*`;
 
-                const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash", systemInstruction: systemPrompt });
-                
-                // Initialize the chat safely with our scrubbed history
-                const chat = model.startChat({ history: cleanHistory });
-                const result = await chat.sendMessage(message);
-                
-                let aiReply = result.response.text();
+                // Calling the load balancer, passing the message, the persona, AND the history!
+                let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory);
                 let planUpdated = false;
 
                 // Extract JSON if Coach Nana prescribed a workout
@@ -569,13 +618,8 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         Analyze my Form (TSB). If I am highly fatigued (negative TSB), prioritize recovery. If I am fresh (positive TSB), you can push the intensity. Give me a quick encouraging summary of the week's focus based on these metrics, and then provide the JSON block.`;
 
        try {
-            const model = genAI.getGenerativeModel({ 
-                model: "gemini-3.5-flash", 
-                systemInstruction: systemPrompt 
-            });
-
-            const result = await model.generateContent(userPrompt);
-            let aiReply = result.response.text();
+            // Calling the load balancer (No history needed here)
+            let aiReply = await generateWithFallback(userPrompt, systemPrompt);
             let planUpdated = false;
 
             const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
