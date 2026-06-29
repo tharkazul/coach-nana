@@ -334,7 +334,7 @@
         // --- UI NAVIGATION ---
         function switchTab(t) {
             // Safely toggle visibility to prevent missing ID crashes
-            const views = ['dashboard', 'coach', 'settings', 'history'];
+            const views = ['dashboard', 'coach', 'settings', 'history', 'admin'];
             views.forEach(view => {
                 const el = document.getElementById(`view-${view}`);
                 if (el) el.classList.toggle('hidden', t !== view);
@@ -1263,6 +1263,51 @@ async function generateTemplate() {
                 }
             }
         }
+
+// --- ADMIN FEEDBACK LOGIC ---
+    async function loadAdminFeedback() {
+        try {
+            const response = await fetch('/api/admin/feedback', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            if (!response.ok) return; 
+
+            const data = await response.json();
+            const tbody = document.getElementById('admin-feedback-table');
+            
+            if (!tbody) {
+                console.error("Admin table body not found in HTML!");
+                return;
+            }
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-theme-muted">No feedback yet. You're doing great!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(f => {
+                const date = new Date(f.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                let imageHtml = '<span class="text-theme-muted text-[10px]">None</span>';
+                
+                if (f.image_path) {
+                    const imgUrl = `/${f.image_path.replace(/\\/g, '/')}`; 
+                    imageHtml = `<button onclick="enlargeAvatar('${imgUrl}')" class="text-theme-accent hover:underline text-xs font-bold transition">🖼️ View</button>`;
+                }
+
+                return `
+                    <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
+                        <td class="px-4 py-3 text-xs whitespace-nowrap text-theme-muted">${date}</td>
+                        <td class="px-4 py-3 font-medium text-xs">${f.username || 'Unknown'}</td>
+                        <td class="px-4 py-3 text-xs leading-relaxed opacity-90">${f.text}</td>
+                        <td class="px-4 py-3 text-center">${imageHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error("Failed to load admin feedback", error);
+        }
+}
 
         // Initialize App
         document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
