@@ -884,8 +884,38 @@ async function generateTemplate() {
             try {
                 const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
                 document.getElementById('modal-title').innerText = data.name || "Activity Details";
-                let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--'; let distStr = data.distance ? `${(data.distance / 1000).toFixed(2)} km` : '--';
-                document.getElementById('modal-stats').innerHTML = `<div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Distance</div><div class="text-lg md:text-xl font-light text-theme-text">${distStr}</div></div><div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg HR</div><div class="text-lg md:text-xl font-light text-theme-text">${hrStr}</div></div><div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Elevation</div><div class="text-lg md:text-xl font-light text-theme-text">${elevStr}</div></div><div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm"><div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div><div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div></div>`;
+                let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--'; let distStr = data.distance ? `${(data.distance / 1000).toFixed(2)} km` : '--'; 
+                let cadenceStr = '--';
+                if (data.average_cadence) {
+                    if (data.type === 'Run') {
+                        // Multiply by 2 for running to get steps per minute
+                        cadenceStr = `${Math.round(data.average_cadence * 2)} spm`;
+                    } else {
+                        // Use raw value for cycling (RPM)
+                        cadenceStr = `${Math.round(data.average_cadence)} rpm`;
+                    }
+                }
+                document.getElementById('modal-stats').innerHTML = `
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Distance</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${distStr}</div>
+                </div>
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg HR</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${hrStr}</div>
+                </div>
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Elevation</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${elevStr}</div>
+                </div>
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div>
+                </div>
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Cadence</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${cadenceStr}</div>
+                </div>`;
                 if (activityMap) activityMap.remove(); document.getElementById('actual-map').innerHTML = '';
                 activityMap = L.map('actual-map', { zoomControl: false }); L.control.zoom({ position: 'bottomright' }).addTo(activityMap); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(activityMap);
                 if (data.map && data.map.summary_polyline) { const coords = decodePolyline(data.map.summary_polyline); if (coords.length > 0) { const polyline = L.polyline(coords, { color: '#0d9488', weight: 4, opacity: 0.8, lineJoin: 'round' }).addTo(activityMap); activityMap.fitBounds(polyline.getBounds(), { padding: [30, 30] }); } } else { activityMap.setView([52.3676, 4.9041], 13); }
@@ -904,6 +934,16 @@ async function generateTemplate() {
                 
                 const container = document.getElementById('history-list-container');
                 if(!container) return;
+
+                // Inside your activity modal rendering function
+                const cadenceDisplay = activityData.average_cadence 
+                    ? (activityData.type === 'Run' 
+                        ? `${Math.round(activityData.average_cadence * 2)} spm` 
+                        : `${Math.round(activityData.average_cadence)} rpm`) 
+                    : 'N/A';
+
+                // Add this to your modal HTML string:
+                // <div class="text-xs">Cadence: ${cadenceDisplay}</div>
 
                 container.innerHTML = globalHistoryData.map((x, idx) => {
                     let sportBadge = '';
