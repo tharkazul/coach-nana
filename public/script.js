@@ -865,7 +865,7 @@ async function generateTemplate() {
     loadMicroPlan(); 
 }
 
-        // --- MAP & HISTORY MODAL ---
+    // --- MAP & HISTORY MODAL ---
         function decodePolyline(str) {
             let index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, latitude_change, longitude_change, factor = 1e5;
             while (index < str.length) {
@@ -934,16 +934,6 @@ async function generateTemplate() {
                 
                 const container = document.getElementById('history-list-container');
                 if(!container) return;
-
-                // Inside your activity modal rendering function
-                const cadenceDisplay = activityData.average_cadence 
-                    ? (activityData.type === 'Run' 
-                        ? `${Math.round(activityData.average_cadence * 2)} spm` 
-                        : `${Math.round(activityData.average_cadence)} rpm`) 
-                    : 'N/A';
-
-                // Add this to your modal HTML string:
-                // <div class="text-xs">Cadence: ${cadenceDisplay}</div>
 
                 container.innerHTML = globalHistoryData.map((x, idx) => {
                     let sportBadge = '';
