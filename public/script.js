@@ -1268,7 +1268,7 @@ async function generateTemplate() {
     async function loadAdminFeedback() {
         try {
             const response = await fetch('/api/admin/feedback', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: getAuthHeaders() // <-- Use your built-in auth function!
             });
 
             if (!response.ok) return; 
