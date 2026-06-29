@@ -647,7 +647,7 @@ app.post('/api/feedback', authenticateToken, upload.single('feedbackImage'), (re
 app.get('/api/admin/feedback', authenticateToken, (req, res) => {
     // 1. Security Check: Ensure the requester is exactly 'rutger'
     db.get(`SELECT username FROM users WHERE id = ?`, [req.user.id], (err, user) => {
-        if (err || !user || user.username !== 'rutger') {
+        if (err || !user || user.username.toLowerCase() !== 'rutger') {
             return res.status(403).json({ error: "Access denied. Admins only." });
         }
 
