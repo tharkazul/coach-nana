@@ -1099,13 +1099,14 @@ async function generateTemplate() {
             statusEl.innerText = "";
 
             try {
+                // Grab your existing auth headers (which contain the correct token)
+                const myHeaders = getAuthHeaders();
+                // REMOVE the JSON content-type so the browser can auto-set the multipart/form-data boundary for the image
+                delete myHeaders['Content-Type'];
+
                 const response = await fetch('/api/feedback', {
                     method: 'POST',
-                    headers: {
-                        // Notice: We DO NOT set 'Content-Type' when sending FormData.
-                        // The browser automatically sets it to multipart/form-data with the correct boundary.
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
+                    headers: myHeaders,
                     body: formData
                 });
 
@@ -1114,8 +1115,8 @@ async function generateTemplate() {
                 if (response.ok) {
                     statusEl.innerText = "✅ Sent! Thank you.";
                     statusEl.className = "text-xs font-medium text-green-500";
-                    form.reset(); // Clear the form
-                    document.getElementById('file-name').innerText = ""; // Clear file label
+                    form.reset(); 
+                    document.getElementById('file-name').innerText = ""; 
                 } else {
                     statusEl.innerText = `❌ Error: ${data.error}`;
                     statusEl.className = "text-xs font-medium text-red-500";
@@ -1126,7 +1127,6 @@ async function generateTemplate() {
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = "Send Feedback";
-                // Clear success message after 5 seconds
                 setTimeout(() => { if(statusEl.innerText.includes('✅')) statusEl.innerText = ''; }, 5000);
             }
         }
