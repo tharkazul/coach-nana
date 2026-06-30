@@ -236,7 +236,7 @@ app.post('/api/auth/login', (req, res) => {
         if (await bcrypt.compare(password, user.password_hash)) {
             // Give them a VIP pass (token) valid for 30 days
             const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '30d' });
-            res.json({ token, message: "Welcome to Coach Nana HQ" });
+            res.json({ token, message: "Welcome to Spark HQ" });
         } else {
             res.status(401).json({ error: "Incorrect password." });
         }
@@ -306,7 +306,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 }).join(', ');
                 
                 const systemPrompt = 
-                    `You are Coach Nana, an elite Ironman Triathlon and endurance coach. 
+                    `You are Spark, an elite Ironman Triathlon and endurance coach. 
                     Today is ${todayStr}.
                     Upcoming Calendar Reference: ${next7Days}
                     Athlete Context: ${user.athlete_context || 'General endurance athlete'}
@@ -996,40 +996,49 @@ async function getStravaTokenForUser(userId) {
     });
 }
 
-// --- 2. THE FIXED WEBHOOK FUNCTION ---
+// Add this tiny helper right above getStravaActivity to translate Strava's sports to Spark's sports
+function mapStravaSportToSpark(stravaSport) {
+    if (!stravaSport) return 'Other';
+    if (stravaSport.includes('Run')) return 'Run';
+    if (stravaSport.includes('Ride') || stravaSport.includes('VirtualRide')) return 'Bike';
+    if (stravaSport.includes('Swim')) return 'Swim';
+    return 'Other';
+}
+
 async function getStravaActivity(userId, activityId) {
     try {
-        // 1. Get token for THIS specific user using our new helper
         const token = await getStravaTokenForUser(userId); 
         
-        // Fetch activity
         const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
         const data = await res.json();
         
-        // Calculate TSS
         const tss = data.suffer_score || Math.round((data.moving_time / 3600) * 50);
         
-        // 2. Save/Update activity for this specific user
         db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
             [data.id, userId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss]);
 
-        const activityDate = data.start_date.split('T')[0];
+        // FIX 1: Use local start date to avoid timezone overlap
+        const activityDate = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
         
-        // 3. Fetch plan for THIS user on THAT date
-        db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ?", 
-            [userId, activityDate], async (err, plan) => {
+        // FIX 2: Map the sport type so we match the correct Brick session
+        const sparkSport = mapStravaSportToSpark(data.sport_type);
+        
+        db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?", 
+            [userId, activityDate, sparkSport], async (err, plan) => {
             
-            if (err || !plan) return; 
+            if (err || !plan) {
+                console.log(`⚠️ Strava Update Skipped: No matching ${sparkSport} plan found for ${activityDate}.`);
+                return; 
+            }
 
-            // We define the missing newDescription variable here!
             const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
             
-            // 4. Update Strava
-            await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+            // FIX 3: Check the response and log any permission errors!
+            const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
                 method: 'PUT',
                 headers: { 
                     'Authorization': `Bearer ${token}`,
@@ -1037,6 +1046,13 @@ async function getStravaActivity(userId, activityId) {
                 },
                 body: JSON.stringify({ description: newDescription })
             });
+
+            if (updateRes.ok) {
+                console.log(`✅ Strava description updated for activity ${activityId}!`);
+            } else {
+                const errorData = await updateRes.json();
+                console.error(`❌ Strava Update Failed:`, errorData);
+            }
         });
 
     } catch (e) { 
@@ -1127,5 +1143,5 @@ async function loadAdminFeedback() {
 }
 
 app.listen(process.env.PORT || 3001, () => {
-    console.log('🚀 Coach Nana HQ Multi-Tenant Engine live on port 3001...');
+    console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
 });
