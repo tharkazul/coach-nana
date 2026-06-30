@@ -346,21 +346,38 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 if (jsonMatch) {
                     try {
                         const planData = JSON.parse(jsonMatch[1]);
-                        const stmt = db.prepare(`
-                            INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?) 
-                            ON CONFLICT(user_id, date, sport) 
-                            DO UPDATE SET description=excluded.description, target_tss=excluded.target_tss, details=excluded.details, steps_json=excluded.steps_json
-                        `);
-                        planData.forEach(day => {
-                            stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
-                        });
-                        stmt.finalize();
+                        
+                        // 1. Find all unique dates the AI just planned for
+                        const affectedDates = [...new Set(planData.map(day => day.date))];
+                        
+                        if (affectedDates.length > 0) {
+                            // 2. Create placeholders for the SQL query (e.g., "?, ?, ?")
+                            const placeholders = affectedDates.map(() => '?').join(',');
+                            
+                            // 3. WIPE the old workouts for these specific dates
+                            db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                if (err) console.error("Failed to clear old plan data:", err);
+                                
+                                // 4. INSERT the fresh workouts (safely allowing Bricks)
+                                const stmt = db.prepare(`
+                                    INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                `);
+                                
+                                planData.forEach(day => {
+                                    stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                });
+                                stmt.finalize();
+                            });
+                        }
+                        
                         planUpdated = true;
                         
                         // Strip the raw code block from the chat UI
                         aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim(); 
-                    } catch(e) { console.error("Failed to parse AI JSON block", e); }
+                    } catch(e) { 
+                        console.error("Failed to parse AI JSON block", e); 
+                    }
                 }
                 
                 let mood = 'default';
@@ -671,25 +688,42 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             let planUpdated = false;
 
             const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
-            if (jsonMatch) {
-                try {
-                    const planData = JSON.parse(jsonMatch[1]);
-                    
-                    const stmt = db.prepare(`
-                        INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?) 
-                        ON CONFLICT(user_id, date, sport) 
-                        DO UPDATE SET description=excluded.description, target_tss=excluded.target_tss, details=excluded.details, steps_json=excluded.steps_json
-                    `);
-                    planData.forEach(day => {
-                        stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
-                    });
-                    stmt.finalize();
-                    planUpdated = true;
-                    
-                    aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim(); 
-                } catch(e) { console.error("Failed to parse AI JSON block", e); }
-            }
+                if (jsonMatch) {
+                    try {
+                        const planData = JSON.parse(jsonMatch[1]);
+                        
+                        // 1. Find all unique dates the AI just planned for
+                        const affectedDates = [...new Set(planData.map(day => day.date))];
+                        
+                        if (affectedDates.length > 0) {
+                            // 2. Create placeholders for the SQL query (e.g., "?, ?, ?")
+                            const placeholders = affectedDates.map(() => '?').join(',');
+                            
+                            // 3. WIPE the old workouts for these specific dates
+                            db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                if (err) console.error("Failed to clear old plan data:", err);
+                                
+                                // 4. INSERT the fresh workouts (safely allowing Bricks)
+                                const stmt = db.prepare(`
+                                    INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                `);
+                                
+                                planData.forEach(day => {
+                                    stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                });
+                                stmt.finalize();
+                            });
+                        }
+                        
+                        planUpdated = true;
+                        
+                        // Strip the raw code block from the chat UI
+                        aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim(); 
+                    } catch(e) { 
+                        console.error("Failed to parse AI JSON block", e); 
+                    }
+                }
             
             let mood = 'default';
             const lowerReply = aiReply.toLowerCase();
