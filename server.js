@@ -506,6 +506,7 @@ app.post('/api/sync-strava', authenticateToken, async (req, res) => {
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [act.id, req.user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
                 );
+                tagStravaActivity(req.user.id, act, tokenData.access_token);
             });
 
             res.json({ message: `Successfully synced ${activities.length} activities!` });
@@ -996,13 +997,45 @@ async function getStravaTokenForUser(userId) {
     });
 }
 
-// Add this tiny helper right above getStravaActivity to translate Strava's sports to Spark's sports
+// --- STRAVA TAGGING HELPERS ---
 function mapStravaSportToSpark(stravaSport) {
     if (!stravaSport) return 'Other';
     if (stravaSport.includes('Run')) return 'Run';
     if (stravaSport.includes('Ride') || stravaSport.includes('VirtualRide')) return 'Bike';
     if (stravaSport.includes('Swim')) return 'Swim';
     return 'Other';
+}
+
+async function tagStravaActivity(userId, activity, token) {
+    // Prevent rewriting if Spark has already tagged this activity
+    if (activity.description && activity.description.includes("Coach Spark Target")) return;
+
+    const tss = activity.suffer_score || Math.round((activity.moving_time / 3600) * 50);
+    // Use local time to prevent late-night workouts bleeding into the next day's UTC timezone
+    const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
+    const sparkSport = mapStravaSportToSpark(activity.sport_type || activity.type);
+    
+    db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?", 
+        [userId, activityDate, sparkSport], async (err, plan) => {
+        
+        if (err || !plan) return; // If no matching plan exists, skip silently
+
+        const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
+        
+        // Append to existing description so we don't delete the user's personal notes
+        const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
+        
+        try {
+            const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: finalDescription })
+            });
+            if (updateRes.ok) console.log(`✅ Strava description updated for ${sparkSport} on ${activityDate}`);
+        } catch (e) {
+            console.error("Failed to tag Strava activity:", e);
+        }
+    });
 }
 
 async function getStravaActivity(userId, activityId) {
@@ -1069,7 +1102,6 @@ async function syncAllStravaUsersOnStartup() {
         for (const user of users) {
             try {
                 const token = await getStravaTokenForUser(user.id);
-                // Pull the last 50 activities to catch them up on startup
                 const actRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=50', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -1083,6 +1115,9 @@ async function syncAllStravaUsersOnStartup() {
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
                     );
+                    
+                    // NEW: Auto-tag activities when the server boots up!
+                    tagStravaActivity(user.id, act, token);
                 });
                 console.log(`✅ Startup sync complete for user ${user.id}`);
             } catch (err) {
