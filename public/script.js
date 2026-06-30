@@ -238,7 +238,7 @@
 
                     // Unhide the secret Admin-Only coach tone
                     const select = document.getElementById('set-coach-tone');
-                    if (select && !select.querySelector('option[value*="madison"]')) {
+                    if (select && !select.querySelector('option[value*="Madison"]')) {
                         select.innerHTML += `<option value="Flirty, Horny, supportive, as if in a relationship, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
                     }
                 }
@@ -1060,13 +1060,13 @@ async function generateTemplate() {
             // Determine the active persona category
             let persona = 'empathetic';
             const toneCheck = currentCoachTone.toLowerCase();
-            if (toneCheck.includes('madison')) persona = 'madison';
+            if (toneCheck.includes('Madison')) persona = 'Madison';
             else if (toneCheck.includes('strict')) persona = 'strict';
             else if (toneCheck.includes('cheerleader')) persona = 'cheer';
 
             // IMPORTANT: Create a folder in your 'public' directory called 'avatars'.
             // Save your 12 images there using this naming convention:
-            // e.g., 'empathetic-default.png', 'madison-hype.png', 'strict-disappointed.png'
+            // e.g., 'empathetic-default.png', 'Madison-hype.png', 'strict-disappointed.png'
             
             const moodKey = (mood === 'thinking' || !mood) ? 'default' : mood;
             const imagePath = `/avatars/${persona}-${moodKey}.png`;
@@ -1076,7 +1076,7 @@ async function generateTemplate() {
                 'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e' },
                 'strict':     { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626' },
                 'cheer':      { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e' },
-                'madison':      { default: '374151', hype: '111827', disappointed: '7f1d1d' }
+                'Madison':      { default: '374151', hype: '111827', disappointed: '7f1d1d' }
             };
             const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
             const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
@@ -1245,7 +1245,7 @@ async function generateTemplate() {
                 document.getElementById(loadId).outerHTML = `
                     <div class="flex items-end gap-2 md:gap-3">
                         <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
-                            <img src="${finalAvatar}" alt="Coach" class="w-full h-full object-cover">
+                            <img src="${finalAvatar}" alt="Coach" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                         </div>
                         <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
                             <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
