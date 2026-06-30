@@ -318,21 +318,23 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     3. Always use metric measurements exclusively (meters for distance, km/h for speed, min/km for pace). Never use imperial units.
                     4. Respond directly with your conversational text. Do not wrap your main reply in JSON.
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
+                    4. Respond directly with your conversational text. Do not wrap your main reply in JSON.
+                    5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
+                    6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
                     The JSON must be a valid Array of objects. Format it EXACTLY like this inside triple backticks:
-
                     \`\`\`json
                     [
-                    {
+                      {
                         "date": "YYYY-MM-DD",
                         "sport": "Run", 
-                        "description": "45-min Easy Aerobic Run",
-                        "target_tss": 40,
-                        "details": "Keep it conversational. Focus on hydration and maintaining good form.",
-                        "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
-                    }
+                        "description": "5k Speed Intervals",
+                        "target_tss": 80,
+                        "details": "Push hard on the intervals, recover fully on the rests.",
+                        "steps_json": "[{\"type\": \"warmup\", \"condition_type\": \"time\", \"condition_value\": 15, \"target_type\": \"heart.rate.zone\", \"zone\": 1}, {\"type\": \"repeat\", \"iterations\": 8, \"steps\": [{\"type\": \"interval\", \"condition_type\": \"time\", \"condition_value\": 3, \"target_type\": \"heart.rate.zone\", \"zone\": 4}, {\"type\": \"recovery\", \"condition_type\": \"time\", \"condition_value\": 1, \"target_type\": \"heart.rate.zone\", \"zone\": 1}]}, {\"type\": \"cooldown\", \"condition_type\": \"time\", \"condition_value\": 10, \"target_type\": \"heart.rate.zone\", \"zone\": 1}]"
+                      }
                     ]
                     \`\`\`
                     *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the example.*`;
@@ -650,18 +652,25 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         2. You must append a JSON code block at the very end of your response containing the schedule.
         3. Use metric measurements exclusively (km, kg, km/h, min/km). Never use imperial units.
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
-        
+        4. Respond directly with your conversational text. Do not wrap your main reply in JSON.
+        5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
+        6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
+
+        WORKOUT PLANNING (CRITICAL):
+        If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
+        The JSON must be a valid Array of objects. Format it EXACTLY like this inside triple backticks:
+
         JSON FORMAT REQUIRED AT THE END OF YOUR RESPONSE:
         \`\`\`json
         [
-          {
+           {
             "date": "YYYY-MM-DD",
-            "sport": "Swim" | "Bike" | "Run" | "Rest", 
-            "description": "Short title",
-            "target_tss": 50,
-            "details": "Workout execution details",
-            "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
-          }
+            "sport": "Run", 
+            "description": "5k Speed Intervals",
+            "target_tss": 80,
+            "details": "Push hard on the intervals, recover fully on the rests.",
+            "steps_json": "[{\"type\": \"warmup\", \"condition_type\": \"time\", \"condition_value\": 15, \"target_type\": \"heart.rate.zone\", \"zone\": 1}, {\"type\": \"repeat\", \"iterations\": 8, \"steps\": [{\"type\": \"interval\", \"condition_type\": \"time\", \"condition_value\": 3, \"target_type\": \"heart.rate.zone\", \"zone\": 4}, {\"type\": \"recovery\", \"condition_type\": \"time\", \"condition_value\": 1, \"target_type\": \"heart.rate.zone\", \"zone\": 1}]}, {\"type\": \"cooldown\", \"condition_type\": \"time\", \"condition_value\": 10, \"target_type\": \"heart.rate.zone\", \"zone\": 1}]"
+            }
         ]
         \`\`\``;
 
@@ -851,6 +860,38 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
             }
 
             const garminSteps = stepsArray.map((step, index) => {
+                // NEW: Handle Repeat/Interval Blocks
+                if (step.type === 'repeat') {
+                    return {
+                        type: "RepeatGroupDTO",
+                        stepOrder: index + 1,
+                        smartRepeat: false,
+                        numberOfIterations: step.iterations || 1,
+                        workoutSteps: (step.steps || []).map((subStep, subIndex) => {
+                            const nType = (subStep.type === 'drill') ? 'interval' : subStep.type;
+                            const sDef = STEP_TYPE_MAP[nType] || STEP_TYPE_MAP['interval'];
+                            const tDef = TARGET_TYPE_MAP[subStep.target_type] || TARGET_TYPE_MAP['no.target'];
+                            const cDef = CONDITION_TYPE_MAP[subStep.condition_type] || CONDITION_TYPE_MAP['time'];
+
+                            const sDTO = {
+                                type: "ExecutableStepDTO",
+                                stepOrder: subIndex + 1,
+                                stepType: { stepTypeId: sDef.id, stepTypeKey: sDef.key },
+                                endCondition: { conditionTypeId: cDef.id, conditionTypeKey: cDef.key },
+                                endConditionValue: subStep.condition_type === 'time' ? subStep.condition_value * 60 : subStep.condition_value,
+                                targetType: { workoutTargetTypeId: tDef.id, workoutTargetTypeKey: tDef.key },
+                                targetValueOne: null, targetValueTwo: null,
+                                zoneNumber: subStep.zone ? parseInt(subStep.zone, 10) : null 
+                            };
+                            if (subStep.condition_type === 'distance') {
+                                sDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
+                            }
+                            return sDTO;
+                        })
+                    };
+                }
+
+                // Standard Single Step
                 const normalizedType = (step.type === 'drill') ? 'interval' : step.type;
                 const stepDef = STEP_TYPE_MAP[normalizedType] || STEP_TYPE_MAP['interval'];
                 const targetDef = TARGET_TYPE_MAP[step.target_type] || TARGET_TYPE_MAP['no.target'];

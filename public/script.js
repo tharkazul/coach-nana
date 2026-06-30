@@ -770,9 +770,27 @@
                             try {
                                 let steps = JSON.parse(p.steps_json);
                                 let stepsList = steps.map(step => {
-                                    let dur = step.condition_type === 'time' ? `${step.condition_value} min` : `${step.condition_value}m`;
-                                    let tgt = step.zone ? `Zone ${step.zone}` : (step.target_type === 'no.target' ? 'Open' : step.target_type.replace('.zone', ''));
-                                    return `<div class="flex justify-between items-center border-b border-theme-border last:border-0 py-1.5"><span class="capitalize font-bold text-theme-text">${step.type}</span><span class="text-theme-muted">${dur} @ <span class="font-bold">${tgt}</span></span></div>`;
+                                    // Handle Repeat Blocks visually
+                                    if (step.type === 'repeat') {
+                                        let subStepsList = (step.steps || []).map(s => {
+                                            let dur = s.condition_type === 'time' ? `${s.condition_value} min` : `${s.condition_value}m`;
+                                            let tgt = s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone', ''));
+                                            return `<div class="flex justify-between items-center py-1 pl-3 border-l-2 border-theme-border ml-2"><span class="capitalize font-medium text-theme-text text-[10px]">${s.type}</span><span class="text-theme-muted text-[10px]">${dur} @ <span class="font-bold">${tgt}</span></span></div>`;
+                                        }).join('');
+                                        
+                                        return `<div class="py-1.5 border-b border-theme-border last:border-0">
+                                            <div class="font-bold text-theme-accent mb-1 flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                                Repeat ${step.iterations}x
+                                            </div>
+                                            ${subStepsList}
+                                        </div>`;
+                                    } else {
+                                        // Standard Steps
+                                        let dur = step.condition_type === 'time' ? `${step.condition_value} min` : `${step.condition_value}m`;
+                                        let tgt = step.zone ? `Zone ${step.zone}` : (step.target_type === 'no.target' ? 'Open' : step.target_type.replace('.zone', ''));
+                                        return `<div class="flex justify-between items-center border-b border-theme-border last:border-0 py-1.5"><span class="capitalize font-bold text-theme-text">${step.type}</span><span class="text-theme-muted">${dur} @ <span class="font-bold">${tgt}</span></span></div>`;
+                                    }
                                 }).join('');
                                 
                                 detailsHtml = `<div class="w-full pl-28 md:pl-40 pr-4 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-2 bg-theme-card shadow-sm rounded-r-sm border border-theme-border flex flex-col">${p.details && p.details.trim() !== '' ? `<div class="mb-2 pb-2 border-b border-theme-border italic">${p.details.replace(/\n/g, '<br>')}</div>` : ''}<div class="space-y-0.5">${stepsList}</div></div></div>`;
