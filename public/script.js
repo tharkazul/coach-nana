@@ -1085,7 +1085,7 @@ async function generateTemplate() {
             // and you can use an onerror attribute in the HTML, but for now we'll just return the path.
             // When you create the images, uncomment the imagePath return!
             
-            // return imagePath; 
+            return imagePath; 
             return fallbackUrl; 
         }
 
