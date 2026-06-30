@@ -967,10 +967,40 @@ app.get('/api/weight', authenticateToken, (req, res) => {
     );
 });
 
+// --- 1. THE MISSING TOKEN HELPER ---
+async function getStravaTokenForUser(userId) {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT strava_refresh_token FROM users WHERE id = ?', [userId], async (err, user) => {
+            if (err || !user || !user.strava_refresh_token) return reject("No Strava token found for user.");
+            
+            try {
+                const tokenRes = await fetch('https://www.strava.com/oauth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        client_id: process.env.STRAVA_CLIENT_ID,
+                        client_secret: process.env.STRAVA_CLIENT_SECRET,
+                        grant_type: 'refresh_token',
+                        refresh_token: user.strava_refresh_token
+                    })
+                });
+                
+                const tokenData = await tokenRes.json();
+                if (tokenData.access_token) {
+                    resolve(tokenData.access_token);
+                } else {
+                    reject("Strava token refresh failed.");
+                }
+            } catch (e) { reject(e); }
+        });
+    });
+}
+
+// --- 2. THE FIXED WEBHOOK FUNCTION ---
 async function getStravaActivity(userId, activityId) {
     try {
-        // 1. Get token for THIS specific user
-        const token = await getStravaTokenForUser(userId); // You'll need this helper
+        // 1. Get token for THIS specific user using our new helper
+        const token = await getStravaTokenForUser(userId); 
         
         // Fetch activity
         const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, { 
@@ -979,13 +1009,13 @@ async function getStravaActivity(userId, activityId) {
         const data = await res.json();
         
         // Calculate TSS
-        const tss = Math.round((data.moving_time / 3600) * Math.pow((data.average_heartrate || 165) / 165, 2) * 100);
+        const tss = data.suffer_score || Math.round((data.moving_time / 3600) * 50);
         
         // 2. Save/Update activity for this specific user
-        db.run(`INSERT INTO activities (user_id, id, name, sport_type, tss, start_date) 
-                VALUES (?, ?, ?, ?, ?, ?) 
+        db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
-            [userId, data.id, data.name, data.sport_type, tss, data.start_date]);
+            [data.id, userId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss]);
 
         const activityDate = data.start_date.split('T')[0];
         
@@ -995,7 +1025,8 @@ async function getStravaActivity(userId, activityId) {
             
             if (err || !plan) return; 
 
-            // ... (Keep your existing newDescription formatting logic here) ...
+            // We define the missing newDescription variable here!
+            const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
             
             // 4. Update Strava
             await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
@@ -1012,6 +1043,43 @@ async function getStravaActivity(userId, activityId) {
         console.error(`Activity Fetch/Update Error for User ${userId}:`, e); 
     }
 }
+
+// --- 3. THE STARTUP SYNC LOGIC ---
+async function syncAllStravaUsersOnStartup() {
+    console.log('🔄 Running initial Strava sync for all connected users...');
+    db.all('SELECT id FROM users WHERE strava_refresh_token IS NOT NULL', [], async (err, users) => {
+        if (err || !users) return;
+        
+        for (const user of users) {
+            try {
+                const token = await getStravaTokenForUser(user.id);
+                // Pull the last 50 activities to catch them up on startup
+                const actRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=50', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const activities = await actRes.json();
+
+                activities.forEach(act => {
+                    const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50); 
+                    db.run(
+                        `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
+                    );
+                });
+                console.log(`✅ Startup sync complete for user ${user.id}`);
+            } catch (err) {
+                console.error(`❌ Startup sync failed for user ${user.id}:`, err);
+            }
+        }
+    });
+}
+
+app.listen(process.env.PORT || 3001, () => {
+    console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
+    syncAllStravaUsersOnStartup(); // Trigger the bulk sync when the server boots
+});
 
 // --- ADMIN FEEDBACK LOGIC ---
 async function loadAdminFeedback() {
