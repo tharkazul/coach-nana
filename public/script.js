@@ -238,7 +238,7 @@
 
                     // Unhide the secret Admin-Only coach tone
                     const select = document.getElementById('set-coach-tone');
-                    if (select && !select.querySelector('option[value*="Madison"]')) {
+                    if (select && !select.querySelector('option[value*="madison"]')) {
                         select.innerHTML += `<option value="Flirty, Horny, supportive, as if in a relationship, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
                     }
                 }
@@ -1060,13 +1060,13 @@ async function generateTemplate() {
             // Determine the active persona category
             let persona = 'empathetic';
             const toneCheck = currentCoachTone.toLowerCase();
-            if (toneCheck.includes('Madison')) persona = 'Madison';
+            if (toneCheck.includes('madison')) persona = 'madison';
             else if (toneCheck.includes('strict')) persona = 'strict';
             else if (toneCheck.includes('cheerleader')) persona = 'cheer';
 
             // IMPORTANT: Create a folder in your 'public' directory called 'avatars'.
             // Save your 12 images there using this naming convention:
-            // e.g., 'empathetic-default.png', 'Madison-hype.png', 'strict-disappointed.png'
+            // e.g., 'empathetic-default.png', 'madison-hype.png', 'strict-disappointed.png'
             
             const moodKey = (mood === 'thinking' || !mood) ? 'default' : mood;
             const imagePath = `/avatars/${persona}-${moodKey}.png`;
@@ -1076,7 +1076,7 @@ async function generateTemplate() {
                 'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e' },
                 'strict':     { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626' },
                 'cheer':      { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e' },
-                'Madison':      { default: '374151', hype: '111827', disappointed: '7f1d1d' }
+                'madison':      { default: '374151', hype: '111827', disappointed: '7f1d1d' }
             };
             const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
             const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
