@@ -248,7 +248,15 @@
                 document.getElementById('set-coach-tone').value = data.coachTone || '';
                 document.getElementById('set-athlete-context').value = data.athleteContext || '';
                 document.getElementById('set-garmin-user').value = data.garminUsername || '';
-                
+                // --- ONBOARDING TRIGGER ---
+                // In server.js, new users default to 'New athlete.'
+                if (data.athleteContext === 'New athlete.') {
+                    const overlay = document.getElementById('onboarding-overlay');
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+                        overlay.classList.add('flex');
+                    }
+                }
                 if (data.hasGarmin) {
                     const b = document.getElementById('garmin-status');
                     b.innerText = "Connected";
@@ -1356,7 +1364,78 @@ async function generateTemplate() {
             console.error("Failed to load admin feedback", error);
         }
 }
+// --- ONBOARDING LOGIC ---
+function selectTone(element, tone) {
+    document.getElementById('onboard-tone').value = tone;
+    
+    // Reset all cards visually
+    const cards = document.querySelectorAll('.tone-card');
+    cards.forEach(card => {
+        card.classList.remove('border-theme-accent', 'bg-theme-accent-soft');
+        card.classList.add('border-theme-border', 'bg-theme-bg');
+    });
+    
+    // Highlight selected card
+    element.classList.remove('border-theme-border', 'bg-theme-bg');
+    element.classList.add('border-theme-accent', 'bg-theme-accent-soft');
+}
 
+async function completeOnboarding(redirectUrl = null) {
+    const btn = document.getElementById('btn-complete-setup');
+    if (btn) btn.innerText = "Saving profile...";
+
+    const tone = document.getElementById('onboard-tone').value;
+    const context = document.getElementById('onboard-context').value;
+    const garminUser = document.getElementById('onboard-garmin-user').value;
+    const garminPass = document.getElementById('onboard-garmin-pass').value;
+    const raceDate = document.getElementById('onboard-race-date').value;
+    const raceName = document.getElementById('onboard-race-name').value;
+    const raceCtl = document.getElementById('onboard-race-ctl').value;
+
+    try {
+        // 1. Save Coach Settings
+        await fetch('/api/user/settings/coach', {
+            method: 'POST', headers: getAuthHeaders(),
+            body: JSON.stringify({ coachTone: tone, athleteContext: context || 'Endurance Athlete' })
+        });
+
+        // 2. Save Garmin (if provided)
+        if (garminUser && garminPass) {
+            await fetch('/api/user/settings/garmin', {
+                method: 'POST', headers: getAuthHeaders(),
+                body: JSON.stringify({ garminUsername: garminUser, garminPassword: garminPass })
+            });
+        }
+
+        // 3. Save Milestone (if provided)
+        if (raceDate && raceName) {
+            await fetch('/api/milestones', {
+                method: 'POST', headers: getAuthHeaders(),
+                body: JSON.stringify({ milestones: [{ name: raceName, date: raceDate, target_ctl: parseFloat(raceCtl || 90), is_main: true }] })
+            });
+        }
+
+        // 4. Redirect or reload
+        if (redirectUrl) {
+            window.location.href = redirectUrl;
+        } else {
+            window.location.reload();
+        }
+    } catch (e) {
+        console.error("Onboarding Save Error:", e);
+        alert("There was an issue saving your profile. Please check your connection.");
+        if (btn) btn.innerText = "Complete Setup";
+    }
+}
+
+function saveAndConnectStrava() {
+    // If the user clicks Strava, we save their inputs FIRST, then redirect them to the OAuth page.
+    const clientId = '208765'; // Your Strava Client ID
+    const redirectUri = encodeURIComponent(window.location.origin); 
+    const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=activity:read_all,activity:write`;
+    
+    completeOnboarding(authUrl);
+}
         // Initialize App
         document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         checkLogin();

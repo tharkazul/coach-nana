@@ -117,7 +117,77 @@
             <p id="auth-error" class="text-red-500 text-xs mt-4 hidden font-medium bg-red-50 p-2 rounded border border-red-200">Error</p>
         </div>
     </div>
+<!-- ONBOARDING OVERLAY -->
+    <div id="onboarding-overlay" class="fixed inset-0 bg-theme-bg/95 backdrop-blur-md z-[9995] hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-theme-card w-full max-w-2xl p-6 md:p-8 rounded-xl shadow-2xl border border-theme-border my-auto">
+            <h2 class="text-2xl font-bold text-theme-text mb-2 text-center">Welcome to Spark! 🚀</h2>
+            <p class="text-sm text-theme-muted mb-6 text-center">Let's get your AI Coach set up and ready to train.</p>
 
+            <div class="space-y-6">
+                <!-- Tone of Voice -->
+                <div>
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">1. Choose Coach Persona</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div onclick="selectTone(this, 'Empathetic but demanding elite endurance coach.')" class="tone-card border-2 border-theme-accent bg-theme-accent-soft p-4 rounded-lg cursor-pointer text-center transition">
+                            <div class="text-2xl mb-2">🤝</div>
+                            <div class="text-xs font-bold text-theme-text">Default</div>
+                            <div class="text-[9px] text-theme-muted mt-1">Empathetic but demanding</div>
+                        </div>
+                        <div onclick="selectTone(this, 'Strict, data-obsessed drill sergeant. Direct and blunt.')" class="tone-card border-2 border-theme-border bg-theme-bg hover:border-theme-muted p-4 rounded-lg cursor-pointer text-center transition">
+                            <div class="text-2xl mb-2">📊</div>
+                            <div class="text-xs font-bold text-theme-text">Data Nerd</div>
+                            <div class="text-[9px] text-theme-muted mt-1">Strict & analytical</div>
+                        </div>
+                        <div onclick="selectTone(this, 'Enthusiastic cheerleader, extremely positive and forgiving.')" class="tone-card border-2 border-theme-border bg-theme-bg hover:border-theme-muted p-4 rounded-lg cursor-pointer text-center transition">
+                            <div class="text-2xl mb-2">📣</div>
+                            <div class="text-xs font-bold text-theme-text">Cheerleader</div>
+                            <div class="text-[9px] text-theme-muted mt-1">Positive & forgiving</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="onboard-tone" value="Empathetic but demanding elite endurance coach.">
+                </div>
+
+                <!-- Connect Devices -->
+                <div>
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">2. Connect Devices</label>
+                    <div class="space-y-3">
+                        <div class="border border-theme-border rounded-lg p-3 bg-theme-bg">
+                            <button onclick="document.getElementById('onboard-garmin-fields').classList.toggle('hidden')" class="w-full flex justify-between items-center text-sm font-bold text-theme-text hover:text-theme-accent transition">
+                                <span>Set up Garmin <span class="text-[10px] font-normal text-theme-muted ml-2 hidden md:inline">(To push workouts)</span></span>
+                                <span>+</span>
+                            </button>
+                            <div id="onboard-garmin-fields" class="hidden mt-3 pt-3 border-t border-theme-border grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <input type="text" id="onboard-garmin-user" placeholder="Garmin Email" class="w-full p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                                <input type="password" id="onboard-garmin-pass" placeholder="Garmin Password" class="w-full p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                            </div>
+                        </div>
+                        <div class="border border-theme-border rounded-lg p-3 bg-theme-bg flex justify-between items-center">
+                            <span class="text-sm font-bold text-theme-text">Set up Strava <span class="text-[10px] font-normal text-theme-muted ml-2 hidden md:inline">(To pull activities)</span></span>
+                            <button onclick="saveAndConnectStrava()" class="bg-[#fc4c02] hover:bg-orange-600 text-white text-[10px] font-bold px-3 py-1.5 rounded transition">Connect</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Athlete Context -->
+                <div>
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">3. Tell us about yourself</label>
+                    <textarea id="onboard-context" class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[80px]" placeholder="e.g. Amateur enthusiast, dad of a 1.5 year old, prefers to exercise during lunch..."></textarea>
+                </div>
+
+                <!-- Race Planner -->
+                <div>
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">4. Main Goal Event</label>
+                    <div class="flex flex-col md:flex-row gap-2 bg-theme-bg p-3 rounded-lg border border-theme-border">
+                        <input type="date" id="onboard-race-date" class="p-2 border border-theme-border rounded text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                        <input type="text" id="onboard-race-name" class="flex-1 p-2 border border-theme-border rounded text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none" placeholder="Race Name (e.g. Ironman 70.3)">
+                        <input type="number" id="onboard-race-ctl" class="w-full md:w-24 p-2 border border-theme-border rounded text-xs bg-theme-card text-theme-text text-right focus:border-theme-accent outline-none" placeholder="Target CTL">
+                    </div>
+                </div>
+
+                <button onclick="completeOnboarding()" class="w-full bg-theme-accent hover:bg-theme-accent-hover text-white font-bold p-3 rounded-lg transition shadow-sm mt-4" id="btn-complete-setup">Complete Setup</button>
+            </div>
+        </div>
+    </div>
     <!-- ACTIVITY MODAL (Maps & Telemetry) -->
     <div id="activity-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 md:p-8 backdrop-blur-sm transition-opacity">
         <div class="bg-theme-card rounded-sm shadow-2xl w-full max-w-4xl h-full md:h-[80vh] flex flex-col overflow-hidden relative border border-theme-border">
