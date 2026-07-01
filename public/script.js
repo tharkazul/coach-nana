@@ -359,7 +359,6 @@
 
         // --- UI NAVIGATION ---
         function switchTab(t) {
-            // Safely toggle visibility to prevent missing ID crashes
             const views = ['dashboard', 'coach', 'settings', 'history', 'admin'];
             views.forEach(view => {
                 const el = document.getElementById(`view-${view}`);
@@ -371,12 +370,25 @@
             views.forEach(tab => {
                 const btn = document.getElementById(`nav-${tab}`);
                 if (!btn) return;
-                if (tab === t) {
-                    btn.classList.add('text-theme-accent-hover', 'bg-theme-accent-soft', 'border-theme-accent');
-                    btn.classList.remove('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+                
+                if (tab !== 'coach') {
+                    // Standard styling for all other buttons
+                    if (tab === t) {
+                        btn.classList.add('text-theme-accent-hover', 'md:bg-theme-accent-soft', 'border-theme-accent');
+                        btn.classList.remove('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+                    } else {
+                        btn.classList.remove('text-theme-accent-hover', 'md:bg-theme-accent-soft', 'border-theme-accent');
+                        btn.classList.add('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+                    }
                 } else {
-                    btn.classList.remove('text-theme-accent-hover', 'bg-theme-accent-soft', 'border-theme-accent');
-                    btn.classList.add('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+                    // Unique styling specifically for the Coach FAB on Desktop
+                    if (tab === t) {
+                        btn.classList.add('md:bg-theme-accent-soft', 'md:border-theme-accent', 'md:text-theme-accent-hover');
+                        btn.classList.remove('md:text-theme-muted', 'md:border-transparent');
+                    } else {
+                        btn.classList.remove('md:bg-theme-accent-soft', 'md:border-theme-accent', 'md:text-theme-accent-hover');
+                        btn.classList.add('md:text-theme-muted', 'md:border-transparent');
+                    }
                 }
             });
 
