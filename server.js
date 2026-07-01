@@ -197,13 +197,36 @@ const CONDITION_TYPE_MAP = {
     'lap.button': { id: 1, key: "lap.button" }
 };
 
-// --- AUTH ROUTES ---
+// --- STRAVA WEBHOOK VERIFICATION (HANDSHAKE) ---
+app.get('/webhook/strava', (req, res) => {
+    // You can change this token, but you must use the same one when creating the subscription via the Strava API
+    const VERIFY_TOKEN = process.env.STRAVA_VERIFY_TOKEN || "STRAVA"; 
+    
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+            console.log('✅ Strava Webhook Verified!');
+            res.json({ "hub.challenge": challenge });
+        } else {
+            res.sendStatus(403);
+        }
+    }
+});
+
+// --- EXISTING POST ROUTE ---
 app.post('/webhook/strava', (req, res) => {
-    const { aspect_type, object_id, owner_id } = req.body;
-    // If it's a new activity, trigger the sync
-    if (aspect_type === 'create') {
+    const { aspect_type, object_id, owner_id, object_type } = req.body;
+    
+    // Ensure we only trigger on new activities (not profile updates or deletes)
+    if (aspect_type === 'create' && object_type === 'activity') {
+        console.log(`🏃‍♂️ New Strava activity detected! Fetching ID: ${object_id}`);
         getStravaActivity(owner_id, object_id);
     }
+    
+    // Always respond 200 OK immediately so Strava doesn't timeout
     res.status(200).send('EVENT_RECEIVED');
 });
 
@@ -1168,10 +1191,7 @@ async function syncAllStravaUsersOnStartup() {
     });
 }
 
-app.listen(process.env.PORT || 3001, () => {
-    console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
-    syncAllStravaUsersOnStartup(); // Trigger the bulk sync when the server boots
-});
+
 
 // --- ADMIN FEEDBACK LOGIC ---
 async function loadAdminFeedback() {
