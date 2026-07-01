@@ -597,7 +597,6 @@ app.post('/api/user/settings/strava-exchange', authenticateToken, async (req, re
     if (!code) return res.status(400).json({ error: "No authorization code provided." });
 
     try {
-        // Trade the temporary code for a permanent refresh token
         const response = await fetch('https://www.strava.com/oauth/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -611,16 +610,17 @@ app.post('/api/user/settings/strava-exchange', authenticateToken, async (req, re
 
         const data = await response.json();
 
-        if (data.errors) {
-            return res.status(400).json({ error: "Strava rejected the authorization." });
-        }
+        if (data.errors) return res.status(400).json({ error: "Strava rejected the authorization." });
 
-        // Save the new refresh token to the logged-in user
+        // 1. Update the main user record
+        db.run(`UPDATE users SET strava_refresh_token = ? WHERE id = ?`, [data.refresh_token, req.user.id]);
+
+        // 2. IMPORTANT: Save the mapping to strava_tokens so the Webhook knows who is who!
         db.run(
-            `UPDATE users SET strava_refresh_token = ? WHERE id = ?`,
-            [data.refresh_token, req.user.id],
+            `INSERT OR REPLACE INTO strava_tokens (user_id, access_token, refresh_token, expires_at, strava_id) VALUES (?, ?, ?, ?, ?)`,
+            [req.user.id, data.access_token, data.refresh_token, data.expires_at, String(data.athlete.id)],
             (err) => {
-                if (err) return res.status(500).json({ error: "Failed to save Strava connection." });
+                if (err) return res.status(500).json({ error: "Failed to map Strava ID." });
                 res.json({ message: "Strava connected successfully!" });
             }
         );
