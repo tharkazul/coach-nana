@@ -1471,6 +1471,17 @@ function saveAndConnectStrava() {
     completeOnboarding(authUrl);
 }
         // Initialize App
-        document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      // Change this line:
+// document.getElementById('header-date').innerText = ...
+
+// To this safe version:
+        const headerDate = document.getElementById('header-date');
+        if (headerDate) {
+            headerDate.innerText = new Date().toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
         checkLogin();
         checkStravaCallback();
