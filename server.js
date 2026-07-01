@@ -218,15 +218,18 @@ app.get('/webhook/strava', (req, res) => {
 
 // --- EXISTING POST ROUTE ---
 app.post('/webhook/strava', (req, res) => {
+    console.log("📥 STRAVA WEBHOOK INCOMING PAYLOAD:", JSON.stringify(req.body, null, 2));
+
     const { aspect_type, object_id, owner_id, object_type } = req.body;
     
-    // Ensure we only trigger on new activities (not profile updates or deletes)
     if (aspect_type === 'create' && object_type === 'activity') {
-        console.log(`🏃‍♂️ New Strava activity detected! Fetching ID: ${object_id}`);
+        console.log(`🏃 Nuevo Strava activity event detected! Athlete ID: ${owner_id}, Activity ID: ${object_id}`);
         getStravaActivity(owner_id, object_id);
+    } else {
+        console.log(`ℹ️ Webhook event ignored: aspect_type is "${aspect_type}", object_type is "${object_type}"`);
     }
     
-    // Always respond 200 OK immediately so Strava doesn't timeout
+    // Always respond 200 OK instantly
     res.status(200).send('EVENT_RECEIVED');
 });
 
