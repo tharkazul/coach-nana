@@ -1033,10 +1033,18 @@ app.get('/api/weight', authenticateToken, (req, res) => {
 });
 
 // --- 1. THE MISSING TOKEN HELPER ---
-async function getStravaTokenForUser(userId) {
+async function getStravaTokenForUser(userIdOrStravaId) {
     return new Promise((resolve, reject) => {
-        db.get('SELECT strava_refresh_token FROM users WHERE id = ?', [userId], async (err, user) => {
-            if (err || !user || !user.strava_refresh_token) return reject("No Strava token found for user.");
+        // Query both the users table and token mapping table to resolve correctly
+        db.get(`
+            SELECT u.strava_refresh_token, u.id 
+            FROM users u
+            LEFT JOIN strava_tokens t ON u.id = t.user_id
+            WHERE u.id = ? OR t.strava_id = ?
+        `, [userIdOrStravaId, String(userIdOrStravaId)], async (err, user) => {
+            if (err || !user || !user.strava_refresh_token) {
+                return reject("No Strava token found for user identifier: " + userIdOrStravaId);
+            }
             
             try {
                 const tokenRes = await fetch('https://www.strava.com/oauth/token', {
@@ -1052,7 +1060,8 @@ async function getStravaTokenForUser(userId) {
                 
                 const tokenData = await tokenRes.json();
                 if (tokenData.access_token) {
-                    resolve(tokenData.access_token);
+                    // Return both the active access token and the real database user ID
+                    resolve({ accessToken: tokenData.access_token, internalUserId: user.id });
                 } else {
                     reject("Strava token refresh failed.");
                 }
@@ -1102,30 +1111,30 @@ async function tagStravaActivity(userId, activity, token) {
     });
 }
 
-async function getStravaActivity(userId, activityId) {
+async function getStravaActivity(stravaAthleteId, activityId) {
     try {
-        const token = await getStravaTokenForUser(userId); 
+        // 1. Get token and real internal user ID using the updated helper
+        const { accessToken, internalUserId } = await getStravaTokenForUser(stravaAthleteId); 
         
+        // Fetch activity
         const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, { 
-            headers: { 'Authorization': `Bearer ${token}` } 
+            headers: { 'Authorization': `Bearer ${accessToken}` } 
         });
         const data = await res.json();
         
         const tss = data.suffer_score || Math.round((data.moving_time / 3600) * 50);
         
+        // 2. Save using internalUserId instead of the raw Strava ID
         db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
-            [data.id, userId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss]);
+            [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss]);
 
-        // FIX 1: Use local start date to avoid timezone overlap
         const activityDate = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
-        
-        // FIX 2: Map the sport type so we match the correct Brick session
         const sparkSport = mapStravaSportToSpark(data.sport_type);
         
         db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?", 
-            [userId, activityDate, sparkSport], async (err, plan) => {
+            [internalUserId, activityDate, sparkSport], async (err, plan) => {
             
             if (err || !plan) {
                 console.log(`⚠️ Strava Update Skipped: No matching ${sparkSport} plan found for ${activityDate}.`);
@@ -1134,11 +1143,10 @@ async function getStravaActivity(userId, activityId) {
 
             const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
             
-            // FIX 3: Check the response and log any permission errors!
             const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
                 method: 'PUT',
                 headers: { 
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ description: newDescription })
@@ -1153,7 +1161,7 @@ async function getStravaActivity(userId, activityId) {
         });
 
     } catch (e) { 
-        console.error(`Activity Fetch/Update Error for User ${userId}:`, e); 
+        console.error(`Activity Fetch/Update Error for Strava Athlete ${stravaAthleteId}:`, e); 
     }
 }
 
