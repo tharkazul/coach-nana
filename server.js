@@ -197,39 +197,13 @@ const CONDITION_TYPE_MAP = {
     'lap.button': { id: 1, key: "lap.button" }
 };
 
-// --- STRAVA WEBHOOK VERIFICATION (HANDSHAKE) ---
-app.get('/webhook/strava', (req, res) => {
-    // You can change this token, but you must use the same one when creating the subscription via the Strava API
-    const VERIFY_TOKEN = process.env.STRAVA_VERIFY_TOKEN || "STRAVA"; 
-    
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
-
-    if (mode && token) {
-        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-            console.log('✅ Strava Webhook Verified!');
-            res.json({ "hub.challenge": challenge });
-        } else {
-            res.sendStatus(403);
-        }
-    }
-});
-
-// --- EXISTING POST ROUTE ---
+// --- AUTH ROUTES ---
 app.post('/webhook/strava', (req, res) => {
-    console.log("📥 STRAVA WEBHOOK INCOMING PAYLOAD:", JSON.stringify(req.body, null, 2));
-
-    const { aspect_type, object_id, owner_id, object_type } = req.body;
-    
-    if (aspect_type === 'create' && object_type === 'activity') {
-        console.log(`🏃 Nuevo Strava activity event detected! Athlete ID: ${owner_id}, Activity ID: ${object_id}`);
+    const { aspect_type, object_id, owner_id } = req.body;
+    // If it's a new activity, trigger the sync
+    if (aspect_type === 'create') {
         getStravaActivity(owner_id, object_id);
-    } else {
-        console.log(`ℹ️ Webhook event ignored: aspect_type is "${aspect_type}", object_type is "${object_type}"`);
     }
-    
-    // Always respond 200 OK instantly
     res.status(200).send('EVENT_RECEIVED');
 });
 
@@ -1036,18 +1010,10 @@ app.get('/api/weight', authenticateToken, (req, res) => {
 });
 
 // --- 1. THE MISSING TOKEN HELPER ---
-async function getStravaTokenForUser(userIdOrStravaId) {
+async function getStravaTokenForUser(userId) {
     return new Promise((resolve, reject) => {
-        // Query both the users table and token mapping table to resolve correctly
-        db.get(`
-            SELECT u.strava_refresh_token, u.id 
-            FROM users u
-            LEFT JOIN strava_tokens t ON u.id = t.user_id
-            WHERE u.id = ? OR t.strava_id = ?
-        `, [userIdOrStravaId, String(userIdOrStravaId)], async (err, user) => {
-            if (err || !user || !user.strava_refresh_token) {
-                return reject("No Strava token found for user identifier: " + userIdOrStravaId);
-            }
+        db.get('SELECT strava_refresh_token FROM users WHERE id = ?', [userId], async (err, user) => {
+            if (err || !user || !user.strava_refresh_token) return reject("No Strava token found for user.");
             
             try {
                 const tokenRes = await fetch('https://www.strava.com/oauth/token', {
@@ -1063,8 +1029,7 @@ async function getStravaTokenForUser(userIdOrStravaId) {
                 
                 const tokenData = await tokenRes.json();
                 if (tokenData.access_token) {
-                    // Return both the active access token and the real database user ID
-                    resolve({ accessToken: tokenData.access_token, internalUserId: user.id });
+                    resolve(tokenData.access_token);
                 } else {
                     reject("Strava token refresh failed.");
                 }
@@ -1114,30 +1079,30 @@ async function tagStravaActivity(userId, activity, token) {
     });
 }
 
-async function getStravaActivity(stravaAthleteId, activityId) {
+async function getStravaActivity(userId, activityId) {
     try {
-        // 1. Get token and real internal user ID using the updated helper
-        const { accessToken, internalUserId } = await getStravaTokenForUser(stravaAthleteId); 
+        const token = await getStravaTokenForUser(userId); 
         
-        // Fetch activity
         const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, { 
-            headers: { 'Authorization': `Bearer ${accessToken}` } 
+            headers: { 'Authorization': `Bearer ${token}` } 
         });
         const data = await res.json();
         
         const tss = data.suffer_score || Math.round((data.moving_time / 3600) * 50);
         
-        // 2. Save using internalUserId instead of the raw Strava ID
         db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
-            [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss]);
+            [data.id, userId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss]);
 
+        // FIX 1: Use local start date to avoid timezone overlap
         const activityDate = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
+        
+        // FIX 2: Map the sport type so we match the correct Brick session
         const sparkSport = mapStravaSportToSpark(data.sport_type);
         
         db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?", 
-            [internalUserId, activityDate, sparkSport], async (err, plan) => {
+            [userId, activityDate, sparkSport], async (err, plan) => {
             
             if (err || !plan) {
                 console.log(`⚠️ Strava Update Skipped: No matching ${sparkSport} plan found for ${activityDate}.`);
@@ -1146,10 +1111,11 @@ async function getStravaActivity(stravaAthleteId, activityId) {
 
             const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
             
+            // FIX 3: Check the response and log any permission errors!
             const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
                 method: 'PUT',
                 headers: { 
-                    'Authorization': `Bearer ${accessToken}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ description: newDescription })
@@ -1164,7 +1130,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         });
 
     } catch (e) { 
-        console.error(`Activity Fetch/Update Error for Strava Athlete ${stravaAthleteId}:`, e); 
+        console.error(`Activity Fetch/Update Error for User ${userId}:`, e); 
     }
 }
 
@@ -1201,7 +1167,6 @@ async function syncAllStravaUsersOnStartup() {
         }
     });
 }
-
 
 
 // --- ADMIN FEEDBACK LOGIC ---
@@ -1251,4 +1216,5 @@ async function loadAdminFeedback() {
 
 app.listen(process.env.PORT || 3001, () => {
     console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
+    syncAllStravaUsersOnStartup(); // Trigger the bulk sync when the server boots
 });
