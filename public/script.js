@@ -365,7 +365,10 @@
                 if (el) el.classList.toggle('hidden', t !== view);
             });
             
-            document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log' }[t];
+            const titleEl = document.getElementById('current-tab-title');
+                if (titleEl) {
+                    titleEl.innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'admin': 'Admin' }[t] || '';
+                }
             
             views.forEach(tab => {
                 const btn = document.getElementById(`nav-${tab}`);
