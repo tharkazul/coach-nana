@@ -364,12 +364,13 @@
                 const el = document.getElementById(`view-${view}`);
                 if (el) el.classList.toggle('hidden', t !== view);
             });
-            
+
+            // Safe title update - will not crash if the header is removed!
             const titleEl = document.getElementById('current-tab-title');
-                if (titleEl) {
-                    titleEl.innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'admin': 'Admin' }[t] || '';
-                }
-            
+            if (titleEl) {
+                titleEl.innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'admin': 'Admin' }[t] || '';
+            }
+
             views.forEach(tab => {
                 const btn = document.getElementById(`nav-${tab}`);
                 if (!btn) return;
@@ -395,7 +396,7 @@
                 }
             });
 
-            if(t === 'history') loadHistory();
+            if(t === 'history' && typeof loadHistory === 'function') loadHistory();
             if(t === 'coach') {
                 setTimeout(() => {
                     const chatWindow = document.getElementById('chat-window');
