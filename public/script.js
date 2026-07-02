@@ -1091,10 +1091,10 @@ async function generateTemplate() {
 
             // Optional Fallback logic if the real images are missing
             const fallbackColors = {
-                'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e' },
-                'strict':     { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626' },
-                'cheer':      { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e' },
-                'madison':      { default: '374151', hype: '111827', disappointed: '7f1d1d' }
+                'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e', horny: '10b981' },
+                'strict':     { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626', horny: '2563eb' },
+                'cheer':      { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e', horny: 'd946ef' },
+                'madison':      { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' }
             };
             const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
             const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
