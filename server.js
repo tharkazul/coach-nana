@@ -269,9 +269,10 @@ app.get('/api/chat/history', authenticateToken, (req, res) => {
 app.post('/api/chat', authenticateToken, async (req, res) => {
     const { message } = req.body;
 
-    db.get(`SELECT coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+        db.get(`SELECT coach_tone, athlete_context, training_phase FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
 
+        const phase = user.training_phase || 'Base';
         try {
             db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
                 
