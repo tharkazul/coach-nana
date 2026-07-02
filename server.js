@@ -372,8 +372,26 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 
                 let mood = 'default';
                 const lowerReply = aiReply.toLowerCase();
-                if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
-                if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+
+                // if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
+                // if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+
+                // Define your keyword arrays here
+                const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
+                const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
+                const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust','dream','hot'];
+                // .some() acts as a giant OR statement across the whole array
+                if (hypeKeywords.some(word => lowerReply.includes(word))) {
+                    mood = 'hype';
+                } else if (hornyKeywords.some(word => lowerReply.includes(word))) {
+                    mood = 'horny';
+                } else if (disappointedKeywords.some(word => lowerReply.includes(word))) {
+                    mood = 'disappointed';
+                }
+
+
+                const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
+                const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
 
                 db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, message]);
                 db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
