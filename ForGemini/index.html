@@ -223,16 +223,9 @@
                 <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                 <span class="hidden md:inline">Log</span>
             </button>
-            <button onclick="switchTab('coach')" id="nav-coach" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-1 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text border-t-2 md:border-t-0 md:border-r-2 border-transparent transition-colors gap-1 md:gap-2 relative z-50">
-                <!-- Floating Action Button for Mobile -->
-                <div class="absolute md:static top-[-22px] md:top-0 left-1/2 md:left-auto transform -translate-x-1/2 md:translate-x-0 bg-theme-accent text-white md:bg-transparent md:text-inherit rounded-full p-3 md:p-0 shadow-lg shadow-theme-accent/40 md:shadow-none ring-4 ring-theme-card md:ring-0 flex items-center justify-center transition-transform hover:scale-105">
-                    <svg class="w-6 h-6 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-                    </svg>
-                </div>
-                <!-- Spacer to maintain layout height on mobile -->
-                <div class="h-5 w-full md:hidden"></div>
-                <span class="hidden md:inline font-bold">Coach</span>
+            <button onclick="switchTab('coach')" id="nav-coach" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text border-t-2 md:border-t-0 md:border-r-2 border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                <span class="hidden md:inline">Coach</span>
             </button>
             <button onclick="switchTab('settings')" id="nav-settings" class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text border-t-2 md:border-t-0 md:border-r-2 border-transparent transition-colors gap-1 md:gap-2">
                 <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -311,22 +304,10 @@
                     
                     <div class="bg-theme-accent-soft border-l-4 border-theme-accent rounded-r-xl shadow-sm p-4 flex items-start space-x-3">
                         <div class="text-theme-accent text-xl leading-none mt-1">💡</div>
-                        <!-- Spark's Analysis Gateway -->
-                    <div onclick="switchTab('coach')" class="bg-theme-accent-soft border-l-4 border-theme-accent rounded-r-xl shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between cursor-pointer hover:bg-theme-accent-border transition group">
-                        <div class="flex items-start space-x-3">
-                            <div class="text-theme-accent text-xl leading-none mt-1 group-hover:scale-110 transition-transform">💡</div>
-                            <div>
-                                <h4 class="text-[10px] uppercase tracking-wider text-theme-accent font-bold mb-1">Spark's Analysis</h4>
-                                <p id="daily-reflection" class="text-xs md:text-sm text-theme-text leading-relaxed">Calculating current training phase...</p>
-                            </div>
+                        <div>
+                            <h4 class="text-[10px] uppercase tracking-wider text-theme-accent font-bold mb-1">Spark's Analysis</h4>
+                            <p id="daily-reflection" class="text-xs md:text-sm text-theme-text leading-relaxed">Calculating current training phase...</p>
                         </div>
-                        <div class="mt-3 md:mt-0 md:ml-4 shrink-0 flex items-center">
-                            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-theme-accent px-4 py-2 rounded-full shadow-md group-hover:bg-theme-accent-hover transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-                                Ask Coach
-                            </span>
-                        </div>
-                    </div>
                     </div>
 
                     <div id="macro-block" class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden hidden">
@@ -438,15 +419,6 @@
                  <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm h-full flex flex-col overflow-hidden">
                     <div id="chat-window" class="flex-1 overflow-y-auto p-4 md:p-6 bg-theme-bg/50 space-y-4 md:space-y-6 flex flex-col"></div>
                     <div class="p-3 md:p-4 bg-theme-card border-t border-theme-border shrink-0">
-                        
-                        <!-- Quick Replies -->
-                        <div class="flex overflow-x-auto gap-2 mb-3 pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                            <button onclick="document.getElementById('chat-input').value = 'Analyze my progress this week'; sendMessage();" class="text-[10px] md:text-xs font-medium text-theme-accent bg-theme-accent-soft border border-theme-accent-border px-3 py-1.5 rounded-full hover:bg-theme-accent hover:text-white transition whitespace-nowrap shrink-0">Analyze my progress</button>
-                            <button onclick="document.getElementById('chat-input').value = 'Plan my next workout'; sendMessage();" class="text-[10px] md:text-xs font-medium text-theme-accent bg-theme-accent-soft border border-theme-accent-border px-3 py-1.5 rounded-full hover:bg-theme-accent hover:text-white transition whitespace-nowrap shrink-0">Plan my next workout</button>
-                            <button onclick="document.getElementById('chat-input').value = 'How is my fatigue level?'; sendMessage();" class="text-[10px] md:text-xs font-medium text-theme-accent bg-theme-accent-soft border border-theme-accent-border px-3 py-1.5 rounded-full hover:bg-theme-accent hover:text-white transition whitespace-nowrap shrink-0">Check fatigue</button>
-                        </div>
-
-                        <!-- Chat Input -->
                         <div class="flex items-end space-x-2 md:space-x-3 bg-theme-bg border border-theme-border rounded-2xl p-1 shadow-inner focus-within:border-theme-accent transition-colors">
                             <textarea onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }" id="chat-input" placeholder="Ask about your training..." class="flex-1 bg-transparent border-none px-3 md:px-4 py-2.5 text-sm focus:outline-none focus:ring-0 text-theme-text resize-none max-h-32 min-h-[44px]" rows="1"></textarea>
                             <button onclick="sendMessage()" class="bg-theme-accent hover:bg-theme-accent-hover text-white w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition shadow-sm mb-0.5 mr-0.5">
