@@ -1165,4 +1165,3 @@ app.listen(process.env.PORT || 3001, () => {
     console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
     syncAllStravaUsersOnStartup();
 });
-// end of server.js
