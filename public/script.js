@@ -315,7 +315,7 @@ async function loadSettings() {
             // Unhide the secret Admin-Only coach tone
             const select = document.getElementById('set-coach-tone');
             if (select && !select.querySelector('option[value*="madison"]')) {
-                select.innerHTML += `<option value="Flirty, Horny, supportive, as if in a relationship, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
+                select.innerHTML += `<option value="Flirty, Horny, lewd, erotic, supportive, as if in a relationship, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
             }
         }
 
