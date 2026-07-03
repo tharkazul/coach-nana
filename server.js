@@ -11,21 +11,21 @@ const multer = require('multer');
 
 // --- GEMINI LOAD BALANCER REGISTRY ---
 const geminiConfigs = [
-    { 
+    {
         name: "Primary",
-        model: "gemini-3.5-flash", 
+        model: "gemini-3.5-flash",
         apiKey: process.env.GEMINI_API_KEY // Your main key
     },
-    { 
+    {
         name: "Backup",
-        model: "gemini-2.5-flash", 
+        model: "gemini-2.5-flash",
         apiKey: process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY // Uses backup key if it exists, otherwise re-uses the main one
     }
 ];
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'; 
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
 const IV_LENGTH = 16; // For AES, this is always 16 bytes
 
 // Optional but recommended: Serve the uploads folder so you (the admin) can view the images later
@@ -38,20 +38,20 @@ async function generateWithFallback(prompt, systemInstruction = null, chatHistor
 
     for (let i = 0; i < geminiConfigs.length; i++) {
         const config = geminiConfigs[i];
-        
+
         try {
             console.log(`🤖 Attempting AI generation with ${config.name} (${config.model})...`);
-            
+
             const genAI = new GoogleGenerativeAI(config.apiKey);
-            
+
             // Build model options
             const modelOptions = { model: config.model };
             if (systemInstruction) {
                 modelOptions.systemInstruction = systemInstruction;
             }
-            
+
             const model = genAI.getGenerativeModel(modelOptions);
-            
+
             let result;
             if (chatHistory) {
                 // If history is provided, use the Chat interface
@@ -61,9 +61,9 @@ async function generateWithFallback(prompt, systemInstruction = null, chatHistor
                 // Otherwise, use a standard single-shot prompt
                 result = await model.generateContent(prompt);
             }
-            
+
             console.log(`✅ AI Success using ${config.name}!`);
-            return result.response.text(); 
+            return result.response.text();
 
         } catch (error) {
             console.warn(`⚠️ ${config.name} failed. Reason: ${error.message}`);
@@ -117,7 +117,7 @@ db.serialize(() => {
         expires_at INTEGER NOT NULL,
         strava_id TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id)
-    )`);    
+    )`);
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, UNIQUE(user_id, date))`);
     db.run(`CREATE TABLE IF NOT EXISTS weight_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, weight_kg REAL, body_fat_percent REAL, bmi REAL, lean_mass_kg REAL, UNIQUE(user_id, date))`);
@@ -148,13 +148,13 @@ db.serialize(() => {
 // --- AUTHENTICATION MIDDLEWARE ---
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; 
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (token == null) return res.status(401).json({ error: "No token provided" });
 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) return res.status(403).json({ error: "Invalid or expired token" });
-        req.user = user; 
+        req.user = user;
         next();
     });
 }
@@ -163,7 +163,7 @@ function authenticateToken(req, res, next) {
 const SPORT_MAP = {
     'Run': { sportTypeId: 1, sportTypeKey: "running" },
     'Bike': { sportTypeId: 2, sportTypeKey: "cycling" },
-    'Swim': { sportTypeId: 4, sportTypeKey: "swimming" } 
+    'Swim': { sportTypeId: 4, sportTypeKey: "swimming" }
 };
 
 const STEP_TYPE_MAP = {
@@ -189,8 +189,8 @@ const CONDITION_TYPE_MAP = {
 
 // --- STRAVA WEBHOOK VERIFICATION (HANDSHAKE) ---
 app.get('/webhook/strava', (req, res) => {
-    const VERIFY_TOKEN = process.env.STRAVA_VERIFY_TOKEN || "STRAVA"; 
-    
+    const VERIFY_TOKEN = process.env.STRAVA_VERIFY_TOKEN || "STRAVA";
+
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -209,25 +209,25 @@ app.get('/webhook/strava', (req, res) => {
 app.post('/webhook/strava', (req, res) => {
     console.log("📥 STRAVA WEBHOOK INCOMING PAYLOAD:", JSON.stringify(req.body, null, 2));
     const { aspect_type, object_id, owner_id, object_type } = req.body;
-    
+
     if (aspect_type === 'create' && object_type === 'activity') {
         console.log(`🏃‍♂️ New Strava activity detected! Fetching ID: ${object_id}`);
         getStravaActivity(owner_id, object_id);
     }
-    
+
     res.status(200).send('EVENT_RECEIVED');
 });
 
 // Register a new friend
 app.post('/api/auth/register', async (req, res) => {
     const { username, password, context } = req.body;
-    
+
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         db.run(
-            `INSERT INTO users (username, password_hash, athlete_context) VALUES (?, ?, ?)`, 
-            [username, hashedPassword, context || 'New athlete.'], 
-            function(err) {
+            `INSERT INTO users (username, password_hash, athlete_context) VALUES (?, ?, ?)`,
+            [username, hashedPassword, context || 'New athlete.'],
+            function (err) {
                 if (err) return res.status(400).json({ error: "Username might already exist." });
                 res.status(201).json({ message: "Athlete registered successfully!", userId: this.lastID });
             }
@@ -240,7 +240,7 @@ app.post('/api/auth/register', async (req, res) => {
 // Login and get a token
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
-    
+
     db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
         if (err || !user) return res.status(400).json({ error: "Athlete not found." });
 
@@ -269,18 +269,18 @@ app.get('/api/chat/history', authenticateToken, (req, res) => {
 app.post('/api/chat', authenticateToken, async (req, res) => {
     const { message } = req.body;
 
-        db.get(`SELECT coach_tone, athlete_context, training_phase FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    db.get(`SELECT coach_tone, athlete_context, training_phase FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
 
         const phase = user.training_phase || 'Base';
         try {
             db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
-                
+
                 let cleanHistory = [];
-                
+
                 (historyRows || []).forEach(row => {
                     let currentRole = row.role === 'coach' ? 'model' : 'user';
-                    
+
                     if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === currentRole) {
                         cleanHistory[cleanHistory.length - 1].parts[0].text += "\n\n" + row.content;
                     } else {
@@ -292,20 +292,20 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 });
 
                 if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
-                    cleanHistory.shift(); 
+                    cleanHistory.shift();
                 }
                 if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
-                    cleanHistory.pop(); 
+                    cleanHistory.pop();
                 }
 
                 const todayStr = new Date().toISOString().split('T')[0];
-                const next7Days = Array.from({length: 7}, (_, i) => {
+                const next7Days = Array.from({ length: 7 }, (_, i) => {
                     const d = new Date();
                     d.setDate(d.getDate() + i);
-                    return `${d.toLocaleDateString('en-US', {weekday: 'long'})}: ${d.toISOString().split('T')[0]}`;
+                    return `${d.toLocaleDateString('en-US', { weekday: 'long' })}: ${d.toISOString().split('T')[0]}`;
                 }).join(', ');
-                
-                const systemPrompt = 
+
+                const systemPrompt =
                     `You are Spark, an elite Ironman Triathlon and endurance coach. 
                     Today is ${todayStr}.
                     Upcoming Calendar Reference: ${next7Days}
@@ -345,32 +345,32 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     try {
                         const planData = JSON.parse(jsonMatch[1]);
                         const affectedDates = [...new Set(planData.map(day => day.date))];
-                        
+
                         if (affectedDates.length > 0) {
                             const placeholders = affectedDates.map(() => '?').join(',');
-                            
+
                             db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
                                 if (err) console.error("Failed to clear old plan data:", err);
-                                
+
                                 const stmt = db.prepare(`
                                     INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
                                     VALUES (?, ?, ?, ?, ?, ?, ?)
                                 `);
-                                
+
                                 planData.forEach(day => {
                                     stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
                                 });
                                 stmt.finalize();
                             });
                         }
-                        
+
                         planUpdated = true;
-                        aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim(); 
-                    } catch(e) { 
-                        console.error("Failed to parse AI JSON block", e); 
+                        aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim();
+                    } catch (e) {
+                        console.error("Failed to parse AI JSON block", e);
                     }
                 }
-                
+
                 let mood = 'default';
                 const lowerReply = aiReply.toLowerCase();
 
@@ -380,7 +380,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 // Define your keyword arrays here
                 const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
                 const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
-                const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust','dream','hot'];
+                const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust', 'dream', 'hot'];
                 // .some() acts as a giant OR statement across the whole array
                 if (hypeKeywords.some(word => lowerReply.includes(word))) {
                     mood = 'hype';
@@ -408,11 +408,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
-        `SELECT username, strava_refresh_token, garmin_username, coach_tone, athlete_context FROM users WHERE id = ?`, 
-        [req.user.id], 
+        `SELECT username, strava_refresh_token, garmin_username, coach_tone, athlete_context FROM users WHERE id = ?`,
+        [req.user.id],
         (err, user) => {
             if (err || !user) return res.status(500).json({ error: "Failed to load settings." });
-            
+
             res.json({
                 username: user.username,
                 hasStrava: !!user.strava_refresh_token,
@@ -427,11 +427,11 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
 
 app.post('/api/user/settings/coach', authenticateToken, (req, res) => {
     const { coachTone, athleteContext } = req.body;
-    
+
     db.run(
         `UPDATE users SET coach_tone = ?, athlete_context = ? WHERE id = ?`,
         [coachTone, athleteContext, req.user.id],
-        function(err) {
+        function (err) {
             if (err) return res.status(500).json({ error: "Failed to update coach settings." });
             res.json({ message: "Coach updated successfully!" });
         }
@@ -440,7 +440,7 @@ app.post('/api/user/settings/coach', authenticateToken, (req, res) => {
 
 app.post('/api/user/settings/garmin', authenticateToken, (req, res) => {
     const { garminUsername, garminPassword } = req.body;
-    
+
     if (!garminUsername || !garminPassword) {
         return res.status(400).json({ error: "Username and password are required." });
     }
@@ -450,7 +450,7 @@ app.post('/api/user/settings/garmin', authenticateToken, (req, res) => {
     db.run(
         `UPDATE users SET garmin_username = ?, garmin_password = ? WHERE id = ?`,
         [garminUsername, encryptedPassword, req.user.id],
-        function(err) {
+        function (err) {
             if (err) return res.status(500).json({ error: "Failed to save Garmin credentials." });
             res.json({ message: "Garmin connection secured successfully!" });
         }
@@ -459,7 +459,7 @@ app.post('/api/user/settings/garmin', authenticateToken, (req, res) => {
 
 app.post('/api/user/settings/strava', authenticateToken, (req, res) => {
     const { stravaRefreshToken } = req.body;
-    
+
     if (!stravaRefreshToken) {
         return res.status(400).json({ error: "Missing Strava refresh token." });
     }
@@ -467,7 +467,7 @@ app.post('/api/user/settings/strava', authenticateToken, (req, res) => {
     db.run(
         `UPDATE users SET strava_refresh_token = ? WHERE id = ?`,
         [stravaRefreshToken, req.user.id],
-        function(err) {
+        function (err) {
             if (err) return res.status(500).json({ error: "Failed to save Strava integration." });
             res.json({ message: "Strava connected successfully!" });
         }
@@ -479,7 +479,7 @@ app.post('/api/sync-strava', authenticateToken, async (req, res) => {
         if (err || !user || !user.strava_refresh_token) {
             return res.status(400).json({ error: "Strava token missing from settings." });
         }
-        
+
         try {
             const tokenRes = await fetch('https://www.strava.com/oauth/token', {
                 method: 'POST',
@@ -491,18 +491,18 @@ app.post('/api/sync-strava', authenticateToken, async (req, res) => {
                     refresh_token: user.strava_refresh_token
                 })
             });
-            
+
             const tokenData = await tokenRes.json();
             if (!tokenData.access_token) throw new Error("Strava rejected the token. Please check your credentials.");
 
             const actRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=200', {
                 headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
             });
-            
+
             const activities = await actRes.json();
 
             activities.forEach(act => {
-                const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50); 
+                const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50);
                 db.run(
                     `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -626,7 +626,7 @@ app.post('/api/micro-plan', authenticateToken, (req, res) => {
 
 app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     const { targetDate } = req.body;
-    
+
     db.get(`SELECT coach_tone, athlete_context, training_phase, current_ctl, current_atl FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Athlete context not found." });
 
@@ -674,7 +674,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
         Analyze my Form (TSB). If I am highly fatigued (negative TSB), prioritize recovery. If I am fresh (positive TSB), you can push the intensity. Give me a quick encouraging summary of the week's focus based on these metrics, and then provide the JSON block.`;
 
-       try {
+        try {
             let aiReply = await generateWithFallback(userPrompt, systemPrompt);
             let planUpdated = false;
 
@@ -683,32 +683,32 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                 try {
                     const planData = JSON.parse(jsonMatch[1]);
                     const affectedDates = [...new Set(planData.map(day => day.date))];
-                    
+
                     if (affectedDates.length > 0) {
                         const placeholders = affectedDates.map(() => '?').join(',');
-                        
+
                         db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
                             if (err) console.error("Failed to clear old plan data:", err);
-                            
+
                             const stmt = db.prepare(`
                                 INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?)
                             `);
-                            
+
                             planData.forEach(day => {
                                 stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
                             });
                             stmt.finalize();
                         });
                     }
-                    
+
                     planUpdated = true;
-                    aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim(); 
-                } catch(e) { 
-                    console.error("Failed to parse AI JSON block", e); 
+                    aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim();
+                } catch (e) {
+                    console.error("Failed to parse AI JSON block", e);
                 }
             }
-            
+
             let mood = 'default';
             const lowerReply = aiReply.toLowerCase();
             if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
@@ -738,9 +738,9 @@ app.post('/api/feedback', authenticateToken, upload.single('feedbackImage'), (re
     }
 
     db.run(
-        `INSERT INTO feedback (user_id, text, image_path, created_at) VALUES (?, ?, ?, ?)`, 
+        `INSERT INTO feedback (user_id, text, image_path, created_at) VALUES (?, ?, ?, ?)`,
         [req.user.id, feedbackText, imagePath, createdAt],
-        function(err) {
+        function (err) {
             if (err) {
                 console.error("Failed to save feedback:", err);
                 return res.status(500).json({ error: "Failed to save feedback." });
@@ -786,7 +786,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
 
         const decryptedPassword = decrypt(user.garmin_password);
         const GCClient = new GarminConnect({ username: user.garmin_username, password: decryptedPassword });
-        
+
         console.log("DEBUG: Attempting login for user:", user.garmin_username);
         await GCClient.login(user.garmin_username, decryptedPassword);
         const client = GCClient.client || GCClient.http;
@@ -794,14 +794,14 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
 
         const todayStr = new Date().toISOString().split('T')[0];
         const workouts = await new Promise((resolve, reject) => {
-            db.all(`SELECT date, sport, description, target_tss, steps_json FROM micro_plan WHERE user_id = ? AND date >= ?`, 
-            [req.user.id, todayStr], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows || []);
-            });
+            db.all(`SELECT date, sport, description, target_tss, steps_json FROM micro_plan WHERE user_id = ? AND date >= ?`,
+                [req.user.id, todayStr], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows || []);
+                });
         });
 
-        const workoutsToSync = workouts.filter(w => 
+        const workoutsToSync = workouts.filter(w =>
             selectedWorkouts.some(sw => sw.date === w.date && sw.sport === w.sport)
         );
 
@@ -814,7 +814,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
 
             const sportDef = SPORT_MAP[workout.sport];
             let stepsArray = [];
-            try { stepsArray = JSON.parse(workout.steps_json); } catch(e) { stepsArray = []; }
+            try { stepsArray = JSON.parse(workout.steps_json); } catch (e) { stepsArray = []; }
 
             if (stepsArray.length === 0) {
                 let durationMins = Math.max(5, Math.round((workout.target_tss / 55) * 60));
@@ -842,7 +842,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                                 endConditionValue: subStep.condition_type === 'time' ? subStep.condition_value * 60 : subStep.condition_value,
                                 targetType: { workoutTargetTypeId: tDef.id, workoutTargetTypeKey: tDef.key },
                                 targetValueOne: null, targetValueTwo: null,
-                                zoneNumber: subStep.zone ? parseInt(subStep.zone, 10) : null 
+                                zoneNumber: subStep.zone ? parseInt(subStep.zone, 10) : null
                             };
                             if (subStep.condition_type === 'distance') {
                                 sDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
@@ -865,7 +865,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                     endConditionValue: step.condition_type === 'time' ? step.condition_value * 60 : step.condition_value,
                     targetType: { workoutTargetTypeId: targetDef.id, workoutTargetTypeKey: targetDef.key },
                     targetValueOne: null, targetValueTwo: null,
-                    zoneNumber: step.zone ? parseInt(step.zone, 10) : null 
+                    zoneNumber: step.zone ? parseInt(step.zone, 10) : null
                 };
 
                 if (step.condition_type === 'distance') {
@@ -882,7 +882,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
             };
 
             if (workout.sport === 'Swim') {
-                wkt.poolLength = 25; 
+                wkt.poolLength = 25;
                 wkt.poolLengthUnit = { unitId: 1, unitKey: "meter", factor: 100 };
             }
 
@@ -914,17 +914,17 @@ app.get('/api/milestones', authenticateToken, (req, res) => {
 });
 
 app.post('/api/milestones', authenticateToken, (req, res) => {
-    const { milestones } = req.body; 
-    
+    const { milestones } = req.body;
+
     db.serialize(() => {
         db.run(`DELETE FROM milestones WHERE user_id = ?`, [req.user.id]);
-        
+
         const stmt = db.prepare(`INSERT INTO milestones (user_id, name, date, target_ctl, is_main) VALUES (?, ?, ?, ?, ?)`);
         milestones.forEach(m => {
             stmt.run(req.user.id, m.name, m.date, m.target_ctl, m.is_main ? 1 : 0);
         });
         stmt.finalize();
-        
+
         res.json({ success: true, message: "Calendar updated!" });
     });
 });
@@ -952,8 +952,8 @@ app.get('/api/weight', authenticateToken, (req, res) => {
         `SELECT date, weight_kg, body_fat_percent, bmi, lean_mass_kg 
          FROM biometrics 
          WHERE user_id = ? 
-         ORDER BY date ASC`, 
-        [req.user.id], 
+         ORDER BY date ASC`,
+        [req.user.id],
         (err, rows) => {
             if (err) {
                 console.error("Database error fetching weight:", err);
@@ -976,7 +976,7 @@ async function processTokenRefresh(refreshToken, internalUserId, resolve, reject
                 refresh_token: refreshToken
             })
         });
-        
+
         const tokenData = await tokenRes.json();
         if (tokenData.access_token) {
             resolve({ accessToken: tokenData.access_token, internalUserId: internalUserId });
@@ -989,27 +989,27 @@ async function processTokenRefresh(refreshToken, internalUserId, resolve, reject
 async function getStravaTokenForUser(userIdOrStravaId) {
     return new Promise((resolve, reject) => {
         const lookupVal = String(userIdOrStravaId).trim();
-        
+
         db.get(`
             SELECT u.strava_refresh_token, u.id 
             FROM users u
             LEFT JOIN strava_tokens t ON u.id = t.user_id
             WHERE u.id = ? OR t.strava_id = ? OR CAST(t.strava_id AS TEXT) = ?
         `, [userIdOrStravaId, lookupVal, lookupVal], async (err, user) => {
-            
+
             if (err || !user || !user.strava_refresh_token) {
                 console.log(`⚠️ Mapping index missing for ${lookupVal}. Attempting profile fallback link...`);
-                
+
                 db.get(`SELECT id, strava_refresh_token FROM users WHERE strava_refresh_token IS NOT NULL LIMIT 1`, [], async (fallbackErr, fallbackUser) => {
                     if (fallbackErr || !fallbackUser || !fallbackUser.strava_refresh_token) {
                         return reject("No Strava token found anywhere in the system for identifier: " + userIdOrStravaId);
                     }
-                    
+
                     db.run(`INSERT OR IGNORE INTO strava_tokens (user_id, access_token, refresh_token, expires_at, strava_id) VALUES (?, ?, ?, ?, ?)`,
                         [fallbackUser.id, 'temporary', fallbackUser.strava_refresh_token, 0, lookupVal], (insertErr) => {
                             if (!insertErr) console.log(`✨ Successfully healed missing index mapping for Strava ID: ${lookupVal}`);
                         });
-                        
+
                     processTokenRefresh(fallbackUser.strava_refresh_token, fallbackUser.id, resolve, reject);
                 });
             } else {
@@ -1033,33 +1033,33 @@ async function tagStravaActivity(userId, activity, token) {
     const tss = activity.suffer_score || Math.round((activity.moving_time / 3600) * 50);
     const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
     const sparkSport = mapStravaSportToSpark(activity.sport_type || activity.type);
-    
-    db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?", 
-        [userId, activityDate, sparkSport], async (err, plan) => {
-        
-        if (err || !plan) return; 
 
-        const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
-        
-        const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
-        
-        try {
-            const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ description: finalDescription })
-            });
-            if (updateRes.ok) console.log(`✅ Strava description updated for ${sparkSport} on ${activityDate}`);
-        } catch (e) {
-            console.error("Failed to tag Strava activity:", e);
-        }
-    });
+    db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+        [userId, activityDate, sparkSport], async (err, plan) => {
+
+            if (err || !plan) return;
+
+            const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
+
+            const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
+
+            try {
+                const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: finalDescription })
+                });
+                if (updateRes.ok) console.log(`✅ Strava description updated for ${sparkSport} on ${activityDate}`);
+            } catch (e) {
+                console.error("Failed to tag Strava activity:", e);
+            }
+        });
 }
 
 async function getStravaActivity(stravaAthleteId, activityId) {
     try {
         console.log(`🔍 Processing webhook activity ${activityId} for Strava Athlete ${stravaAthleteId}...`);
-        
+
         let accessToken;
         let internalUserId;
 
@@ -1069,24 +1069,24 @@ async function getStravaActivity(stravaAthleteId, activityId) {
             internalUserId = result.internalUserId;
         } catch (lookupError) {
             console.warn(`⚠️ Token mapping failed (${lookupError.message}). Using master fallback account...`);
-            
-            internalUserId = 1; 
+
+            internalUserId = 1;
             const fallbackResult = await getStravaTokenForUser(internalUserId);
             accessToken = fallbackResult.accessToken;
         }
-        
-        const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, { 
-            headers: { 'Authorization': `Bearer ${accessToken}` } 
+
+        const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
         });
         const data = await res.json();
-        
+
         if (!data.id) {
             console.error("❌ Failed to pull activity details from Strava payload:", data);
             return;
         }
 
         const tss = data.suffer_score || Math.round((data.moving_time / 3600) * 50);
-        
+
         db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
@@ -1094,36 +1094,36 @@ async function getStravaActivity(stravaAthleteId, activityId) {
 
         const activityDate = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
         const sparkSport = mapStravaSportToSpark(data.sport_type);
-        
-        db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?", 
-            [internalUserId, activityDate, sparkSport], async (err, plan) => {
-            
-            if (err || !plan) {
-                console.log(`⚠️ Strava Description Sync Skipped: No matching ${sparkSport} plan found on ${activityDate}.`);
-                return; 
-            }
 
-            const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
-            
-            const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
-                method: 'PUT',
-                headers: { 
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ description: newDescription })
+        db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+            [internalUserId, activityDate, sparkSport], async (err, plan) => {
+
+                if (err || !plan) {
+                    console.log(`⚠️ Strava Description Sync Skipped: No matching ${sparkSport} plan found on ${activityDate}.`);
+                    return;
+                }
+
+                const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
+
+                const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ description: newDescription })
+                });
+
+                if (updateRes.ok) {
+                    console.log(`✅ Strava description updated for activity ${activityId}!`);
+                } else {
+                    const errorData = await updateRes.json();
+                    console.error(`❌ Strava Description Update Failed:`, errorData);
+                }
             });
 
-            if (updateRes.ok) {
-                console.log(`✅ Strava description updated for activity ${activityId}!`);
-            } else {
-                const errorData = await updateRes.json();
-                console.error(`❌ Strava Description Update Failed:`, errorData);
-            }
-        });
-
-    } catch (e) { 
-        console.error(`❌ Fatal Webhook Processing Error for Strava Athlete ${stravaAthleteId}:`, e); 
+    } catch (e) {
+        console.error(`❌ Fatal Webhook Processing Error for Strava Athlete ${stravaAthleteId}:`, e);
     }
 }
 
@@ -1131,7 +1131,7 @@ async function syncAllStravaUsersOnStartup() {
     console.log('🔄 Running initial Strava sync for all connected users...');
     db.all('SELECT id FROM users WHERE strava_refresh_token IS NOT NULL', [], async (err, users) => {
         if (err || !users) return;
-        
+
         for (const user of users) {
             try {
                 const result = await getStravaTokenForUser(user.id);
@@ -1140,17 +1140,17 @@ async function syncAllStravaUsersOnStartup() {
                 const actRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=50', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 const activities = await actRes.json();
 
                 activities.forEach(act => {
-                    const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50); 
+                    const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50);
                     db.run(
                         `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
                     );
-                    
+
                     tagStravaActivity(user.id, act, token);
                 });
                 console.log(`✅ Startup sync complete for user ${user.id}`);
@@ -1165,3 +1165,4 @@ app.listen(process.env.PORT || 3001, () => {
     console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
     syncAllStravaUsersOnStartup();
 });
+// end of server.js
