@@ -32,11 +32,25 @@ function renderMetricsEditor() {
 }
 
 function addMetricRow() {
+    const rows = document.querySelectorAll('.metric-row');
+    if (rows.length > 0) {
+        globalMetrics = Array.from(rows).map((row) => ({
+            metric: row.querySelector('.metric-key').value,
+            value: row.querySelector('.metric-val').value
+        }));
+    }
     globalMetrics.push({ metric: '', value: '' });
     renderMetricsEditor();
 }
 
 function removeMetricRow(idx) {
+    const rows = document.querySelectorAll('.metric-row');
+    if (rows.length > 0) {
+        globalMetrics = Array.from(rows).map((row) => ({
+            metric: row.querySelector('.metric-key').value,
+            value: row.querySelector('.metric-val').value
+        }));
+    }
     globalMetrics.splice(idx, 1);
     renderMetricsEditor();
 }
