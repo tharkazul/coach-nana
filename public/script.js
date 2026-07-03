@@ -795,10 +795,10 @@
                                     }
                                 }).join('');
                                 
-                                detailsHtml = `<div class="w-full px-4 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-2 bg-theme-card shadow-sm rounded-r-sm border border-theme-border flex flex-col">${p.details && p.details.trim() !== '' ? `<div class="mb-2 pb-2 border-b border-theme-border italic">${p.details.replace(/\n/g, '<br>')}</div>` : ''}<div class="space-y-0.5">${stepsList}</div></div></div>`;
+                                detailsHtml = `<div class="w-full pl-8 pr-4 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 pr-3 py-2 bg-theme-card shadow-sm rounded-r-sm border border-theme-border flex flex-col">${p.details && p.details.trim() !== '' ? `<div class="mb-2 pb-2 border-b border-theme-border italic">${p.details.replace(/\n/g, '<br>')}</div>` : ''}<div class="space-y-0.5">${stepsList}</div></div></div>`;
                             } catch(e) {}
                         } else if (p.details && p.details.trim() !== '') {
-                            detailsHtml = `<div class="w-full px-4 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-1.5 bg-theme-card shadow-sm rounded-r-sm border border-theme-border">${p.details.replace(/\n/g, '<br>')}</div></div>`;
+                            detailsHtml = `<div class="w-full pl-8 pr-4 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 pr-3 py-1.5 bg-theme-card shadow-sm rounded-r-sm border border-theme-border">${p.details.replace(/\n/g, '<br>')}</div></div>`;
                         }
                         
                         // Only show the Date text on the first row of the day
