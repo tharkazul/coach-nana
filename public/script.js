@@ -303,12 +303,13 @@ async function loadSettings() {
         if (isRutger) {
             console.log("✅ Admin verified! Unlocking admin features...");
 
-            // Unhide the Admin Panel button in the sidebar
-            const adminNav = document.getElementById('nav-admin');
-            if (adminNav) {
-                adminNav.classList.remove('hidden');
+            // Unhide the Admin Section in Settings
+            const adminSection = document.getElementById('admin-settings-section');
+            if (adminSection) {
+                adminSection.classList.remove('hidden');
+                loadAdminFeedback();
             } else {
-                console.error("❌ Could not find 'nav-admin' in the HTML!");
+                console.error("❌ Could not find 'admin-settings-section' in the HTML!");
             }
 
             // Unhide the secret Admin-Only coach tone
