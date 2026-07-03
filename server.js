@@ -782,12 +782,11 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
             db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, coachAcknowledgement, mood]);
             res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
-
-        }); // End metrics fetch
         } catch (e) {
             console.error("AI Generation Error:", e);
             res.status(500).json({ error: "AI failed to respond." });
         }
+        }); // End metrics fetch
     });
 });
 
