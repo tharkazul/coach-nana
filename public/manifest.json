@@ -1,0 +1,17 @@
+{
+  "name": "Spark Training HQ",
+  "short_name": "Spark",
+  "description": "Your AI-powered endurance training coach and performance dashboard.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#f97316",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon4.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

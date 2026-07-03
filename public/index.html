@@ -2,10 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Spark | Training HQ</title>
     <link rel="icon" type="image/png" href="/icon4.png">
     <link rel="apple-touch-icon" href="/icon4.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Spark">
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f9fafb" media="(prefers-color-scheme: light)">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -74,7 +80,16 @@
         ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
         html, body { height: 100%; height: 100dvh; width: 100%; overflow: hidden; overscroll-behavior-y: none; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
         .today-marker { transition: left 1s ease-in-out; }
+
+        /* Native-like gesture enhancements */
+        button, a, input, select, textarea, [role="button"] {
+            touch-action: manipulation;
+        }
+        .overflow-y-auto {
+            -webkit-overflow-scrolling: touch;
+        }
     </style>
 </head>
 <body class="bg-theme-bg text-theme-text font-sans flex flex-col md:flex-row relative transition-colors duration-300">
@@ -190,7 +205,7 @@
     </div>
     <!-- ACTIVITY MODAL (Maps & Telemetry) -->
     <div id="activity-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 md:p-8 backdrop-blur-sm transition-opacity">
-        <div class="bg-theme-card rounded-sm shadow-2xl w-full max-w-4xl h-full md:h-[80vh] flex flex-col overflow-hidden relative border border-theme-border">
+        <div class="pt-safe bg-theme-card rounded-sm shadow-2xl w-full max-w-4xl h-full md:h-[80vh] flex flex-col overflow-hidden relative border border-theme-border">
             <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg shrink-0">
                 <h2 id="modal-title" class="text-sm font-bold text-theme-text truncate pr-4">Loading Telemetry...</h2>
                 <button onclick="closeModal()" class="text-theme-muted hover:text-theme-text transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -258,7 +273,7 @@
 
     <!-- MAIN CONTENT AREA -->
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
-       <header class="h-14 md:h-16 bg-theme-card border-b border-theme-border flex items-center justify-between px-4 md:px-8 z-10 shrink-0 transition-colors duration-300">
+       <header class="pt-safe min-h-[3.5rem] md:min-h-[4rem] py-2 bg-theme-card border-b border-theme-border flex items-center justify-between px-4 md:px-8 z-10 shrink-0 transition-colors duration-300">
             <div class="flex items-center text-xs md:text-sm text-theme-muted space-x-1 md:space-x-2">
                 <span class="hidden md:inline">Spark HQ</span>
                 <span class="hidden md:inline">/</span>
