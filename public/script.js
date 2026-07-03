@@ -1055,32 +1055,77 @@ async function openActivityModal(id) {
                 cadenceStr = `${Math.round(data.average_cadence)} rpm`;
             }
         }
+        
+        let paceSpeedLabel = 'Avg Pace';
+        let paceSpeedStr = '--';
+        if (data.distance && data.moving_time) {
+            if (data.type === 'Ride' || data.type === 'EBikeRide' || data.type === 'VirtualRide') {
+                paceSpeedLabel = 'Avg Speed';
+                let speedKmh = ((data.distance / 1000) / (data.moving_time / 3600)).toFixed(1);
+                paceSpeedStr = `${speedKmh} km/h`;
+            } else if (data.type === 'Swim') {
+                paceSpeedLabel = 'Avg Pace';
+                let swimPaceDecimal = (data.moving_time / 60) / (data.distance / 100);
+                let swimMins = Math.floor(swimPaceDecimal);
+                let swimSecs = Math.round((swimPaceDecimal - swimMins) * 60).toString().padStart(2, '0');
+                if (swimSecs === '60') { swimMins += 1; swimSecs = '00'; }
+                paceSpeedStr = `${swimMins}:${swimSecs} /100m`;
+            } else { // Run, Walk, Hike
+                paceSpeedLabel = 'Avg Pace';
+                let paceDecimal = (data.moving_time / 60) / (data.distance / 1000);
+                let paceMins = Math.floor(paceDecimal);
+                let paceSecs = Math.round((paceDecimal - paceMins) * 60).toString().padStart(2, '0');
+                if (paceSecs === '60') { paceMins += 1; paceSecs = '00'; }
+                paceSpeedStr = `${paceMins}:${paceSecs} /km`;
+            }
+        }
+        
         document.getElementById('modal-stats').innerHTML = `
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Distance</div>
                     <div class="text-lg md:text-xl font-light text-theme-text">${distStr}</div>
                 </div>
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg HR</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${hrStr}</div>
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">${paceSpeedLabel}</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${paceSpeedStr}</div>
                 </div>
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Elevation</div>
                     <div class="text-lg md:text-xl font-light text-theme-text">${elevStr}</div>
                 </div>
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div>
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg HR</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${hrStr}</div>
                 </div>
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Cadence</div>
                     <div class="text-lg md:text-xl font-light text-theme-text">${cadenceStr}</div>
+                </div>
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div>
                 </div>`;
         if (activityMap) activityMap.remove(); document.getElementById('actual-map').innerHTML = '';
         activityMap = L.map('actual-map', { zoomControl: false }); L.control.zoom({ position: 'bottomright' }).addTo(activityMap); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(activityMap);
-        if (data.map && data.map.summary_polyline) { const coords = decodePolyline(data.map.summary_polyline); if (coords.length > 0) { const polyline = L.polyline(coords, { color: '#0d9488', weight: 4, opacity: 0.8, lineJoin: 'round' }).addTo(activityMap); activityMap.fitBounds(polyline.getBounds(), { padding: [30, 30] }); } } else { activityMap.setView([52.3676, 4.9041], 13); }
+        
+        let boundsToFit = null;
+        if (data.map && data.map.summary_polyline) { 
+            const coords = decodePolyline(data.map.summary_polyline); 
+            if (coords.length > 0) { 
+                const polyline = L.polyline(coords, { color: '#0d9488', weight: 4, opacity: 0.8, lineJoin: 'round' }).addTo(activityMap); 
+                boundsToFit = polyline.getBounds(); 
+            } 
+        } 
+        
         document.getElementById('modal-loader').classList.add('hidden'); document.getElementById('modal-content').classList.remove('hidden'); document.getElementById('modal-content').classList.add('flex');
-        setTimeout(() => { activityMap.invalidateSize(); }, 100);
+        setTimeout(() => { 
+            activityMap.invalidateSize(); 
+            if (boundsToFit) {
+                activityMap.fitBounds(boundsToFit, { padding: [30, 30] });
+            } else {
+                activityMap.setView([52.3676, 4.9041], 13);
+            }
+        }, 100);
     } catch (e) { document.getElementById('modal-title').innerText = "Error Fetching Data"; document.getElementById('modal-loader').innerHTML = `<span class="text-red-500 font-bold uppercase tracking-widest text-xs">Connection Failed</span>`; }
 }
 
