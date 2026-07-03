@@ -427,11 +427,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
                 res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
             });
+            } catch (e) {
+                console.error("Chat Server Error:", e);
+                res.status(500).json({ error: "AI failed to respond." });
+            }
         });
-        } catch (e) {
-            console.error("Chat Server Error:", e);
-            res.status(500).json({ error: "AI failed to respond." });
-        }
     });
 });
 
