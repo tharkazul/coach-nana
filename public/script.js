@@ -759,10 +759,12 @@
                         
                         // Only show weather on the first row of the day
                         let weatherHtml = `<div class="w-12 md:w-16 shrink-0"></div>`;
+                        let weatherMobileHtml = '';
                         if (wIdx === 0 && weatherMap[dateStr]) { 
                             const w = weatherMap[dateStr]; 
                             const precipAlert = w.precip > 0 ? `<span class="text-blue-400">${w.precip}mm</span>` : `<span class="text-theme-muted opacity-50">0mm</span>`; 
                             weatherHtml = `<div class="w-12 md:w-16 flex flex-col items-center justify-center shrink-0 border-l border-theme-border pl-2"><span class="text-lg leading-none">${w.emoji}</span><span class="text-[9px] md:text-[10px] font-mono text-theme-muted mt-1">${w.temp}°C</span><span class="text-[8px] md:text-[9px] font-mono">${precipAlert}</span></div>`; 
+                            weatherMobileHtml = `<span class="text-[10px] mr-2 font-mono flex items-center gap-1 bg-theme-bg px-1.5 py-0.5 rounded border border-theme-border">${w.emoji} ${w.temp}°C</span>`;
                         }
                         
                         let detailsHtml = '';
@@ -793,10 +795,10 @@
                                     }
                                 }).join('');
                                 
-                                detailsHtml = `<div class="w-full pl-28 md:pl-40 pr-4 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-2 bg-theme-card shadow-sm rounded-r-sm border border-theme-border flex flex-col">${p.details && p.details.trim() !== '' ? `<div class="mb-2 pb-2 border-b border-theme-border italic">${p.details.replace(/\n/g, '<br>')}</div>` : ''}<div class="space-y-0.5">${stepsList}</div></div></div>`;
+                                detailsHtml = `<div class="w-full px-4 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-2 bg-theme-card shadow-sm rounded-r-sm border border-theme-border flex flex-col">${p.details && p.details.trim() !== '' ? `<div class="mb-2 pb-2 border-b border-theme-border italic">${p.details.replace(/\n/g, '<br>')}</div>` : ''}<div class="space-y-0.5">${stepsList}</div></div></div>`;
                             } catch(e) {}
                         } else if (p.details && p.details.trim() !== '') {
-                            detailsHtml = `<div class="w-full pl-28 md:pl-40 pr-4 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-1.5 bg-theme-card shadow-sm rounded-r-sm border border-theme-border">${p.details.replace(/\n/g, '<br>')}</div></div>`;
+                            detailsHtml = `<div class="w-full px-4 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 py-1.5 bg-theme-card shadow-sm rounded-r-sm border border-theme-border">${p.details.replace(/\n/g, '<br>')}</div></div>`;
                         }
                         
                         // Only show the Date text on the first row of the day
@@ -811,15 +813,52 @@
                             : (p.sport !== 'Rest' ? `<span class="w-4 h-4 block opacity-20 cursor-not-allowed"></span>` : ``);
                 
                         html += `
-                            <div class="flex items-center px-4 md:px-6 py-2 w-full">
-                                <div class="w-8 shrink-0 flex items-center">${cbHtml}</div>
-                                <div class="w-24 md:w-32 flex items-center space-x-2 md:space-x-3 shrink-0">${dateDisplay}</div>
-                                <span class="w-16 md:w-24 text-xs md:text-sm font-medium ${p.sport==='Rest' ? 'text-theme-muted' : 'text-theme-accent'} shrink-0">${p.sport}</span>
-                                <span class="flex-1 text-xs md:text-sm text-theme-text truncate pr-2 md:pr-4 min-w-[120px]">${p.description}</span>
-                                <span class="w-28 md:w-36 text-xs md:text-sm text-right pr-2 md:pr-4 shrink-0">${humanData}</span>
-                                <div class="w-16 md:w-20 flex flex-col items-end pr-2 md:pr-4 shrink-0 font-mono text-[10px] md:text-xs"><span class="text-theme-muted">Tgt: ${p.target_tss}</span><span class="${actColor}">Act: ${actualTss}</span></div>
-                                ${weatherHtml}
-                                <button onclick="editDay('${dateStr}', '${dayName}')" class="text-xs text-theme-muted hover:text-theme-accent font-medium md:opacity-0 group-hover:opacity-100 transition shrink-0 p-2 md:p-0 ml-2">Edit</button>
+                            <div class="flex flex-col md:flex-row md:items-center px-4 md:px-6 py-3 md:py-2 w-full gap-2 md:gap-0 border-b border-theme-border last:border-b-0">
+                                
+                                <!-- Mobile row top: Checkbox + Date + Sport + Mobile Weather + Edit button -->
+                                <div class="flex items-center justify-between w-full md:w-auto shrink-0">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 shrink-0 flex items-center justify-center">${cbHtml}</div>
+                                        <div class="w-20 md:w-32 flex items-baseline md:items-center space-x-2 shrink-0">${dateDisplay}</div>
+                                        <span class="text-[10px] md:text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${p.sport==='Rest' ? 'bg-theme-border text-theme-muted' : 'bg-theme-accent-soft text-theme-accent'}">${p.sport}</span>
+                                    </div>
+                                    <div class="flex items-center md:hidden">
+                                        ${weatherMobileHtml}
+                                        <button onclick="editDay('${dateStr}', '${dayName}')" class="text-[10px] text-theme-accent font-bold px-2 py-0.5 bg-theme-bg rounded border border-theme-border">Edit</button>
+                                    </div>
+                                </div>
+
+                                <!-- Description & Estimate/Target info -->
+                                <div class="flex-1 min-w-0 md:pl-2">
+                                    <div class="text-xs md:text-sm font-medium text-theme-text truncate">${p.description}</div>
+                                    <div class="text-[10px] md:text-xs text-theme-muted mt-0.5 md:hidden">${humanData}</div>
+                                </div>
+
+                                <!-- Right side info (Desktop layout & Mobile details) -->
+                                <div class="flex items-center justify-between md:justify-end w-full md:w-auto shrink-0 mt-1 md:mt-0 gap-3">
+                                    <!-- Mobile view TSS info -->
+                                    <div class="flex items-center gap-2 font-mono text-[9px] md:hidden bg-theme-bg/60 px-2 py-1 rounded border border-theme-border/50">
+                                        <span class="text-theme-muted">Tgt: ${p.target_tss}</span>
+                                        <span class="text-theme-muted">/</span>
+                                        <span class="${actColor}">Act: ${actualTss}</span>
+                                    </div>
+
+                                    <!-- Desktop Estimate/Details -->
+                                    <span class="hidden md:inline w-28 md:w-36 text-xs md:text-sm text-right pr-2 md:pr-4 shrink-0">${humanData}</span>
+
+                                    <!-- Desktop TSS stats -->
+                                    <div class="hidden md:flex flex-col items-end w-16 md:w-20 pr-2 md:pr-4 shrink-0 font-mono text-[10px] md:text-xs">
+                                        <span class="text-theme-muted">Tgt: ${p.target_tss}</span>
+                                        <span class="${actColor}">Act: ${actualTss}</span>
+                                    </div>
+
+                                    <!-- Desktop Weather & Edit button -->
+                                    <div class="hidden md:flex items-center">
+                                        ${weatherHtml}
+                                        <button onclick="editDay('${dateStr}', '${dayName}')" class="text-xs text-theme-muted hover:text-theme-accent font-medium md:opacity-0 group-hover:opacity-100 transition shrink-0 p-2 md:p-0 ml-2">Edit</button>
+                                    </div>
+                                </div>
+
                             </div>
                             ${detailsHtml}
                         `;
