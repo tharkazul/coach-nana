@@ -272,9 +272,14 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     db.get(`SELECT coach_tone, athlete_context, training_phase FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
 
-        const phase = user.training_phase || 'Base';
-        try {
-            db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
+        db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metricsRows) => {
+            const metricsText = (metricsRows && metricsRows.length > 0) 
+                ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ') 
+                : 'None explicitly recorded yet.';
+
+            const phase = user.training_phase || 'Base';
+            try {
+                db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
 
                 let cleanHistory = [];
 
@@ -310,6 +315,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     Today is ${todayStr}.
                     Upcoming Calendar Reference: ${next7Days}
                     Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+                    Key Physiological Metrics: ${metricsText}
                     Your Tone & Persona: ${user.coach_tone || 'empathetic'}
 
                     CRITICAL RULES:
@@ -335,41 +341,63 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                       }
                     ]
                     \`\`\`
-                    *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the example.*`;
+                    *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the example.*
+                    
+                    ATHLETE METRICS MEMORY (CRITICAL):
+                    If the athlete mentions a new personal best, physiological metric, or baseline number (e.g., FTP, 5K pace, Max HR, resting heart rate, swim threshold), you MUST output an additional JSON block at the very end of your response to commit it to your long-term memory. Format it exactly like this inside triple backticks:
+                    \`\`\`json
+                    {
+                      "type": "metrics",
+                      "data": {
+                        "Cycling FTP": "250W",
+                        "5K Run PB": "19:30"
+                      }
+                    }
+                    \`\`\``;
 
                 let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory);
                 let planUpdated = false;
 
-                const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
-                if (jsonMatch) {
+                const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
+                for (const match of jsonMatches) {
                     try {
-                        const planData = JSON.parse(jsonMatch[1]);
-                        const affectedDates = [...new Set(planData.map(day => day.date))];
+                        const parsedData = JSON.parse(match[1]);
+                        
+                        if (Array.isArray(parsedData)) {
+                            const planData = parsedData;
+                            const affectedDates = [...new Set(planData.map(day => day.date))];
 
-                        if (affectedDates.length > 0) {
-                            const placeholders = affectedDates.map(() => '?').join(',');
+                            if (affectedDates.length > 0) {
+                                const placeholders = affectedDates.map(() => '?').join(',');
 
-                            db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
-                                if (err) console.error("Failed to clear old plan data:", err);
+                                db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                    if (err) console.error("Failed to clear old plan data:", err);
 
-                                const stmt = db.prepare(`
-                                    INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                                `);
+                                    const stmt = db.prepare(`
+                                        INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
+                                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                                    `);
 
-                                planData.forEach(day => {
-                                    stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                    planData.forEach(day => {
+                                        stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                    });
+                                    stmt.finalize();
                                 });
-                                stmt.finalize();
-                            });
+                            }
+                            planUpdated = true;
+                        } else if (parsedData && parsedData.type === 'metrics' && parsedData.data) {
+                            const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?) ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`);
+                            for (const [key, val] of Object.entries(parsedData.data)) {
+                                stmt.run(req.user.id, key, String(val));
+                            }
+                            stmt.finalize();
                         }
-
-                        planUpdated = true;
-                        aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim();
                     } catch (e) {
-                        console.error("Failed to parse AI JSON block", e);
+                        console.error("Failed to parse an AI JSON block", e);
                     }
                 }
+                
+                aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
 
                 let mood = 'default';
                 const lowerReply = aiReply.toLowerCase();
@@ -399,6 +427,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
                 res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
             });
+        });
         } catch (e) {
             console.error("Chat Server Error:", e);
             res.status(500).json({ error: "AI failed to respond." });
@@ -436,6 +465,33 @@ app.post('/api/user/settings/coach', authenticateToken, (req, res) => {
             res.json({ message: "Coach updated successfully!" });
         }
     );
+});
+
+app.get('/api/user/metrics', authenticateToken, (req, res) => {
+    db.all(`SELECT id, metric, value FROM athlete_metrics WHERE user_id = ? ORDER BY metric ASC`, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Failed to load metrics." });
+        res.json(rows || []);
+    });
+});
+
+app.post('/api/user/metrics', authenticateToken, (req, res) => {
+    const { metrics } = req.body;
+    if (!metrics || !Array.isArray(metrics)) {
+        return res.status(400).json({ error: "Invalid metrics array format." });
+    }
+
+    db.serialize(() => {
+        // We will just clear all custom metrics and re-insert what the user passed, or update them.
+        // But some might have been auto-added by the AI. It's safer to just clear and insert the passed array from the UI,
+        // assuming the UI sent the complete list.
+        db.run(`DELETE FROM athlete_metrics WHERE user_id = ?`, [req.user.id]);
+        const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?)`);
+        metrics.forEach(m => {
+            stmt.run(req.user.id, m.metric, m.value);
+        });
+        stmt.finalize();
+        res.json({ message: "Metrics updated successfully!" });
+    });
 });
 
 app.post('/api/user/settings/garmin', authenticateToken, (req, res) => {
@@ -630,9 +686,15 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     db.get(`SELECT coach_tone, athlete_context, training_phase, current_ctl, current_atl FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Athlete context not found." });
 
-        const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
-        Tone: ${user.coach_tone || 'empathetic'}
-        Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+        db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metricsRows) => {
+            const metricsText = (metricsRows && metricsRows.length > 0) 
+                ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ') 
+                : 'None explicitly recorded yet.';
+
+            const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
+            Tone: ${user.coach_tone || 'empathetic'}
+            Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+            Key Physiological Metrics: ${metricsText}
         
         CRITICAL RULES:
         1. You are generating a 7-day training plan starting exactly on ${targetDate}.
@@ -721,6 +783,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, coachAcknowledgement, mood]);
             res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
 
+        }); // End metrics fetch
         } catch (e) {
             console.error("AI Generation Error:", e);
             res.status(500).json({ error: "AI failed to respond." });
