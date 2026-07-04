@@ -246,6 +246,7 @@ app.post('/api/auth/login', (req, res) => {
 
         if (await bcrypt.compare(password, user.password_hash)) {
             const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '30d' });
+            db.run(`UPDATE users SET login_count = login_count + 1 WHERE id = ?`, [user.id]);
             res.json({ token, message: "Welcome to Spark HQ" });
         } else {
             res.status(401).json({ error: "Incorrect password." });
@@ -268,6 +269,7 @@ app.get('/api/chat/history', authenticateToken, (req, res) => {
 
 app.post('/api/chat', authenticateToken, async (req, res) => {
     const { message } = req.body;
+    db.run(`UPDATE users SET chat_count = chat_count + 1 WHERE id = ?`, [req.user.id]);
 
     db.get(`SELECT coach_tone, athlete_context, training_phase FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
@@ -810,6 +812,16 @@ app.post('/api/feedback', authenticateToken, upload.single('feedbackImage'), (re
             res.json({ message: "Feedback received loud and clear! Thank you." });
         }
     );
+});
+
+app.get('/api/admin/usage', authenticateToken, (req, res) => {
+    if (!req.user.username.toLowerCase().includes('rutger') && req.user.id !== 1) {
+        return res.status(403).json({ error: "Unauthorized" });
+    }
+    db.all(`SELECT username, login_count, chat_count FROM users ORDER BY login_count DESC`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        res.json(rows || []);
+    });
 });
 
 app.get('/api/admin/feedback', authenticateToken, (req, res) => {

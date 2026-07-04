@@ -216,8 +216,28 @@
                     <span class="text-xs uppercase tracking-widest text-theme-accent font-bold animate-pulse">Syncing Strava...</span>
                 </div>
                 <div id="modal-content" class="hidden flex-col h-full gap-4 md:gap-6">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 shrink-0" id="modal-stats"></div>
-                    <div class="flex-1 bg-theme-bg rounded-sm border border-theme-border relative min-h-[250px] md:min-h-[400px]"><div id="actual-map" class="absolute inset-0 z-0"></div></div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4 shrink-0" id="modal-stats"></div>
+                    <div class="flex-1 bg-theme-bg rounded-sm border border-theme-border relative min-h-[250px] md:min-h-[400px] shrink-0"><div id="actual-map" class="absolute inset-0 z-0"></div></div>
+                    
+                    <div id="modal-laps-container" class="hidden flex-col shrink-0 mt-2">
+                        <h3 class="text-[10px] md:text-xs font-bold text-theme-muted mb-2 tracking-wide uppercase">Laps Overview</h3>
+                        <div class="overflow-x-auto border border-theme-border rounded-sm bg-theme-card shadow-sm">
+                            <table class="w-full text-left text-[10px] md:text-xs text-theme-text min-w-[400px]">
+                                <thead class="bg-theme-bg text-theme-muted uppercase tracking-wider border-b border-theme-border">
+                                    <tr>
+                                        <th class="px-3 py-2 font-bold">Lap</th>
+                                        <th class="px-3 py-2 font-bold">Dist</th>
+                                        <th class="px-3 py-2 font-bold">Time</th>
+                                        <th class="px-3 py-2 font-bold">Pace/Spd</th>
+                                        <th class="px-3 py-2 font-bold">HR</th>
+                                        <th class="px-3 py-2 font-bold">Power</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modal-laps-table" class="divide-y divide-theme-border">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -638,22 +658,42 @@
                     </div>
 
                     <!-- ADMIN SECTION IN SETTINGS -->
-                    <div id="admin-settings-section" class="hidden bg-theme-card border border-theme-border rounded-md p-4 mt-6">
-                        <h3 class="text-sm font-bold text-theme-text mb-2">Admin Feedback Dashboard</h3>
-                        <p class="text-xs text-theme-muted mb-4">User feedback submissions.</p>
-                        <div class="overflow-x-auto border border-theme-border rounded-lg">
-                            <table class="w-full text-left text-sm text-theme-text min-w-[600px]">
-                                <thead class="bg-theme-bg text-theme-muted uppercase text-[10px] tracking-wider border-b border-theme-border">
-                                    <tr>
-                                        <th class="px-4 py-3">Date</th>
-                                        <th class="px-4 py-3">User</th>
-                                        <th class="px-4 py-3 w-1/2">Feedback</th>
-                                        <th class="px-4 py-3 text-center">Attachment</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-feedback-table" class="divide-y divide-theme-border">
-                                </tbody>
-                            </table>
+                    <div id="admin-settings-section" class="hidden bg-theme-card border border-theme-border rounded-md p-4 mt-6 space-y-8">
+                        <div>
+                            <h3 class="text-sm font-bold text-theme-text mb-2">User Usage Stats</h3>
+                            <p class="text-xs text-theme-muted mb-4">Track user activity.</p>
+                            <div class="overflow-x-auto border border-theme-border rounded-lg">
+                                <table class="w-full text-left text-sm text-theme-text">
+                                    <thead class="bg-theme-bg text-theme-muted uppercase text-[10px] tracking-wider border-b border-theme-border">
+                                        <tr>
+                                            <th class="px-4 py-3">User</th>
+                                            <th class="px-4 py-3">Logins / Opens</th>
+                                            <th class="px-4 py-3">Chat Messages</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-usage-table" class="divide-y divide-theme-border">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-sm font-bold text-theme-text mb-2">Admin Feedback Dashboard</h3>
+                            <p class="text-xs text-theme-muted mb-4">User feedback submissions.</p>
+                            <div class="overflow-x-auto border border-theme-border rounded-lg">
+                                <table class="w-full text-left text-sm text-theme-text min-w-[600px]">
+                                    <thead class="bg-theme-bg text-theme-muted uppercase text-[10px] tracking-wider border-b border-theme-border">
+                                        <tr>
+                                            <th class="px-4 py-3">Date</th>
+                                            <th class="px-4 py-3">User</th>
+                                            <th class="px-4 py-3 w-1/2">Feedback</th>
+                                            <th class="px-4 py-3 text-center">Attachment</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-feedback-table" class="divide-y divide-theme-border">
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

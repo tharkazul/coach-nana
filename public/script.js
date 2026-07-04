@@ -1080,10 +1080,23 @@ async function openActivityModal(id) {
             }
         }
         
+        let movingTimeStr = '--';
+        if (data.moving_time) {
+            let h = Math.floor(data.moving_time / 3600);
+            let m = Math.floor((data.moving_time % 3600) / 60);
+            let s = Math.floor(data.moving_time % 60);
+            movingTimeStr = h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+        }
+        let pwrStr = data.average_watts ? `${Math.round(data.average_watts)} W` : '--';
+
         document.getElementById('modal-stats').innerHTML = `
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Distance</div>
                     <div class="text-lg md:text-xl font-light text-theme-text">${distStr}</div>
+                </div>
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Moving Time</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${movingTimeStr}</div>
                 </div>
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">${paceSpeedLabel}</div>
@@ -1098,6 +1111,10 @@ async function openActivityModal(id) {
                     <div class="text-lg md:text-xl font-light text-theme-text">${hrStr}</div>
                 </div>
                 <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
+                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg Power</div>
+                    <div class="text-lg md:text-xl font-light text-theme-text">${pwrStr}</div>
+                </div>
+                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Cadence</div>
                     <div class="text-lg md:text-xl font-light text-theme-text">${cadenceStr}</div>
                 </div>
@@ -1105,6 +1122,58 @@ async function openActivityModal(id) {
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div>
                     <div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div>
                 </div>`;
+                
+        if (data.laps && data.laps.length > 0) {
+            document.getElementById('modal-laps-container').classList.remove('hidden');
+            document.getElementById('modal-laps-table').innerHTML = data.laps.map(lap => {
+                let dist = lap.distance ? `${(lap.distance / 1000).toFixed(2)} km` : '--';
+                
+                let time = '--';
+                if (lap.moving_time) {
+                    let mins = Math.floor(lap.moving_time / 60);
+                    let secs = Math.round(lap.moving_time % 60).toString().padStart(2, '0');
+                    if (secs === '60') { mins += 1; secs = '00'; }
+                    time = `${mins}:${secs}`;
+                }
+                
+                let paceSpd = '--';
+                if (lap.distance && lap.moving_time) {
+                    if (data.type === 'Ride' || data.type === 'EBikeRide' || data.type === 'VirtualRide') {
+                        let speedKmh = ((lap.distance / 1000) / (lap.moving_time / 3600)).toFixed(1);
+                        paceSpd = `${speedKmh}`;
+                    } else if (data.type === 'Swim') {
+                        let swimPaceDecimal = (lap.moving_time / 60) / (lap.distance / 100);
+                        let sMins = Math.floor(swimPaceDecimal);
+                        let sSecs = Math.round((swimPaceDecimal - sMins) * 60).toString().padStart(2, '0');
+                        if (sSecs === '60') { sMins += 1; sSecs = '00'; }
+                        paceSpd = `${sMins}:${sSecs}`;
+                    } else {
+                        let paceDecimal = (lap.moving_time / 60) / (lap.distance / 1000);
+                        let pMins = Math.floor(paceDecimal);
+                        let pSecs = Math.round((paceDecimal - pMins) * 60).toString().padStart(2, '0');
+                        if (pSecs === '60') { pMins += 1; pSecs = '00'; }
+                        paceSpd = `${pMins}:${pSecs}`;
+                    }
+                }
+                
+                let hr = lap.average_heartrate ? `${Math.round(lap.average_heartrate)}` : '--';
+                let pwr = lap.average_watts ? `${Math.round(lap.average_watts)}` : '--';
+                let lapName = lap.name ? `<span class="text-theme-muted font-normal block text-[9px] truncate max-w-[120px]">${lap.name}</span>` : '';
+                
+                return `
+                    <tr class="hover:bg-theme-bg transition">
+                        <td class="px-3 py-2 font-medium">${lap.lap_index || ''} ${lapName}</td>
+                        <td class="px-3 py-2">${dist}</td>
+                        <td class="px-3 py-2">${time}</td>
+                        <td class="px-3 py-2 font-mono">${paceSpd}</td>
+                        <td class="px-3 py-2">${hr}</td>
+                        <td class="px-3 py-2">${pwr}</td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            document.getElementById('modal-laps-container').classList.add('hidden');
+        }
         if (activityMap) activityMap.remove(); document.getElementById('actual-map').innerHTML = '';
         activityMap = L.map('actual-map', { zoomControl: false }); L.control.zoom({ position: 'bottomright' }).addTo(activityMap); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(activityMap);
         
@@ -1112,7 +1181,7 @@ async function openActivityModal(id) {
         if (data.map && data.map.summary_polyline) { 
             const coords = decodePolyline(data.map.summary_polyline); 
             if (coords.length > 0) { 
-                const polyline = L.polyline(coords, { color: '#0d9488', weight: 4, opacity: 0.8, lineJoin: 'round' }).addTo(activityMap); 
+                const polyline = L.polyline(coords, { color: '#0f766e', weight: 5, opacity: 0.9, lineJoin: 'round' }).addTo(activityMap); 
                 boundsToFit = polyline.getBounds(); 
             } 
         } 
@@ -1121,7 +1190,13 @@ async function openActivityModal(id) {
         setTimeout(() => { 
             activityMap.invalidateSize(); 
             if (boundsToFit) {
-                activityMap.fitBounds(boundsToFit, { padding: [30, 30] });
+                let dynamicMaxZoom = 15;
+                if (data.distance) {
+                    if (data.distance < 10000) dynamicMaxZoom = 14;      // < 10km: zoom out more to show neighborhood context
+                    else if (data.distance < 30000) dynamicMaxZoom = 13; // < 30km: show city context
+                    else dynamicMaxZoom = 12;                            // > 30km: zoom out
+                }
+                activityMap.fitBounds(boundsToFit, { padding: [40, 40], maxZoom: dynamicMaxZoom });
             } else {
                 activityMap.setView([52.3676, 4.9041], 13);
             }
@@ -1509,6 +1584,29 @@ async function loadAdminFeedback() {
         if (!response.ok) return;
 
         const data = await response.json();
+        
+        try {
+            const usageRes = await fetch('/api/admin/usage', { headers: getAuthHeaders() });
+            if (usageRes.ok) {
+                const usageData = await usageRes.json();
+                const usageTbody = document.getElementById('admin-usage-table');
+                if (usageTbody) {
+                    if (usageData.length === 0) {
+                        usageTbody.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-theme-muted">No usage data.</td></tr>`;
+                    } else {
+                        usageTbody.innerHTML = usageData.map(u => `
+                            <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
+                                <td class="px-4 py-3 font-medium text-xs">${u.username || 'Unknown'}</td>
+                                <td class="px-4 py-3 text-xs text-theme-muted">${u.login_count || 0}</td>
+                                <td class="px-4 py-3 text-xs text-theme-muted">${u.chat_count || 0}</td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load admin usage", e);
+        }
         const tbody = document.getElementById('admin-feedback-table');
 
         if (!tbody) {
