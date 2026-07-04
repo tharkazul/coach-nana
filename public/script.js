@@ -1503,6 +1503,7 @@ async function sendMessage() {
         let finalAvatar = getCoachAvatar(data.mood || 'default');
         let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
+        const msgId = 'reply-content-' + Date.now();
         document.getElementById(loadId).outerHTML = `
                     <div class="flex items-end gap-2 md:gap-3">
                         <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
@@ -1510,12 +1511,36 @@ async function sendMessage() {
                         </div>
                         <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
                             <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
-                            <span class="whitespace-pre-wrap">${formattedContent}</span>
+                            <span id="${msgId}" class="whitespace-pre-wrap"></span>
                         </div>
                     </div>`;
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
         if (data.planUpdated) { loadMicroPlan(); }
+        
+        // Typewriter effect
+        const targetEl = document.getElementById(msgId);
+        let i = 0;
+        function typeStep() {
+            if (i < formattedContent.length) {
+                if (formattedContent.charAt(i) === '<') {
+                    let tag = '';
+                    while (formattedContent.charAt(i) !== '>' && i < formattedContent.length) {
+                        tag += formattedContent.charAt(i);
+                        i++;
+                    }
+                    tag += '>';
+                    targetEl.innerHTML += tag;
+                    i++;
+                } else {
+                    targetEl.innerHTML += formattedContent.charAt(i);
+                    i++;
+                }
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                setTimeout(typeStep, 15); // Adjust typing speed here (ms)
+            }
+        }
+        typeStep();
 
     } catch (error) {
         document.getElementById(loadId).outerHTML = `
