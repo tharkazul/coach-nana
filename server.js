@@ -261,7 +261,7 @@ app.get('/api/micro-plan', authenticateToken, (req, res) => {
 });
 
 app.get('/api/chat/history', authenticateToken, (req, res) => {
-    db.all(`SELECT role, content, mood FROM chat_history WHERE user_id = ? ORDER BY id ASC`, [req.user.id], (err, rows) => {
+    db.all(`SELECT role, content, mood, timestamp FROM chat_history WHERE user_id = ? ORDER BY id ASC`, [req.user.id], (err, rows) => {
         if (err) return res.status(500).json({ error: "Failed to load chat history." });
         res.json(rows || []);
     });
@@ -334,6 +334,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     4. Respond directly with your conversational text. Do not wrap your main reply in JSON.
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
+                    7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -441,6 +442,51 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 console.error("Chat Server Error:", e);
                 res.status(500).json({ error: "AI failed to respond." });
             }
+        });
+    });
+});
+
+app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
+    db.get(`SELECT coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+        if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
+
+        db.all(`SELECT name, sport_type, distance_km, moving_time_min, tss, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
+            const recentActivitiesText = (recentActivities && recentActivities.length > 0)
+                ? recentActivities.map(a => `- ${a.start_date.split('T')[0]}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n')
+                : 'No recent activities recorded.';
+                
+            db.all(`SELECT date, sport, description FROM micro_plan WHERE user_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 2`, [req.user.id], async (err, upcomingPlan) => {
+                const upcomingText = (upcomingPlan && upcomingPlan.length > 0)
+                    ? upcomingPlan.map(p => `- ${p.date}: ${p.sport} - ${p.description}`).join('\n')
+                    : 'No upcoming workouts scheduled.';
+
+                const todayStr = new Date().toISOString().split('T')[0];
+                const systemPrompt = `You are Spark, an elite Ironman Triathlon and endurance coach.
+Today is ${todayStr}.
+Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+Recent Completed Workouts:
+${recentActivitiesText}
+Upcoming Workouts (Next 2 days):
+${upcomingText}
+Your Tone & Persona: ${user.coach_tone || 'empathetic'}
+
+CRITICAL RULES:
+1. Generate a single, highly personalized, proactive 1-2 sentence greeting for the athlete who just opened the app.
+2. Reference either a recent workout they crushed OR an upcoming workout they have planned.
+3. Keep it brief, extremely human, and supportive. 
+4. DO NOT generate any JSON or workout plan updates. Just the greeting.`;
+
+                try {
+                    let aiReply = await generateWithFallback("Generate the proactive greeting.", systemPrompt, []);
+                    aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
+
+                    db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'default')`, [req.user.id, aiReply]);
+                    res.json({ reply: aiReply, mood: 'default' });
+                } catch (e) {
+                    console.error("Checkin Server Error:", e);
+                    res.status(500).json({ error: "AI failed to respond." });
+                }
+            });
         });
     });
 });

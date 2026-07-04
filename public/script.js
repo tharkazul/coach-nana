@@ -1398,7 +1398,97 @@ async function loadChatHistory() {
         });
         chatWindow.innerHTML = html;
         chatWindow.scrollTop = chatWindow.scrollHeight;
+        
+        // Proactive Check-in Logic
+        if (history && history.length > 0) {
+            const lastMsg = history[history.length - 1];
+            // SQLite DATETIME 'CURRENT_TIMESTAMP' is in UTC
+            const lastTime = new Date(lastMsg.timestamp + 'Z').getTime(); 
+            const now = Date.now();
+            
+            // Check if older than 24 hours (24 * 60 * 60 * 1000)
+            if (now - lastTime > 86400000) {
+                triggerProactiveCheckin();
+            }
+        }
     } catch (e) { console.error("Chat History Load Error:", e); }
+}
+
+async function triggerProactiveCheckin() {
+    const chatWindow = document.getElementById('chat-window');
+    if (!chatWindow) return;
+
+    const loadId = 'typing-' + Date.now();
+    chatWindow.insertAdjacentHTML('beforeend', `
+        <div id="${loadId}" class="flex items-end gap-2 md:gap-3 text-theme-text/50">
+            <span class="text-xs italic">Spark is typing...</span>
+        </div>
+    `);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    try {
+        const res = await fetch('/api/chat/checkin', {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+
+        if (!res.ok) {
+            document.getElementById(loadId).remove();
+            return;
+        }
+
+        const data = await res.json();
+        let finalAvatar = getCoachAvatar(data.mood || 'default');
+        let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        const msgId = 'reply-content-' + Date.now();
+        document.getElementById(loadId).outerHTML = `
+            <div class="flex items-end gap-2 md:gap-3">
+                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
+                    <img src="${finalAvatar}" alt="Coach" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
+                </div>
+                <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
+                    <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
+                    <span id="${msgId}" class="whitespace-pre-wrap"></span>
+                </div>
+            </div>`;
+
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        // Typewriter effect (token streaming simulation)
+        const targetEl = document.getElementById(msgId);
+        let i = 0;
+        function typeStep() {
+            if (i < formattedContent.length) {
+                if (formattedContent.charAt(i) === '<') {
+                    let tag = '';
+                    while (formattedContent.charAt(i) !== '>' && i < formattedContent.length) {
+                        tag += formattedContent.charAt(i);
+                        i++;
+                    }
+                    tag += '>';
+                    targetEl.innerHTML += tag;
+                    i++;
+                } else {
+                    let chunkLength = Math.floor(Math.random() * 5) + 3; // 3 to 7 characters
+                    let chunk = '';
+                    while (chunkLength > 0 && i < formattedContent.length && formattedContent.charAt(i) !== '<') {
+                        chunk += formattedContent.charAt(i);
+                        i++;
+                        chunkLength--;
+                    }
+                    targetEl.innerHTML += chunk;
+                }
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                setTimeout(typeStep, 25); // Delay between token chunks
+            }
+        }
+        typeStep();
+
+    } catch (error) {
+        const typingEl = document.getElementById(loadId);
+        if (typingEl) typingEl.remove();
+    }
 }
 
 async function submitFeedback(event) {
