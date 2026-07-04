@@ -281,7 +281,12 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
             const phase = user.training_phase || 'Base';
             try {
-                db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
+                db.all(`SELECT name, sport_type, distance_km, moving_time_min, tss, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
+                    const recentActivitiesText = (recentActivities && recentActivities.length > 0)
+                        ? recentActivities.map(a => `- ${a.start_date.split('T')[0]}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n                    ')
+                        : 'No recent activities recorded.';
+
+                    db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
 
                 let cleanHistory = [];
 
@@ -318,6 +323,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     Upcoming Calendar Reference: ${next7Days}
                     Athlete Context: ${user.athlete_context || 'General endurance athlete'}
                     Key Physiological Metrics: ${metricsText}
+                    Recent Completed Workouts (Last 3):
+                    ${recentActivitiesText}
                     Your Tone & Persona: ${user.coach_tone || 'empathetic'}
 
                     CRITICAL RULES:
@@ -428,6 +435,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
 
                 res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
+            });
             });
             } catch (e) {
                 console.error("Chat Server Error:", e);
