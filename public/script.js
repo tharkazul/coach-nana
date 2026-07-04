@@ -1518,7 +1518,7 @@ async function sendMessage() {
         chatWindow.scrollTop = chatWindow.scrollHeight;
         if (data.planUpdated) { loadMicroPlan(); }
         
-        // Typewriter effect
+        // Typewriter effect (token streaming simulation)
         const targetEl = document.getElementById(msgId);
         let i = 0;
         function typeStep() {
@@ -1533,11 +1533,17 @@ async function sendMessage() {
                     targetEl.innerHTML += tag;
                     i++;
                 } else {
-                    targetEl.innerHTML += formattedContent.charAt(i);
-                    i++;
+                    let chunkLength = Math.floor(Math.random() * 5) + 3; // 3 to 7 characters
+                    let chunk = '';
+                    while (chunkLength > 0 && i < formattedContent.length && formattedContent.charAt(i) !== '<') {
+                        chunk += formattedContent.charAt(i);
+                        i++;
+                        chunkLength--;
+                    }
+                    targetEl.innerHTML += chunk;
                 }
                 chatWindow.scrollTop = chatWindow.scrollHeight;
-                setTimeout(typeStep, 15); // Adjust typing speed here (ms)
+                setTimeout(typeStep, 25); // Delay between token chunks
             }
         }
         typeStep();
