@@ -1102,7 +1102,7 @@ function mapStravaSportToSpark(stravaSport) {
 }
 
 async function tagStravaActivity(userId, activity, token) {
-    if (activity.description && activity.description.includes("Coach Spark Target")) return;
+    if (activity.description && activity.description.includes("Spark Target")) return;
 
     const tss = activity.suffer_score || Math.round((activity.moving_time / 3600) * 50);
     const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
@@ -1112,8 +1112,10 @@ async function tagStravaActivity(userId, activity, token) {
         [userId, activityDate, sparkSport], async (err, plan) => {
 
             if (err || !plan) return;
+            
+            const workoutContent = (plan.details && plan.details.trim().length > 0) ? plan.details : plan.description;
 
-            const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
+            const newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}`;
 
             const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
 
@@ -1176,8 +1178,10 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                     console.log(`⚠️ Strava Description Sync Skipped: No matching ${sparkSport} plan found on ${activityDate}.`);
                     return;
                 }
+                
+                const workoutContent = (plan.details && plan.details.trim().length > 0) ? plan.details : plan.description;
 
-                const newDescription = `Coach Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${plan.description}\n${plan.details || ''}`;
+                const newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}`;
 
                 const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
                     method: 'PUT',
