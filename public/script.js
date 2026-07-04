@@ -1044,7 +1044,11 @@ async function openActivityModal(id) {
     try {
         const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
         document.getElementById('modal-title').innerText = data.name || "Activity Details";
-        let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--'; let distStr = data.distance ? `${(data.distance / 1000).toFixed(2)} km` : '--';
+        let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--'; 
+        let distStr = '--';
+        if (data.distance) {
+            distStr = data.type === 'Swim' ? `${Math.round(data.distance)} m` : `${(data.distance / 1000).toFixed(2)} km`;
+        }
         let cadenceStr = '--';
         if (data.average_cadence) {
             if (data.type === 'Run') {
@@ -1126,7 +1130,10 @@ async function openActivityModal(id) {
         if (data.laps && data.laps.length > 0) {
             document.getElementById('modal-laps-container').classList.remove('hidden');
             document.getElementById('modal-laps-table').innerHTML = data.laps.map(lap => {
-                let dist = lap.distance ? `${(lap.distance / 1000).toFixed(2)} km` : '--';
+                let dist = '--';
+                if (lap.distance) {
+                    dist = data.type === 'Swim' ? `${Math.round(lap.distance)} m` : `${(lap.distance / 1000).toFixed(2)} km`;
+                }
                 
                 let time = '--';
                 if (lap.moving_time) {
