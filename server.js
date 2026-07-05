@@ -247,7 +247,8 @@ function authenticateToken(req, res, next) {
 const SPORT_MAP = {
     'Run': { sportTypeId: 1, sportTypeKey: "running" },
     'Bike': { sportTypeId: 2, sportTypeKey: "cycling" },
-    'Swim': { sportTypeId: 4, sportTypeKey: "swimming" }
+    'Swim': { sportTypeId: 4, sportTypeKey: "swimming" },
+    'Strength': { sportTypeId: 5, sportTypeKey: "strength_training" }
 };
 
 const STEP_TYPE_MAP = {
@@ -484,6 +485,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
+                    8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete.
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -904,9 +906,9 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         CRITICAL RULES:
         1. You are generating a 7-day training plan starting exactly on ${targetDate}.
         2. You must append a JSON code block at the very end of your response containing the schedule.
-        3. Use metric measurements exclusively (km, kg, km/h, min/km). Never use imperial units.
+        3. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
-        5. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
+        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete.
 
         WORKOUT PLANNING (CRITICAL):
         If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -1301,6 +1303,7 @@ function mapStravaSportToSpark(stravaSport) {
     if (stravaSport.includes('Run')) return 'Run';
     if (stravaSport.includes('Ride') || stravaSport.includes('VirtualRide')) return 'Bike';
     if (stravaSport.includes('Swim')) return 'Swim';
+    if (stravaSport.includes('WeightTraining') || stravaSport.includes('Workout')) return 'Strength';
     return 'Other';
 }
 
