@@ -435,6 +435,16 @@ async function forceStravaSync() {
 }
 
 // --- UI NAVIGATION ---
+function updateUnreadBadge(latestMsgTime) {
+    const lastViewed = parseInt(localStorage.getItem('lastChatViewTimestamp') || '0');
+    const badge = document.getElementById('unread-badge');
+    const coachTabHidden = document.getElementById('view-coach')?.classList.contains('hidden');
+    
+    if (latestMsgTime > lastViewed && coachTabHidden && badge) {
+        badge.classList.remove('hidden');
+    }
+}
+
 function switchTab(t) {
     // Safely toggle visibility to prevent missing ID crashes
     const views = ['dashboard', 'coach', 'settings', 'history', 'admin'];
@@ -442,6 +452,12 @@ function switchTab(t) {
         const el = document.getElementById(`view-${view}`);
         if (el) el.classList.toggle('hidden', t !== view);
     });
+
+    if (t === 'coach') {
+        localStorage.setItem('lastChatViewTimestamp', Date.now());
+        const badge = document.getElementById('unread-badge');
+        if (badge) badge.classList.add('hidden');
+    }
 
     document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log' }[t];
 
@@ -1401,12 +1417,18 @@ async function loadChatHistory() {
         chatWindow.innerHTML = html;
         chatWindow.scrollTop = chatWindow.scrollHeight;
         
-        // Proactive Check-in Logic
+        // Proactive Check-in Logic & Unread Badge
         if (history && history.length > 0) {
             const lastMsg = history[history.length - 1];
             // SQLite DATETIME 'CURRENT_TIMESTAMP' is in UTC
             const lastTime = new Date(lastMsg.timestamp + 'Z').getTime(); 
             const now = Date.now();
+            
+            // Check for unread messages from coach
+            const lastCoachMsg = [...history].reverse().find(m => m.role === 'coach');
+            if (lastCoachMsg) {
+                updateUnreadBadge(new Date(lastCoachMsg.timestamp + 'Z').getTime());
+            }
             
             // Check if older than 24 hours (24 * 60 * 60 * 1000)
             if (now - lastTime > 86400000) {
@@ -1456,6 +1478,8 @@ async function triggerProactiveCheckin() {
             </div>`;
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
+        
+        updateUnreadBadge(Date.now());
 
         // Typewriter effect (token streaming simulation)
         const targetEl = document.getElementById(msgId);
