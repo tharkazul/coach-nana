@@ -1375,9 +1375,11 @@ async function loadChatHistory() {
         let html = '';
         history.forEach(msg => {
             if (msg.role === 'user') {
+                let imgHtml = msg.image_path ? `<img src="${msg.image_path}" class="w-full rounded-md mb-2 border border-white/20">` : '';
                 html += `
                             <div class="flex justify-end">
                                 <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
+                                    ${imgHtml}
                                     <span class="whitespace-pre-wrap">${msg.content}</span>
                                 </div>
                             </div>`;
@@ -1548,22 +1550,79 @@ function enlargeAvatar(src) {
     }
 }
 
+let currentImageBase64 = null;
+
+function handleImageSelection(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1024;
+            const MAX_HEIGHT = 1024;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            currentImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            document.getElementById('image-preview').src = currentImageBase64;
+            document.getElementById('image-preview-container').classList.remove('hidden');
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+
+function clearImageSelection() {
+    currentImageBase64 = null;
+    document.getElementById('image-upload').value = '';
+    document.getElementById('image-preview-container').classList.add('hidden');
+    document.getElementById('image-preview').src = '';
+}
+
 async function sendMessage() {
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
-    if (!message) return;
+    if (!message && !currentImageBase64) return;
 
     const chatWindow = document.getElementById('chat-window');
+
+    let userImgHtml = '';
+    if (currentImageBase64) {
+        userImgHtml = `<img src="${currentImageBase64}" class="w-full rounded-md mb-2 border border-white/20">`;
+    }
 
     chatWindow.innerHTML += `
                 <div class="flex justify-end">
                     <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
+                        ${userImgHtml}
                         <span class="whitespace-pre-wrap">${message}</span>
                     </div>
                 </div>`;
 
+    const payload = { message, imageBase64: currentImageBase64 };
+    
     input.value = '';
     input.style.height = '44px';
+    clearImageSelection();
     chatWindow.scrollTop = chatWindow.scrollHeight;
 
     const loadId = 'loading-' + Date.now();
@@ -1586,7 +1645,7 @@ async function sendMessage() {
         const res = await fetch('/api/chat', {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ message })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
 

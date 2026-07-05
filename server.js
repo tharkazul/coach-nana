@@ -8,6 +8,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const crypto = require('crypto');
 const { GarminConnect } = require('@flow-js/garmin-connect');
 const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 // --- GEMINI LOAD BALANCER REGISTRY ---
 const geminiConfigs = [
@@ -30,10 +32,32 @@ const IV_LENGTH = 16; // For AES, this is always 16 bytes
 
 // Optional but recommended: Serve the uploads folder so you (the admin) can view the images later
 app.use('/uploads', express.static('uploads'));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '15mb' }));
 app.use(express.static('public'));
 
-async function generateWithFallback(prompt, systemInstruction = null, chatHistory = null) {
+// Image Cleanup Routine (Every Hour)
+setInterval(() => {
+    const dir = path.join(__dirname, 'public/uploads/chat_images');
+    if (fs.existsSync(dir)) {
+        fs.readdir(dir, (err, files) => {
+            if (err) return console.error('Cleanup Error:', err);
+            const now = Date.now();
+            files.forEach(file => {
+                const filePath = path.join(dir, file);
+                fs.stat(filePath, (err, stats) => {
+                    if (err) return;
+                    if (now - stats.mtimeMs > 86400000) { // 24 hours
+                        fs.unlink(filePath, err => {
+                            if (!err) console.log(`Auto-cleaned old image: ${file}`);
+                        });
+                    }
+                });
+            });
+        });
+    }
+}, 3600000);
+
+async function generateWithFallback(prompt, systemInstruction = null, chatHistory = null, imageBase64 = null) {
     let lastError = null;
 
     for (let i = 0; i < geminiConfigs.length; i++) {
@@ -53,13 +77,22 @@ async function generateWithFallback(prompt, systemInstruction = null, chatHistor
             const model = genAI.getGenerativeModel(modelOptions);
 
             let result;
+
+            let promptContent = prompt;
+            if (imageBase64) {
+                promptContent = [
+                    { text: prompt },
+                    { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
+                ];
+            }
+
             if (chatHistory) {
                 // If history is provided, use the Chat interface
                 const chat = model.startChat({ history: chatHistory });
-                result = await chat.sendMessage(prompt);
+                result = await chat.sendMessage(promptContent);
             } else {
                 // Otherwise, use a standard single-shot prompt
-                result = await model.generateContent(prompt);
+                result = await model.generateContent(promptContent);
             }
 
             console.log(`✅ AI Success using ${config.name}!`);
@@ -261,15 +294,35 @@ app.get('/api/micro-plan', authenticateToken, (req, res) => {
 });
 
 app.get('/api/chat/history', authenticateToken, (req, res) => {
-    db.all(`SELECT role, content, mood, timestamp FROM chat_history WHERE user_id = ? ORDER BY id ASC`, [req.user.id], (err, rows) => {
+    db.all(`SELECT role, content, mood, timestamp, image_path FROM chat_history WHERE user_id = ? ORDER BY id ASC`, [req.user.id], (err, rows) => {
         if (err) return res.status(500).json({ error: "Failed to load chat history." });
         res.json(rows || []);
     });
 });
 
 app.post('/api/chat', authenticateToken, async (req, res) => {
-    const { message } = req.body;
+    const { message, imageBase64 } = req.body;
     db.run(`UPDATE users SET chat_count = chat_count + 1 WHERE id = ?`, [req.user.id]);
+    
+    let imagePathDB = null;
+    let base64Data = null;
+
+    if (imageBase64) {
+        try {
+            // imageBase64 is expected to look like "data:image/jpeg;base64,/9j/4AAQSk..."
+            const matches = imageBase64.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                const ext = matches[1];
+                base64Data = matches[2];
+                const fileName = `img_${req.user.id}_${Date.now()}.${ext}`;
+                const savePath = path.join(__dirname, 'public/uploads/chat_images', fileName);
+                fs.writeFileSync(savePath, base64Data, 'base64');
+                imagePathDB = `/uploads/chat_images/${fileName}`;
+            }
+        } catch (e) {
+            console.error("Image saving error:", e);
+        }
+    }
 
     db.get(`SELECT coach_tone, athlete_context, training_phase FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
@@ -365,7 +418,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     }
                     \`\`\``;
 
-                let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory);
+                let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data);
                 let planUpdated = false;
 
                 const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
@@ -432,7 +485,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
                 const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
 
-                db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, message]);
+                db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
                 db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
 
                 res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
