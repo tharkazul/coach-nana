@@ -1479,6 +1479,8 @@ async function triggerProactiveCheckin() {
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
         
+        speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
+
         updateUnreadBadge(Date.now());
 
         // Typewriter effect (token streaming simulation)
@@ -1690,6 +1692,8 @@ async function sendMessage() {
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
         if (data.planUpdated) { loadMicroPlan(); }
+        
+        speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
         
         // Typewriter effect (token streaming simulation)
         const targetEl = document.getElementById(msgId);
@@ -1924,6 +1928,137 @@ function saveAndConnectStrava() {
 
     completeOnboarding(authUrl);
 }
+// --- VOICE COACHING FEATURE ---
+let isVoiceEnabled = true;
+let speechRecognition;
+let isRecording = false;
+let availableVoices = [];
+
+function toggleSpeaker() {
+    isVoiceEnabled = !isVoiceEnabled;
+    const btn = document.getElementById('speaker-toggle');
+    const icon = document.getElementById('speaker-icon');
+    const text = document.getElementById('speaker-text');
+    if (isVoiceEnabled) {
+        btn.classList.add('bg-theme-accent-soft', 'border-theme-accent-border', 'text-theme-accent');
+        btn.classList.remove('bg-theme-bg', 'border-theme-border', 'text-theme-muted');
+        text.innerText = 'Voice On';
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10c0-1.1.9-2 2-2h2l4-4v16l-4-4H7c-1.1 0-2-.9-2-2z"></path>';
+    } else {
+        btn.classList.remove('bg-theme-accent-soft', 'border-theme-accent-border', 'text-theme-accent');
+        btn.classList.add('bg-theme-bg', 'border-theme-border', 'text-theme-muted');
+        text.innerText = 'Voice Off';
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />';
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+}
+
+if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    speechRecognition = new SpeechRecognition();
+    speechRecognition.continuous = false;
+    speechRecognition.interimResults = true;
+
+    speechRecognition.onstart = function() {
+        isRecording = true;
+        const btn = document.getElementById('voice-btn');
+        btn.classList.add('text-red-500', 'animate-pulse');
+        btn.classList.remove('text-theme-muted');
+        document.getElementById('chat-input').placeholder = "Listening...";
+    };
+
+    speechRecognition.onresult = function(event) {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+        const input = document.getElementById('chat-input');
+        if (finalTranscript) {
+            input.value = finalTranscript;
+            sendMessage();
+        } else {
+            input.value = interimTranscript;
+        }
+    };
+
+    speechRecognition.onerror = function(event) {
+        console.error("Speech Recognition Error:", event.error);
+        stopRecording();
+    };
+
+    speechRecognition.onend = function() {
+        stopRecording();
+    };
+}
+
+function toggleRecording() {
+    if (!speechRecognition) {
+        alert("Voice recognition is not supported in this browser.");
+        return;
+    }
+    if (isRecording) {
+        speechRecognition.stop();
+    } else {
+        document.getElementById('chat-input').value = '';
+        speechRecognition.start();
+    }
+}
+
+function stopRecording() {
+    isRecording = false;
+    const btn = document.getElementById('voice-btn');
+    if(btn) {
+        btn.classList.remove('text-red-500', 'animate-pulse');
+        btn.classList.add('text-theme-muted');
+    }
+    const input = document.getElementById('chat-input');
+    if(input) input.placeholder = "Ask about your training...";
+}
+
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+        availableVoices = window.speechSynthesis.getVoices();
+    };
+}
+
+function speakResponse(text, mood, coachTone) {
+    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+
+    // Clean markdown from text before speaking
+    const cleanText = text.replace(/[*#_`\[\]]/g, '');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // Map voice based on coachTone
+    let selectedVoice = null;
+    const tone = (coachTone || '').toLowerCase();
+    
+    if (tone.includes('goggins') || tone.includes('intense')) {
+        selectedVoice = availableVoices.find(v => v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('uk english male'));
+        utterance.pitch = 0.8;
+        utterance.rate = 1.05;
+    } else if (tone.includes('supportive') || tone.includes('empathetic')) {
+        selectedVoice = availableVoices.find(v => v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('karen') || v.name.toLowerCase().includes('us english female'));
+        utterance.pitch = 1.1;
+        utterance.rate = 0.95;
+    } else {
+        // Default
+        selectedVoice = availableVoices.find(v => v.name.toLowerCase().includes('google us english') || v.lang === 'en-US');
+    }
+
+    if (selectedVoice) {
+        utterance.voice = selectedVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+}
+
 // Initialize App
 document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 checkLogin();
