@@ -1381,30 +1381,51 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
             [internalUserId, activityDate, sparkSport], async (err, plan) => {
 
-                if (err || !plan) {
-                    console.log(`⚠️ Strava Description Sync Skipped: No matching ${sparkSport} plan found on ${activityDate}.`);
-                    return;
-                }
-                
-                const workoutContent = (plan.details && plan.details.trim().length > 0) ? plan.details : plan.description;
+                // Fetch the coach tone
+                db.get("SELECT coach_tone FROM users WHERE id = ?", [internalUserId], async (err, userRow) => {
+                    const tone = userRow ? userRow.coach_tone : 'Friendly and motivating';
+                    
+                    let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance/1000).toFixed(1)}km in ${Math.round(data.moving_time/60)} minutes, generating ${tss} TSS. `;
+                    let newDescription = null;
 
-                const newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}`;
+                    if (plan) {
+                        const workoutContent = (plan.details && plan.details.trim().length > 0) ? plan.details : plan.description;
+                        newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}`;
+                        prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_tss} TSS. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
+                    } else {
+                        console.log(`⚠️ No matching ${sparkSport} plan found on ${activityDate}. Generating unplanned reaction.`);
+                        prompt += `This was an unplanned activity. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}).`;
+                    }
 
-                const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ description: newDescription })
+                    // 1. Generate AI Coach Response
+                    try {
+                        const aiReply = await generateWithFallback(prompt);
+                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'proud')`, [internalUserId, aiReply]);
+                        sendSSEEvent(internalUserId, 'unread_message', { message: aiReply, mood: 'proud' });
+                        console.log(`🤖 Sent proactive coach update for activity ${activityId}`);
+                    } catch (e) {
+                        console.error("Proactive coach activity update failed:", e);
+                    }
+
+                    // 2. Update Strava Description (only if there was a plan)
+                    if (newDescription) {
+                        const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ description: newDescription })
+                        });
+
+                        if (updateRes.ok) {
+                            console.log(`✅ Strava description updated for activity ${activityId}!`);
+                        } else {
+                            const errorData = await updateRes.json();
+                            console.error(`❌ Strava Description Update Failed:`, errorData);
+                        }
+                    }
                 });
-
-                if (updateRes.ok) {
-                    console.log(`✅ Strava description updated for activity ${activityId}!`);
-                } else {
-                    const errorData = await updateRes.json();
-                    console.error(`❌ Strava Description Update Failed:`, errorData);
-                }
             });
 
     } catch (e) {
