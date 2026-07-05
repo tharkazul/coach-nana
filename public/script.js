@@ -231,8 +231,8 @@ function initSSE() {
             // update lastMsgTime so reload keeps the badge
             localStorage.setItem('lastMsgTimestamp', Date.now());
         } else {
-            // Already on Coach tab, just append the message to chat
-            appendMessage('coach', data.message);
+            // Already on Coach tab, reload the chat to show the new message
+            loadChatHistory();
         }
     });
 }

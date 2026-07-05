@@ -1400,8 +1400,8 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                     // 1. Generate AI Coach Response
                     try {
                         const aiReply = await generateWithFallback(prompt);
-                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'proud')`, [internalUserId, aiReply]);
-                        sendSSEEvent(internalUserId, 'unread_message', { message: aiReply, mood: 'proud' });
+                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [internalUserId, aiReply]);
+                        sendSSEEvent(internalUserId, 'unread_message', { message: aiReply, mood: 'hype' });
                         console.log(`🤖 Sent proactive coach update for activity ${activityId}`);
                     } catch (e) {
                         console.error("Proactive coach activity update failed:", e);
