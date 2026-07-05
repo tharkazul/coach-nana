@@ -200,6 +200,43 @@ function getAuthHeaders() {
     };
 }
 
+let sseConnection = null;
+
+function initSSE() {
+    const token = localStorage.getItem('nana_token');
+    if (!token) return;
+    
+    if (sseConnection) sseConnection.close();
+    
+    // Pass token in URL query parameter because EventSource doesn't support custom headers
+    sseConnection = new EventSource(`/api/events?token=${token}`);
+    
+    sseConnection.addEventListener('sync_complete', (e) => {
+        console.log("Real-time sync complete received:", e.data);
+        // Silently refresh the dashboard data if the user is logged in
+        if (document.getElementById('login-overlay').style.display === 'none') {
+            fetchDashboardData();
+        }
+    });
+
+    sseConnection.addEventListener('unread_message', (e) => {
+        console.log("Real-time unread message received:", e.data);
+        const data = JSON.parse(e.data);
+        
+        // Show notification bubble if not currently on the coach tab
+        const coachTabHidden = document.getElementById('view-coach')?.classList.contains('hidden');
+        if (coachTabHidden) {
+            const badge = document.getElementById('unread-badge');
+            if (badge) badge.classList.remove('hidden');
+            // update lastMsgTime so reload keeps the badge
+            localStorage.setItem('lastMsgTimestamp', Date.now());
+        } else {
+            // Already on Coach tab, just append the message to chat
+            appendMessage('coach', data.message);
+        }
+    });
+}
+
 function checkLogin() {
     const token = localStorage.getItem('nana_token');
     if (token) {
@@ -207,6 +244,7 @@ function checkLogin() {
         loadSettings();
         buildDashboard();
         loadChatHistory();
+        initSSE();
     } else {
         document.getElementById('login-overlay').style.display = 'flex';
     }

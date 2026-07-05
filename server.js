@@ -57,6 +57,56 @@ setInterval(() => {
     }
 }, 3600000);
 
+// AI Proactive 24h Check-in Routine (Every Hour)
+setInterval(() => {
+    console.log("🕒 Running 24h inactivity check...");
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    db.all(`
+        SELECT u.id, u.email, u.coach_tone 
+        FROM users u
+        WHERE NOT EXISTS (
+            SELECT 1 FROM chat_history ch 
+            WHERE ch.user_id = u.id 
+            AND ch.timestamp > ?
+        )
+    `, [twentyFourHoursAgo], async (err, inactiveUsers) => {
+        if (err || !inactiveUsers) return;
+        
+        for (const user of inactiveUsers) {
+            console.log(`🤖 User ${user.id} inactive for 24h. Generating proactive message...`);
+            const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${user.coach_tone || 'Friendly and motivating'}. Keep it under 2 sentences.`;
+            
+            try {
+                const aiReply = await generateWithFallback(prompt);
+                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'curious')`, [user.id, aiReply]);
+                sendSSEEvent(user.id, 'unread_message', { message: aiReply, mood: 'curious' });
+            } catch (e) {
+                console.error("Proactive AI generation failed:", e);
+            }
+        }
+    });
+}, 3600000);
+
+// Endpoint to manually simulate the 24h inactivity trigger
+app.post('/api/admin/simulate-24h', authenticateToken, async (req, res) => {
+    const user = req.user;
+    console.log(`🤖 Simulating 24h inactivity for user ${user.id}...`);
+    
+    db.get(`SELECT coach_tone FROM users WHERE id = ?`, [user.id], async (err, row) => {
+        const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${row ? row.coach_tone : 'Friendly and motivating'}. Keep it under 2 sentences.`;
+        try {
+            const aiReply = await generateWithFallback(prompt);
+            db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'curious')`, [user.id, aiReply]);
+            sendSSEEvent(user.id, 'unread_message', { message: aiReply, mood: 'curious' });
+            res.json({ success: true, message: "Trigger fired." });
+        } catch (e) {
+            console.error("Simulated AI generation failed:", e);
+            res.status(500).json({ error: "Failed" });
+        }
+    });
+});
+
 async function generateWithFallback(prompt, systemInstruction = null, chatHistory = null, imageBase64 = null) {
     let lastError = null;
 
@@ -181,7 +231,8 @@ db.serialize(() => {
 // --- AUTHENTICATION MIDDLEWARE ---
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    let token = authHeader && authHeader.split(' ')[1];
+    if (!token && req.query.token) token = req.query.token;
 
     if (token == null) return res.status(401).json({ error: "No token provided" });
 
@@ -219,6 +270,51 @@ const CONDITION_TYPE_MAP = {
     'distance': { id: 3, key: "distance" },
     'lap.button': { id: 1, key: "lap.button" }
 };
+
+// --- SERVER-SENT EVENTS (SSE) FOR REAL-TIME UPDATES ---
+const sseClients = new Map(); // Maps userId -> Set of response objects
+
+function sendSSEEvent(userId, eventName, data) {
+    const clients = sseClients.get(userId);
+    if (clients) {
+        const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
+        clients.forEach(client => {
+            try {
+                client.write(payload);
+            } catch (err) {
+                clients.delete(client);
+            }
+        });
+    }
+}
+
+app.get('/api/events', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    
+    // Set headers for SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx/Cloudflare buffering if applicable
+
+    // Send initial connection event
+    res.write(`data: ${JSON.stringify({ connected: true })}\n\n`);
+
+    // Store the client
+    if (!sseClients.has(userId)) {
+        sseClients.set(userId, new Set());
+    }
+    const clients = sseClients.get(userId);
+    clients.add(res);
+
+    // Remove client when connection closes
+    req.on('close', () => {
+        clients.delete(res);
+        if (clients.size === 0) {
+            sseClients.delete(userId);
+        }
+    });
+});
 
 // --- STRAVA WEBHOOK VERIFICATION (HANDSHAKE) ---
 app.get('/webhook/strava', (req, res) => {
@@ -1273,7 +1369,11 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
-            [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss]);
+            [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss], (err) => {
+                if (!err) {
+                    sendSSEEvent(internalUserId, 'sync_complete', { provider: 'strava', activityId: data.id });
+                }
+            });
 
         const activityDate = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
         const sparkSport = mapStravaSportToSpark(data.sport_type);
