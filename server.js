@@ -922,10 +922,8 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
         WORKOUT PLANNING (CRITICAL):
         If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
-        The JSON must be a valid Array of objects. Format it EXACTLY like this inside triple backticks:
-
-        JSON FORMAT REQUIRED AT THE END OF YOUR RESPONSE:
-        ```json
+        The JSON must be a valid Array of objects. Format it EXACTLY JSON FORMAT REQUIRED AT THE END OF YOUR RESPONSE:
+        \`\`\`json
         [
           {
             "date": "YYYY-MM-DD",
@@ -944,7 +942,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 5, \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"repeat\\", \\"iterations\\": 3, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"reps\\", \\"condition_value\\": 10, \\"weight\\": 80, \\"exerciseName\\": \\"Barbell Squat\\", \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 2, \\"target_type\\": \\"no.target\\"}]}]"
           }
         ]
-        ```
+        \`\`\`
         *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the examples. Exercises MUST go in steps_json, NOT details!*`;
 
         const ctl = user.current_ctl || 0;
