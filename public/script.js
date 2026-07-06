@@ -954,7 +954,7 @@ async function loadMicroPlan() {
                                     else if (s.condition_type === 'reps') dur = `${s.condition_value} reps`;
                                     else dur = s.condition_value;
 
-                                    let tgt = s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone', ''));
+                                    let tgt = s.target_value ? s.target_value : (s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone', '')));
                                     let extra = s.weight ? ` @ ${s.weight}kg` : ` @ <span class="font-bold">${tgt}</span>`;
                                     let stepName = s.exerciseName || s.type;
 
@@ -976,7 +976,7 @@ async function loadMicroPlan() {
                                 else if (step.condition_type === 'reps') dur = `${step.condition_value} reps`;
                                 else dur = step.condition_value;
 
-                                let tgt = step.zone ? `Zone ${step.zone}` : (step.target_type === 'no.target' ? 'Open' : step.target_type.replace('.zone', ''));
+                                let tgt = step.target_value ? step.target_value : (step.zone ? `Zone ${step.zone}` : (step.target_type === 'no.target' ? 'Open' : step.target_type.replace('.zone', '')));
                                 let extra = step.weight ? ` @ ${step.weight}kg` : ` @ <span class="font-bold">${tgt}</span>`;
                                 let stepName = step.exerciseName || step.type;
 

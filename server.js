@@ -487,6 +487,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
                     8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
+                    9. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -919,6 +920,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         3. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
         5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and push for progressive overload.
+        6. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
 
         WORKOUT PLANNING (CRITICAL):
         If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -1140,6 +1142,27 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                                 targetValueOne: null, targetValueTwo: null,
                                 zoneNumber: subStep.zone ? parseInt(subStep.zone, 10) : null
                             };
+                            if (subStep.target_value) {
+                                if (subStep.target_value.includes('min/km')) {
+                                    const match = subStep.target_value.match(/(\d+):(\d+)/);
+                                    if (match) {
+                                        const speedMs = 1000 / ((parseInt(match[1], 10) * 60) + parseInt(match[2], 10));
+                                        sDTO.targetType = { workoutTargetTypeId: TARGET_TYPE_MAP['pace.zone'].id, workoutTargetTypeKey: TARGET_TYPE_MAP['pace.zone'].key };
+                                        sDTO.targetValueOne = speedMs * 0.95;
+                                        sDTO.targetValueTwo = speedMs * 1.05;
+                                        sDTO.zoneNumber = null;
+                                    }
+                                } else if (subStep.target_value.toLowerCase().includes('w')) {
+                                    const match = subStep.target_value.match(/(\d+)/);
+                                    if (match) {
+                                        const watts = parseInt(match[1], 10);
+                                        sDTO.targetType = { workoutTargetTypeId: TARGET_TYPE_MAP['power.zone'].id, workoutTargetTypeKey: TARGET_TYPE_MAP['power.zone'].key };
+                                        sDTO.targetValueOne = watts * 0.90;
+                                        sDTO.targetValueTwo = watts * 1.10;
+                                        sDTO.zoneNumber = null;
+                                    }
+                                }
+                            }
                             if (subStep.condition_type === 'distance') {
                                 sDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
                             }
@@ -1170,6 +1193,27 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                     targetValueOne: null, targetValueTwo: null,
                     zoneNumber: step.zone ? parseInt(step.zone, 10) : null
                 };
+                if (step.target_value) {
+                    if (step.target_value.includes('min/km')) {
+                        const match = step.target_value.match(/(\d+):(\d+)/);
+                        if (match) {
+                            const speedMs = 1000 / ((parseInt(match[1], 10) * 60) + parseInt(match[2], 10));
+                            stepDTO.targetType = { workoutTargetTypeId: TARGET_TYPE_MAP['pace.zone'].id, workoutTargetTypeKey: TARGET_TYPE_MAP['pace.zone'].key };
+                            stepDTO.targetValueOne = speedMs * 0.95;
+                            stepDTO.targetValueTwo = speedMs * 1.05;
+                            stepDTO.zoneNumber = null;
+                        }
+                    } else if (step.target_value.toLowerCase().includes('w')) {
+                        const match = step.target_value.match(/(\d+)/);
+                        if (match) {
+                            const watts = parseInt(match[1], 10);
+                            stepDTO.targetType = { workoutTargetTypeId: TARGET_TYPE_MAP['power.zone'].id, workoutTargetTypeKey: TARGET_TYPE_MAP['power.zone'].key };
+                            stepDTO.targetValueOne = watts * 0.90;
+                            stepDTO.targetValueTwo = watts * 1.10;
+                            stepDTO.zoneNumber = null;
+                        }
+                    }
+                }
 
                 if (step.condition_type === 'distance') {
                     stepDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
