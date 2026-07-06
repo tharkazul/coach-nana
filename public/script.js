@@ -55,6 +55,48 @@ function removeMetricRow(idx) {
     renderMetricsEditor();
 }
 
+// --- ONBOARDING METRICS UI LOGIC ---
+let onboardMetrics = [];
+
+function renderOnboardMetricsEditor() {
+    const container = document.getElementById('onboard-metrics-container');
+    if (onboardMetrics.length === 0) {
+        container.innerHTML = `<p class="text-[10px] text-theme-muted italic">No metrics added yet.</p>`;
+        return;
+    }
+    container.innerHTML = onboardMetrics.map((m, idx) => `
+        <div class="flex items-center gap-2 onboard-metric-row">
+            <input type="text" class="onboard-metric-key flex-1 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text font-bold focus:border-theme-accent outline-none" value="${m.metric}" placeholder="Metric (e.g. FTP, 5K PB)">
+            <input type="text" class="onboard-metric-val flex-1 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none" value="${m.value}" placeholder="Value">
+            <button onclick="removeOnboardMetricRow(${idx})" class="text-red-500 hover:text-red-700 font-bold px-2">✕</button>
+        </div>
+    `).join('');
+}
+
+function addOnboardMetricRow() {
+    const rows = document.querySelectorAll('.onboard-metric-row');
+    if (rows.length > 0) {
+        onboardMetrics = Array.from(rows).map((row) => ({
+            metric: row.querySelector('.onboard-metric-key').value,
+            value: row.querySelector('.onboard-metric-val').value
+        }));
+    }
+    onboardMetrics.push({ metric: '', value: '' });
+    renderOnboardMetricsEditor();
+}
+
+function removeOnboardMetricRow(idx) {
+    const rows = document.querySelectorAll('.onboard-metric-row');
+    if (rows.length > 0) {
+        onboardMetrics = Array.from(rows).map((row) => ({
+            metric: row.querySelector('.onboard-metric-key').value,
+            value: row.querySelector('.onboard-metric-val').value
+        }));
+    }
+    onboardMetrics.splice(idx, 1);
+    renderOnboardMetricsEditor();
+}
+
 async function saveMetrics() {
     const rows = document.querySelectorAll('.metric-row');
     const updated = Array.from(rows).map((row) => ({
@@ -1932,16 +1974,18 @@ async function completeOnboarding(redirectUrl = null) {
     if (btn) btn.innerText = "Saving profile...";
 
     let context = document.getElementById('onboard-context').value;
-    const ftp = document.getElementById('onboard-ftp').value;
-    const pb5k = document.getElementById('onboard-5k').value;
-    const bench = document.getElementById('onboard-bench').value;
-    const squat = document.getElementById('onboard-squat').value;
-
+    
+    const metricRows = document.querySelectorAll('.onboard-metric-row');
     let extraContext = [];
-    if (ftp) extraContext.push(`FTP: ${ftp}W`);
-    if (pb5k) extraContext.push(`5K PB: ${pb5k}`);
-    if (bench) extraContext.push(`Bench Press: ${bench}kg`);
-    if (squat) extraContext.push(`Squat: ${squat}kg`);
+    if (metricRows.length > 0) {
+        Array.from(metricRows).forEach(row => {
+            const mKey = row.querySelector('.onboard-metric-key').value.trim();
+            const mVal = row.querySelector('.onboard-metric-val').value.trim();
+            if (mKey && mVal) {
+                extraContext.push(`${mKey}: ${mVal}`);
+            }
+        });
+    }
 
     if (extraContext.length > 0) {
         context = (context ? context + '\n\n' : '') + 'Personal Metrics:\n' + extraContext.join('\n');

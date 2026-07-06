@@ -294,11 +294,12 @@
                         class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[80px]"
                         placeholder="e.g. Amateur enthusiast, dad of a 1.5 year old, prefers to exercise during lunch..."></textarea>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-                        <input type="text" id="onboard-ftp" placeholder="FTP (W)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
-                        <input type="text" id="onboard-5k" placeholder="5K PB (MM:SS)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
-                        <input type="text" id="onboard-bench" placeholder="Bench Press (kg)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
-                        <input type="text" id="onboard-squat" placeholder="Squat (kg)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                    <div class="mt-3 bg-theme-bg border border-theme-border rounded-lg p-3">
+                        <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Key Physiological Metrics (Optional)</label>
+                        <div id="onboard-metrics-container" class="space-y-2 mb-2">
+                            <p class="text-[10px] text-theme-muted italic">No metrics added yet.</p>
+                        </div>
+                        <button onclick="addOnboardMetricRow()" class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1.5 rounded hover:opacity-80 transition">+ Add Metric</button>
                     </div>
                 </div>
 
