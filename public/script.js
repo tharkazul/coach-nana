@@ -906,9 +906,17 @@ async function loadMicroPlan() {
                             // Handle Repeat Blocks visually
                             if (step.type === 'repeat') {
                                 let subStepsList = (step.steps || []).map(s => {
-                                    let dur = s.condition_type === 'time' ? `${s.condition_value} min` : `${s.condition_value}m`;
+                                    let dur;
+                                    if (s.condition_type === 'time') dur = `${s.condition_value} min`;
+                                    else if (s.condition_type === 'distance') dur = `${s.condition_value}m`;
+                                    else if (s.condition_type === 'reps') dur = `${s.condition_value} reps`;
+                                    else dur = s.condition_value;
+
                                     let tgt = s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone', ''));
-                                    return `<div class="flex justify-between items-center py-1 pl-3 pr-2 border-l-2 border-theme-border ml-2"><span class="capitalize font-medium text-theme-text text-[10px] truncate pr-2">${s.type}</span><span class="text-theme-muted text-[10px] text-right shrink-0">${dur} @ <span class="font-bold">${tgt}</span></span></div>`;
+                                    let extra = s.weight ? ` @ ${s.weight}kg` : ` @ <span class="font-bold">${tgt}</span>`;
+                                    let stepName = s.exerciseName || s.type;
+
+                                    return `<div class="flex justify-between items-center py-1 pl-3 pr-2 border-l-2 border-theme-border ml-2"><span class="capitalize font-medium text-theme-text text-[10px] truncate pr-2">${stepName}</span><span class="text-theme-muted text-[10px] text-right shrink-0">${dur}${extra}</span></div>`;
                                 }).join('');
 
                                 return `<div class="py-1.5 border-b border-theme-border last:border-0">
@@ -920,9 +928,17 @@ async function loadMicroPlan() {
                                     </div>`;
                             } else {
                                 // Standard Steps
-                                let dur = step.condition_type === 'time' ? `${step.condition_value} min` : `${step.condition_value}m`;
+                                let dur;
+                                if (step.condition_type === 'time') dur = `${step.condition_value} min`;
+                                else if (step.condition_type === 'distance') dur = `${step.condition_value}m`;
+                                else if (step.condition_type === 'reps') dur = `${step.condition_value} reps`;
+                                else dur = step.condition_value;
+
                                 let tgt = step.zone ? `Zone ${step.zone}` : (step.target_type === 'no.target' ? 'Open' : step.target_type.replace('.zone', ''));
-                                return `<div class="flex justify-between items-center border-b border-theme-border last:border-0 py-1.5 pr-2"><span class="capitalize font-bold text-theme-text truncate pr-2">${step.type}</span><span class="text-theme-muted text-right shrink-0">${dur} @ <span class="font-bold">${tgt}</span></span></div>`;
+                                let extra = step.weight ? ` @ ${step.weight}kg` : ` @ <span class="font-bold">${tgt}</span>`;
+                                let stepName = step.exerciseName || step.type;
+
+                                return `<div class="flex justify-between items-center border-b border-theme-border last:border-0 py-1.5 pr-2"><span class="capitalize font-bold text-theme-text truncate pr-2">${stepName}</span><span class="text-theme-muted text-right shrink-0">${dur}${extra}</span></div>`;
                             }
                         }).join('');
 

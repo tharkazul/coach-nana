@@ -269,7 +269,8 @@ const TARGET_TYPE_MAP = {
 const CONDITION_TYPE_MAP = {
     'time': { id: 2, key: "time" },
     'distance': { id: 3, key: "distance" },
-    'lap.button': { id: 1, key: "lap.button" }
+    'lap.button': { id: 1, key: "lap.button" },
+    'reps': { id: 4, key: "reps" }
 };
 
 // --- SERVER-SENT EVENTS (SSE) FOR REAL-TIME UPDATES ---
@@ -485,7 +486,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
-                    8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete.
+                    8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -511,7 +512,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                       "type": "metrics",
                       "data": {
                         "Cycling FTP": "250W",
-                        "5K Run PB": "19:30"
+                        "5K Run PB": "19:30",
+                        "Squat Weight": "80kg"
                       }
                     }
                     \`\`\``;
@@ -908,7 +910,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         2. You must append a JSON code block at the very end of your response containing the schedule.
         3. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
-        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete.
+        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and push for progressive overload.
 
         WORKOUT PLANNING (CRITICAL):
         If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -1126,6 +1128,13 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                             if (subStep.condition_type === 'distance') {
                                 sDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
                             }
+                            if (subStep.weight) {
+                                sDTO.weightValue = subStep.weight;
+                                sDTO.weightUnit = { unitId: 9, unitKey: "kilogram" };
+                            }
+                            if (subStep.exerciseName) {
+                                sDTO.description = subStep.exerciseName;
+                            }
                             return sDTO;
                         })
                     };
@@ -1149,6 +1158,13 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
 
                 if (step.condition_type === 'distance') {
                     stepDTO.preferredEndConditionUnit = { unitId: 1, unitKey: "meter", factor: 100 };
+                }
+                if (step.weight) {
+                    stepDTO.weightValue = step.weight;
+                    stepDTO.weightUnit = { unitId: 9, unitKey: "kilogram" };
+                }
+                if (step.exerciseName) {
+                    stepDTO.description = step.exerciseName;
                 }
                 return stepDTO;
             });
