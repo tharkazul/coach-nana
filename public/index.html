@@ -227,19 +227,25 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div onclick="selectTone(this, 'Empathetic but demanding elite endurance coach.')"
                             class="tone-card border-2 border-theme-accent bg-theme-accent-soft p-4 rounded-lg cursor-pointer text-center transition">
-                            <div class="text-2xl mb-2">🤝</div>
+                            <div class="flex justify-center mb-2">
+                                <img src="/avatars/empathetic-default.png" class="w-10 h-10 rounded-full object-cover shadow-sm">
+                            </div>
                             <div class="text-xs font-bold text-theme-text">Default</div>
                             <div class="text-[9px] text-theme-muted mt-1">Empathetic but demanding</div>
                         </div>
                         <div onclick="selectTone(this, 'Strict, data-obsessed drill sergeant. Direct and blunt.')"
                             class="tone-card border-2 border-theme-border bg-theme-bg hover:border-theme-muted p-4 rounded-lg cursor-pointer text-center transition">
-                            <div class="text-2xl mb-2">📊</div>
+                            <div class="flex justify-center mb-2">
+                                <img src="/avatars/strict-default.png" class="w-10 h-10 rounded-full object-cover shadow-sm grayscale">
+                            </div>
                             <div class="text-xs font-bold text-theme-text">Data Nerd</div>
                             <div class="text-[9px] text-theme-muted mt-1">Strict & analytical</div>
                         </div>
                         <div onclick="selectTone(this, 'Enthusiastic cheerleader, extremely positive and forgiving.')"
                             class="tone-card border-2 border-theme-border bg-theme-bg hover:border-theme-muted p-4 rounded-lg cursor-pointer text-center transition">
-                            <div class="text-2xl mb-2">📣</div>
+                            <div class="flex justify-center mb-2">
+                                <img src="/avatars/cheer-default.png" class="w-10 h-10 rounded-full object-cover shadow-sm">
+                            </div>
                             <div class="text-xs font-bold text-theme-text">Cheerleader</div>
                             <div class="text-[9px] text-theme-muted mt-1">Positive & forgiving</div>
                         </div>
@@ -287,6 +293,13 @@
                     <textarea id="onboard-context"
                         class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[80px]"
                         placeholder="e.g. Amateur enthusiast, dad of a 1.5 year old, prefers to exercise during lunch..."></textarea>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                        <input type="text" id="onboard-ftp" placeholder="FTP (W)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                        <input type="text" id="onboard-5k" placeholder="5K PB (MM:SS)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                        <input type="text" id="onboard-bench" placeholder="Bench Press (kg)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                        <input type="text" id="onboard-squat" placeholder="Squat (kg)" class="p-2 border border-theme-border rounded-md text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
+                    </div>
                 </div>
 
                 <!-- Race Planner -->

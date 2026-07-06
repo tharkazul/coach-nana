@@ -1931,8 +1931,23 @@ async function completeOnboarding(redirectUrl = null) {
     const btn = document.getElementById('btn-complete-setup');
     if (btn) btn.innerText = "Saving profile...";
 
+    let context = document.getElementById('onboard-context').value;
+    const ftp = document.getElementById('onboard-ftp').value;
+    const pb5k = document.getElementById('onboard-5k').value;
+    const bench = document.getElementById('onboard-bench').value;
+    const squat = document.getElementById('onboard-squat').value;
+
+    let extraContext = [];
+    if (ftp) extraContext.push(`FTP: ${ftp}W`);
+    if (pb5k) extraContext.push(`5K PB: ${pb5k}`);
+    if (bench) extraContext.push(`Bench Press: ${bench}kg`);
+    if (squat) extraContext.push(`Squat: ${squat}kg`);
+
+    if (extraContext.length > 0) {
+        context = (context ? context + '\n\n' : '') + 'Personal Metrics:\n' + extraContext.join('\n');
+    }
+
     const tone = document.getElementById('onboard-tone').value;
-    const context = document.getElementById('onboard-context').value;
     const garminUser = document.getElementById('onboard-garmin-user').value;
     const garminPass = document.getElementById('onboard-garmin-pass').value;
     const raceDate = document.getElementById('onboard-race-date').value;
