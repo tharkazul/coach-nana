@@ -61,7 +61,7 @@ setInterval(() => {
 setInterval(() => {
     console.log("🕒 Running 24h inactivity check...");
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
+
     db.all(`
         SELECT u.id, u.email, u.coach_tone 
         FROM users u
@@ -72,11 +72,11 @@ setInterval(() => {
         )
     `, [twentyFourHoursAgo], async (err, inactiveUsers) => {
         if (err || !inactiveUsers) return;
-        
+
         for (const user of inactiveUsers) {
             console.log(`🤖 User ${user.id} inactive for 24h. Generating proactive message...`);
             const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${user.coach_tone || 'Friendly and motivating'}. Keep it under 2 sentences.`;
-            
+
             try {
                 const aiReply = await generateWithFallback(prompt);
                 db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'curious')`, [user.id, aiReply]);
@@ -92,7 +92,7 @@ setInterval(() => {
 app.post('/api/admin/simulate-24h', authenticateToken, async (req, res) => {
     const user = req.user;
     console.log(`🤖 Simulating 24h inactivity for user ${user.id}...`);
-    
+
     db.get(`SELECT coach_tone FROM users WHERE id = ?`, [user.id], async (err, row) => {
         const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${row ? row.coach_tone : 'Friendly and motivating'}. Keep it under 2 sentences.`;
         try {
@@ -156,7 +156,7 @@ async function generateWithFallback(prompt, systemInstruction = null, chatHistor
     }
 
     console.error("❌ CRITICAL: All Gemini fallback models failed.");
-    throw new Error("Coach Spark is currently catching their breath. Please try again in a moment.");
+    throw new Error("Spark is currently catching their breath. Please try again in a moment.");
 }
 
 function encrypt(text) {
@@ -292,7 +292,7 @@ function sendSSEEvent(userId, eventName, data) {
 
 app.get('/api/events', authenticateToken, (req, res) => {
     const userId = req.user.id;
-    
+
     // Set headers for SSE
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -401,7 +401,7 @@ app.get('/api/chat/history', authenticateToken, (req, res) => {
 app.post('/api/chat', authenticateToken, async (req, res) => {
     const { message, imageBase64 } = req.body;
     db.run(`UPDATE users SET chat_count = chat_count + 1 WHERE id = ?`, [req.user.id]);
-    
+
     let imagePathDB = null;
     let base64Data = null;
 
@@ -426,8 +426,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
 
         db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metricsRows) => {
-            const metricsText = (metricsRows && metricsRows.length > 0) 
-                ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ') 
+            const metricsText = (metricsRows && metricsRows.length > 0)
+                ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ')
                 : 'None explicitly recorded yet.';
 
             const phase = user.training_phase || 'Base';
@@ -439,37 +439,37 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
                     db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
 
-                let cleanHistory = [];
+                        let cleanHistory = [];
 
-                (historyRows || []).forEach(row => {
-                    let currentRole = row.role === 'coach' ? 'model' : 'user';
+                        (historyRows || []).forEach(row => {
+                            let currentRole = row.role === 'coach' ? 'model' : 'user';
 
-                    if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === currentRole) {
-                        cleanHistory[cleanHistory.length - 1].parts[0].text += "\n\n" + row.content;
-                    } else {
-                        cleanHistory.push({
-                            role: currentRole,
-                            parts: [{ text: row.content }]
+                            if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === currentRole) {
+                                cleanHistory[cleanHistory.length - 1].parts[0].text += "\n\n" + row.content;
+                            } else {
+                                cleanHistory.push({
+                                    role: currentRole,
+                                    parts: [{ text: row.content }]
+                                });
+                            }
                         });
-                    }
-                });
 
-                if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
-                    cleanHistory.shift();
-                }
-                if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
-                    cleanHistory.pop();
-                }
+                        if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
+                            cleanHistory.shift();
+                        }
+                        if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
+                            cleanHistory.pop();
+                        }
 
-                const todayStr = new Date().toISOString().split('T')[0];
-                const next7Days = Array.from({ length: 7 }, (_, i) => {
-                    const d = new Date();
-                    d.setDate(d.getDate() + i);
-                    return `${d.toLocaleDateString('en-US', { weekday: 'long' })}: ${d.toISOString().split('T')[0]}`;
-                }).join(', ');
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const next7Days = Array.from({ length: 7 }, (_, i) => {
+                            const d = new Date();
+                            d.setDate(d.getDate() + i);
+                            return `${d.toLocaleDateString('en-US', { weekday: 'long' })}: ${d.toISOString().split('T')[0]}`;
+                        }).join(', ');
 
-                const systemPrompt =
-                    `You are Spark, an elite Ironman Triathlon and endurance coach. 
+                        const systemPrompt =
+                            `You are Spark, an elite Ironman Triathlon and endurance coach. 
                     Today is ${todayStr}.
                     Upcoming Calendar Reference: ${next7Days}
                     Athlete Context: ${user.athlete_context || 'General endurance athlete'}
@@ -526,79 +526,79 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     }
                     \`\`\``;
 
-                let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data);
-                let planUpdated = false;
+                        let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data);
+                        let planUpdated = false;
 
-                const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
-                for (const match of jsonMatches) {
-                    try {
-                        const parsedData = JSON.parse(match[1]);
-                        
-                        if (Array.isArray(parsedData)) {
-                            const planData = parsedData;
-                            const affectedDates = [...new Set(planData.map(day => day.date))];
+                        const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
+                        for (const match of jsonMatches) {
+                            try {
+                                const parsedData = JSON.parse(match[1]);
 
-                            if (affectedDates.length > 0) {
-                                const placeholders = affectedDates.map(() => '?').join(',');
+                                if (Array.isArray(parsedData)) {
+                                    const planData = parsedData;
+                                    const affectedDates = [...new Set(planData.map(day => day.date))];
 
-                                db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
-                                    if (err) console.error("Failed to clear old plan data:", err);
+                                    if (affectedDates.length > 0) {
+                                        const placeholders = affectedDates.map(() => '?').join(',');
 
-                                    const stmt = db.prepare(`
+                                        db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                            if (err) console.error("Failed to clear old plan data:", err);
+
+                                            const stmt = db.prepare(`
                                         INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?)
                                     `);
 
-                                    planData.forEach(day => {
-                                        stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
-                                    });
+                                            planData.forEach(day => {
+                                                stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                            });
+                                            stmt.finalize();
+                                        });
+                                    }
+                                    planUpdated = true;
+                                } else if (parsedData && parsedData.type === 'metrics' && parsedData.data) {
+                                    const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?) ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`);
+                                    for (const [key, val] of Object.entries(parsedData.data)) {
+                                        stmt.run(req.user.id, key, String(val));
+                                    }
                                     stmt.finalize();
-                                });
+                                }
+                            } catch (e) {
+                                console.error("Failed to parse an AI JSON block", e);
                             }
-                            planUpdated = true;
-                        } else if (parsedData && parsedData.type === 'metrics' && parsedData.data) {
-                            const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?) ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`);
-                            for (const [key, val] of Object.entries(parsedData.data)) {
-                                stmt.run(req.user.id, key, String(val));
-                            }
-                            stmt.finalize();
                         }
-                    } catch (e) {
-                        console.error("Failed to parse an AI JSON block", e);
-                    }
-                }
-                
-                aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
 
-                let mood = 'default';
-                const lowerReply = aiReply.toLowerCase();
+                        aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
 
-                // if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
-                // if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+                        let mood = 'default';
+                        const lowerReply = aiReply.toLowerCase();
 
-                // Define your keyword arrays here
-                const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
-                const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
-                const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust', 'dream', 'hot'];
-                // .some() acts as a giant OR statement across the whole array
-                if (hypeKeywords.some(word => lowerReply.includes(word))) {
-                    mood = 'hype';
-                } else if (hornyKeywords.some(word => lowerReply.includes(word))) {
-                    mood = 'horny';
-                } else if (disappointedKeywords.some(word => lowerReply.includes(word))) {
-                    mood = 'disappointed';
-                }
+                        // if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
+                        // if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+
+                        // Define your keyword arrays here
+                        const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
+                        const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
+                        const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust', 'dream', 'hot'];
+                        // .some() acts as a giant OR statement across the whole array
+                        if (hypeKeywords.some(word => lowerReply.includes(word))) {
+                            mood = 'hype';
+                        } else if (hornyKeywords.some(word => lowerReply.includes(word))) {
+                            mood = 'horny';
+                        } else if (disappointedKeywords.some(word => lowerReply.includes(word))) {
+                            mood = 'disappointed';
+                        }
 
 
-                const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
-                const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
+                        const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
+                        const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
 
-                db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
-                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
+                        db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
+                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
 
-                res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
-            });
-            });
+                        res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
+                    });
+                });
             } catch (e) {
                 console.error("Chat Server Error:", e);
                 res.status(500).json({ error: "AI failed to respond." });
@@ -615,7 +615,7 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
             const recentActivitiesText = (recentActivities && recentActivities.length > 0)
                 ? recentActivities.map(a => `- ${a.start_date.split('T')[0]}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n')
                 : 'No recent activities recorded.';
-                
+
             db.all(`SELECT date, sport, description FROM micro_plan WHERE user_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 2`, [req.user.id], async (err, upcomingPlan) => {
                 const upcomingText = (upcomingPlan && upcomingPlan.length > 0)
                     ? upcomingPlan.map(p => `- ${p.date}: ${p.sport} - ${p.description}`).join('\n')
@@ -904,8 +904,8 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         if (err || !user) return res.status(500).json({ error: "Athlete context not found." });
 
         db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metricsRows) => {
-            const metricsText = (metricsRows && metricsRows.length > 0) 
-                ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ') 
+            const metricsText = (metricsRows && metricsRows.length > 0)
+                ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ')
                 : 'None explicitly recorded yet.';
 
             const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
@@ -945,12 +945,12 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         \`\`\`
         *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the examples. Exercises MUST go in steps_json, NOT details!*`;
 
-        const ctl = user.current_ctl || 0;
-        const atl = user.current_atl || 0;
-        const tsb = ctl - atl;
-        const phase = user.training_phase || 'Base';
+            const ctl = user.current_ctl || 0;
+            const atl = user.current_atl || 0;
+            const tsb = ctl - atl;
+            const phase = user.training_phase || 'Base';
 
-        const userPrompt = `Please generate a 7-day training plan for me starting on ${targetDate}. 
+            const userPrompt = `Please generate a 7-day training plan for me starting on ${targetDate}. 
         
         Here are my current physiological metrics to govern the volume and intensity of this block:
         - Training Phase: ${phase}
@@ -960,56 +960,56 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
         Analyze my Form (TSB). If I am highly fatigued (negative TSB), prioritize recovery. If I am fresh (positive TSB), you can push the intensity. Give me a quick encouraging summary of the week's focus based on these metrics, and then provide the JSON block.`;
 
-        try {
-            let aiReply = await generateWithFallback(userPrompt, systemPrompt);
-            let planUpdated = false;
+            try {
+                let aiReply = await generateWithFallback(userPrompt, systemPrompt);
+                let planUpdated = false;
 
-            const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
-            if (jsonMatch) {
-                try {
-                    const planData = JSON.parse(jsonMatch[1]);
-                    const affectedDates = [...new Set(planData.map(day => day.date))];
+                const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
+                if (jsonMatch) {
+                    try {
+                        const planData = JSON.parse(jsonMatch[1]);
+                        const affectedDates = [...new Set(planData.map(day => day.date))];
 
-                    if (affectedDates.length > 0) {
-                        const placeholders = affectedDates.map(() => '?').join(',');
+                        if (affectedDates.length > 0) {
+                            const placeholders = affectedDates.map(() => '?').join(',');
 
-                        db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
-                            if (err) console.error("Failed to clear old plan data:", err);
+                            db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                if (err) console.error("Failed to clear old plan data:", err);
 
-                            const stmt = db.prepare(`
+                                const stmt = db.prepare(`
                                 INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?)
                             `);
 
-                            planData.forEach(day => {
-                                stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                planData.forEach(day => {
+                                    stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                });
+                                stmt.finalize();
                             });
-                            stmt.finalize();
-                        });
+                        }
+
+                        planUpdated = true;
+                        aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim();
+                    } catch (e) {
+                        console.error("Failed to parse AI JSON block", e);
                     }
-
-                    planUpdated = true;
-                    aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim();
-                } catch (e) {
-                    console.error("Failed to parse AI JSON block", e);
                 }
+
+                let mood = 'default';
+                const lowerReply = aiReply.toLowerCase();
+                if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
+                if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+
+                const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
+                const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
+
+                db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
+                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, coachAcknowledgement, mood]);
+                res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
+            } catch (e) {
+                console.error("AI Generation Error:", e);
+                res.status(500).json({ error: "AI failed to respond." });
             }
-
-            let mood = 'default';
-            const lowerReply = aiReply.toLowerCase();
-            if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
-            if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
-
-            const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
-            const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
-
-            db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
-            db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, coachAcknowledgement, mood]);
-            res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
-        } catch (e) {
-            console.error("AI Generation Error:", e);
-            res.status(500).json({ error: "AI failed to respond." });
-        }
         }); // End metrics fetch
     });
 });
@@ -1185,7 +1185,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
             });
 
             const wkt = {
-                workoutName: `Coach Spark: ${workout.sport}`,
+                workoutName: `Spark: ${workout.sport}`,
                 description: workout.description,
                 sportType: sportDef,
                 workoutSegments: [{ segmentOrder: 1, sportType: sportDef, workoutSteps: garminSteps }]
@@ -1349,7 +1349,7 @@ async function tagStravaActivity(userId, activity, token) {
         [userId, activityDate, sparkSport], async (err, plan) => {
 
             if (err || !plan) return;
-            
+
             const workoutContent = (plan.details && plan.details.trim().length > 0) ? plan.details : plan.description;
 
             const newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}`;
@@ -1418,8 +1418,8 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                 // Fetch the coach tone
                 db.get("SELECT coach_tone FROM users WHERE id = ?", [internalUserId], async (err, userRow) => {
                     const tone = userRow ? userRow.coach_tone : 'Friendly and motivating';
-                    
-                    let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance/1000).toFixed(1)}km in ${Math.round(data.moving_time/60)} minutes, generating ${tss} TSS. `;
+
+                    let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance / 1000).toFixed(1)}km in ${Math.round(data.moving_time / 60)} minutes, generating ${tss} TSS. `;
                     let newDescription = null;
 
                     if (plan) {

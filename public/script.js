@@ -2043,7 +2043,7 @@ function saveAndConnectStrava() {
     completeOnboarding(authUrl);
 }
 // --- VOICE COACHING FEATURE ---
-let isVoiceEnabled = true;
+let isVoiceEnabled = false;
 let speechRecognition;
 let isRecording = false;
 let availableVoices = [];
