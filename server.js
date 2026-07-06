@@ -486,7 +486,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
-                    8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
+                    8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -500,10 +500,18 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         "target_tss": 80,
                         "details": "Push hard on the intervals, recover fully on the rests.",
                         "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}, {\\"type\\": \\"repeat\\", \\"iterations\\": 8, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 3, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 4}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 1, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]}, {\\"type\\": \\"cooldown\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 10, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
+                      },
+                      {
+                        "date": "YYYY-MM-DD",
+                        "sport": "Strength", 
+                        "description": "Leg Day Burner",
+                        "target_tss": 40,
+                        "details": "Focus on depth and explosion.",
+                        "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 5, \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"repeat\\", \\"iterations\\": 3, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"reps\\", \\"condition_value\\": 10, \\"weight\\": 80, \\"exerciseName\\": \\"Barbell Squat\\", \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 2, \\"target_type\\": \\"no.target\\"}]}]"
                       }
                     ]
                     \`\`\`
-                    *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the example.*
+                    *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the examples. Exercises MUST go in steps_json, NOT details!*
                     
                     ATHLETE METRICS MEMORY (CRITICAL):
                     If the athlete mentions a new personal best, physiological metric, or baseline number (e.g., FTP, 5K pace, Max HR, resting heart rate, swim threshold), you MUST output an additional JSON block at the very end of your response to commit it to your long-term memory. Format it exactly like this inside triple backticks:
@@ -910,25 +918,34 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         2. You must append a JSON code block at the very end of your response containing the schedule.
         3. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
-        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and push for progressive overload.
+        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Between sets, use a "recovery" step with "condition_type": "time". Reference the Athlete Context for their past weights, and push for progressive overload.
 
         WORKOUT PLANNING (CRITICAL):
         If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
         The JSON must be a valid Array of objects. Format it EXACTLY like this inside triple backticks:
 
         JSON FORMAT REQUIRED AT THE END OF YOUR RESPONSE:
-        \`\`\`json
+        ```json
         [
-           {
+          {
             "date": "YYYY-MM-DD",
             "sport": "Run", 
             "description": "5k Speed Intervals",
             "target_tss": 80,
             "details": "Push hard on the intervals, recover fully on the rests.",
             "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}, {\\"type\\": \\"repeat\\", \\"iterations\\": 8, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 3, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 4}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 1, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]}, {\\"type\\": \\"cooldown\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 10, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
-            }
+          },
+          {
+            "date": "YYYY-MM-DD",
+            "sport": "Strength", 
+            "description": "Leg Day Burner",
+            "target_tss": 40,
+            "details": "Focus on depth and explosion.",
+            "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 5, \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"repeat\\", \\"iterations\\": 3, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"reps\\", \\"condition_value\\": 10, \\"weight\\": 80, \\"exerciseName\\": \\"Barbell Squat\\", \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 2, \\"target_type\\": \\"no.target\\"}]}]"
+          }
         ]
-        \`\`\``;
+        ```
+        *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the examples. Exercises MUST go in steps_json, NOT details!*`;
 
         const ctl = user.current_ctl || 0;
         const atl = user.current_atl || 0;
