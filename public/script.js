@@ -915,6 +915,8 @@ async function loadMicroPlan() {
             });
         }
 
+        renderQuickActions(currentPlan, actualTssMap);
+
         const container = document.getElementById('micro-plan-container');
         if (!container) return;
 
@@ -1930,6 +1932,44 @@ function clearImageSelection() {
     document.getElementById('image-upload').value = '';
     document.getElementById('image-preview-container').classList.add('hidden');
     document.getElementById('image-preview').src = '';
+}
+
+function renderQuickActions(planMap, tssMap) {
+    const container = document.getElementById('quick-actions-container');
+    if (!container) return;
+
+    let todayStr = new Date().toISOString().split('T')[0];
+    let actualTss = tssMap[todayStr] || 0;
+    
+    // Check if there is a scheduled workout today that isn't just rest
+    let workoutsToday = planMap[todayStr] || [];
+    let isRestDay = workoutsToday.length === 0 || (workoutsToday.length === 1 && workoutsToday[0].sport.toLowerCase() === 'rest');
+
+    let actions = [];
+
+    if (actualTss > 0) {
+        // Workout completed today
+        actions.push({ text: "🔥 Debrief Workout", msg: "I crushed my workout today! Let's debrief." });
+        actions.push({ text: "📉 Felt Terrible", msg: "That workout felt terrible today, I really struggled." });
+    } else if (!isRestDay) {
+        // Workout scheduled but not completed yet
+        actions.push({ text: "🏃‍♂️ Warmup Routine", msg: "Give me a quick warmup routine for my workout today." });
+        actions.push({ text: "🥱 Too Tired", msg: "I am feeling extremely tired today, can we modify or skip the plan?" });
+        actions.push({ text: "🍽️ Nutrition Focus", msg: "What should I eat before this workout?" });
+    } else {
+        // Rest day, no workout completed
+        actions.push({ text: "🧘‍♂️ Stretching Routine", msg: "Recommend a light stretching or yoga routine for my rest day." });
+        actions.push({ text: "🥗 Nutrition Focus", msg: "Give me a nutrition focus for my rest day today." });
+    }
+
+    let html = `<span class="text-[10px] uppercase font-bold text-theme-muted tracking-wider self-center mr-2">Quick Actions:</span>`;
+    actions.forEach(act => {
+        // Escape quotes safely
+        let safeMsg = act.msg.replace(/'/g, "\\'");
+        html += `<button onclick="sendQuickAction('${safeMsg}')" class="text-xs text-theme-accent bg-theme-accent-soft border border-theme-accent-border px-3 py-1.5 rounded-full hover:bg-theme-accent transition font-medium hover:text-white">${act.text}</button>`;
+    });
+
+    container.innerHTML = html;
 }
 
 async function sendQuickAction(msg) {
