@@ -556,6 +556,7 @@ function switchTab(t) {
     if (t === 'history') loadHistory();
     if (t === 'physique') loadPhysiqueLogs();
     if (t === 'coach') {
+        loadChatHistory();
         setTimeout(() => {
             const chatWindow = document.getElementById('chat-window');
             if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -2373,7 +2374,13 @@ async function submitPhysiqueLog(e) {
         if (res.ok) {
             document.getElementById('physique-form').reset();
             loadPhysiqueLogs();
-            alert("Physique log saved!");
+            
+            const statusEl = document.getElementById('physique-status');
+            if (statusEl) {
+                statusEl.innerText = "✅ Saved!";
+                statusEl.classList.remove('hidden');
+                setTimeout(() => statusEl.classList.add('hidden'), 3000);
+            }
         } else {
             alert("Failed to save log.");
         }
