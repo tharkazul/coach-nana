@@ -1610,7 +1610,8 @@ function getCoachAvatar(mood) {
     // Save your 12 images there using this naming convention:
     // e.g., 'empathetic-default.png', 'madison-hype.png', 'strict-disappointed.png'
 
-    const moodKey = (mood === 'thinking' || !mood) ? 'default' : mood;
+    const validMoods = ['default', 'hype', 'disappointed', 'horny'];
+    const moodKey = validMoods.includes(mood) ? mood : 'default';
     const imagePath = `/avatars/${persona}-${moodKey}.png`;
 
     // Optional Fallback logic if the real images are missing
@@ -1656,7 +1657,7 @@ async function loadChatHistory() {
         let html = '';
         history.forEach(msg => {
             if (msg.role === 'user') {
-                let imgHtml = msg.image_path ? `<img src="${msg.image_path}" class="w-full rounded-md mb-2 border border-white/20">` : '';
+                let imgHtml = msg.image_path ? `<img src="${msg.image_path}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-md mb-2 border border-white/20">` : '';
                 html += `
                             <div class="flex justify-end">
                                 <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
