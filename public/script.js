@@ -1056,23 +1056,138 @@ async function loadMicroPlan() {
 }
 
 let editingDayWorkouts = [];
+let editingDateStr = '';
+let editingDayName = '';
 
 function editDay(dateStr, dayName) {
+    editingDateStr = dateStr;
+    editingDayName = dayName;
     let workouts = currentPlan[dateStr] || [{ sport: 'Rest', description: '', target_tss: 0, details: '' }];
     editingDayWorkouts = JSON.parse(JSON.stringify(workouts)); // Deep copy
+    editingDayWorkouts.forEach(w => {
+        try { 
+            w._steps = (w.steps_json && w.steps_json !== 'null') ? JSON.parse(w.steps_json) : []; 
+            if (!Array.isArray(w._steps)) w._steps = [];
+        }
+        catch (e) { w._steps = []; }
+    });
     renderEditDay(dateStr, dayName);
+}
+
+function updateStep(wIdx, stepIdx, subStepIdx, field, el) {
+    let w = editingDayWorkouts[wIdx];
+    let step = subStepIdx === null ? w._steps[stepIdx] : w._steps[stepIdx].steps[subStepIdx];
+    let val = el.value;
+    if (field === 'condition_value' || field === 'zone' || field === 'iterations' || field === 'weight') val = Number(val);
+    step[field] = val;
+    
+    // Structure management
+    if (field === 'type' && val === 'repeat' && !step.steps) step.steps = [];
+    if (field === 'type' && val !== 'repeat') delete step.steps;
+    
+    // Only re-render if it's a structural change like type changing
+    if (field === 'type') {
+       renderEditDay(editingDateStr, editingDayName);
+    }
+}
+
+function addStep(wIdx, parentStepIdx) {
+    let w = editingDayWorkouts[wIdx];
+    let newStep = { type: 'interval', condition_type: 'time', condition_value: 5, target_type: 'no.target' };
+    if (parentStepIdx === null) {
+        w._steps.push(newStep);
+    } else {
+        w._steps[parentStepIdx].steps = w._steps[parentStepIdx].steps || [];
+        w._steps[parentStepIdx].steps.push(newStep);
+    }
+    renderEditDay(editingDateStr, editingDayName);
+}
+
+function removeStep(wIdx, stepIdx, subStepIdx) {
+    let w = editingDayWorkouts[wIdx];
+    if (subStepIdx === null) {
+        w._steps.splice(stepIdx, 1);
+    } else {
+        w._steps[stepIdx].steps.splice(subStepIdx, 1);
+    }
+    renderEditDay(editingDateStr, editingDayName);
+}
+
+function renderStepsUI(steps, wIdx, parentStepIdx = null) {
+    if (!steps || !Array.isArray(steps)) return '';
+    return steps.map((s, idx) => {
+        let isRepeat = s.type === 'repeat';
+        let html = `<div class="flex flex-col mt-1 p-2 bg-theme-bg border border-theme-border rounded-sm">`;
+        
+        // Header row
+        html += `<div class="flex flex-wrap items-center gap-2 w-full">`;
+        // Type dropdown
+        html += `<select onchange="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'type', this)" class="w-20 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent shrink-0">
+            <option value="warmup" ${s.type === 'warmup'?'selected':''}>Warmup</option>
+            <option value="interval" ${s.type === 'interval'?'selected':''}>Interval</option>
+            <option value="recovery" ${s.type === 'recovery'?'selected':''}>Recovery</option>
+            <option value="cooldown" ${s.type === 'cooldown'?'selected':''}>Cooldown</option>
+            <option value="repeat" ${s.type === 'repeat'?'selected':''}>Repeat</option>
+        </select>`;
+
+        if (isRepeat) {
+            html += `<input type="number" placeholder="x" oninput="updateStep(${wIdx}, ${idx}, null, 'iterations', this)" value="${s.iterations || 1}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+            html += `<span class="text-[10px] text-theme-muted">times</span>`;
+        } else {
+            // Condition value and type
+            html += `<input type="number" oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'condition_value', this)" value="${s.condition_value || 0}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+            html += `<select onchange="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'condition_type', this)" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent shrink-0">
+                <option value="time" ${s.condition_type === 'time'?'selected':''}>min</option>
+                <option value="distance" ${s.condition_type === 'distance'?'selected':''}>m</option>
+                <option value="reps" ${s.condition_type === 'reps'?'selected':''}>reps</option>
+            </select>`;
+
+            // Target Type
+            html += `<select onchange="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'target_type', this); renderEditDay(editingDateStr, editingDayName);" class="w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent shrink-0">
+                <option value="no.target" ${s.target_type === 'no.target'?'selected':''}>Open</option>
+                <option value="heart.rate.zone" ${s.target_type === 'heart.rate.zone'?'selected':''}>HR Zone</option>
+                <option value="power.zone" ${s.target_type === 'power.zone'?'selected':''}>Power Zone</option>
+                <option value="pace.zone" ${s.target_type === 'pace.zone'?'selected':''}>Pace Zone</option>
+                <option value="speed.zone" ${s.target_type === 'speed.zone'?'selected':''}>Speed Zone</option>
+            </select>`;
+            
+            // Target Value / Zone
+            let isZone = s.target_type && s.target_type.endsWith('.zone');
+            if (isZone) {
+                html += `<input type="number" placeholder="Zone 1-5" oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'zone', this)" value="${s.zone || ''}" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+            } else if (s.target_type !== 'no.target') {
+                html += `<input type="text" placeholder="Target..." oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'target_value', this)" value="${s.target_value || ''}" class="flex-1 min-w-[60px] bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
+            }
+
+            // Strength extensions
+            html += `<input type="text" placeholder="Exercise name..." oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'exerciseName', this)" value="${s.exerciseName || ''}" class="flex-1 min-w-[80px] bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
+            html += `<input type="number" placeholder="kg" oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'weight', this)" value="${s.weight || ''}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+        }
+        
+        // Remove button
+        html += `<button onclick="removeStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'})" class="text-red-500 hover:text-red-400 text-[10px] px-2 shrink-0 transition" title="Remove Step">X</button>`;
+        html += `</div>`; // End Header Row
+        
+        if (isRepeat) {
+            html += `<div class="ml-4 pl-2 border-l border-theme-border mt-1">`;
+            html += renderStepsUI(s.steps || [], wIdx, idx);
+            html += `<button onclick="addStep(${wIdx}, ${idx})" class="mt-1 bg-theme-card border border-theme-border text-theme-text text-[9px] px-1.5 py-1 rounded-sm hover:bg-theme-border transition">+ Add Sub-step</button>`;
+            html += `</div>`;
+        }
+
+        html += `</div>`;
+        return html;
+    }).join('');
 }
 
 function renderEditDay(dateStr, dayName) {
     let rowsHtml = editingDayWorkouts.map((w, idx) => {
-        let prettySteps = '';
-        try { prettySteps = (w.steps_json && w.steps_json !== 'null') ? JSON.stringify(JSON.parse(w.steps_json), null, 2) : '[]'; } 
-        catch (e) { prettySteps = w.steps_json || '[]'; }
+        let stepsHtml = renderStepsUI(w._steps, idx, null);
 
         return `
         <div class="flex flex-col mt-2 border border-theme-border bg-theme-bg p-2 md:p-3 rounded-sm shadow-sm" id="edit-row-${dateStr}-${idx}">
             <div class="flex items-center w-full">
-                <select id="s-${dateStr}-${idx}" class="w-20 md:w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent shrink-0">
+                <select id="s-${dateStr}-${idx}" class="w-20 md:w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent shrink-0" onchange="editingDayWorkouts[${idx}].sport = this.value; renderEditDay('${dateStr}', '${dayName}')">
                     <option ${w.sport === 'Swim' ? 'selected' : ''}>Swim</option>
                     <option ${w.sport === 'Bike' ? 'selected' : ''}>Bike</option>
                     <option ${w.sport === 'Run' ? 'selected' : ''}>Run</option>
@@ -1080,13 +1195,17 @@ function renderEditDay(dateStr, dayName) {
                     <option ${w.sport === 'Brick' ? 'selected' : ''}>Brick</option>
                     <option ${w.sport === 'Rest' ? 'selected' : ''}>Rest</option>
                 </select>
-                <input id="d-${dateStr}-${idx}" value="${w.description || ''}" placeholder="Title..." class="flex-1 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 focus:border-theme-accent min-w-[100px]">
-                <input id="t-${dateStr}-${idx}" type="number" value="${w.target_tss || 0}" class="w-14 md:w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm text-right mr-2 focus:border-theme-accent shrink-0">
+                <input id="d-${dateStr}-${idx}" value="${w.description || ''}" placeholder="Title..." class="flex-1 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 focus:border-theme-accent min-w-[100px]" oninput="editingDayWorkouts[${idx}].description = this.value">
+                <input id="t-${dateStr}-${idx}" type="number" value="${w.target_tss || 0}" class="w-14 md:w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm text-right mr-2 focus:border-theme-accent shrink-0" oninput="editingDayWorkouts[${idx}].target_tss = parseFloat(this.value)">
                 <button onclick="removeWorkoutRow('${dateStr}', '${dayName}', ${idx})" class="text-red-500 hover:text-red-400 text-xs px-2 shrink-0 border border-transparent hover:border-red-500 rounded transition" title="Remove">X</button>
             </div>
             <div class="w-full mt-2 space-y-2">
-                <textarea id="det-${dateStr}-${idx}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[50px]" placeholder="Workout drills/structure...">${w.details || ''}</textarea>
-                <textarea id="steps-${dateStr}-${idx}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[80px]" placeholder="Steps JSON (Advanced)...">${prettySteps}</textarea>
+                <textarea id="det-${dateStr}-${idx}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[50px]" placeholder="Workout drills/structure..." oninput="editingDayWorkouts[${idx}].details = this.value">${w.details || ''}</textarea>
+            </div>
+            <div class="w-full mt-2 pt-2 border-t border-theme-border">
+                <div class="text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-1">Steps</div>
+                ${stepsHtml}
+                <button onclick="addStep(${idx}, null)" class="mt-2 bg-theme-card border border-theme-border text-theme-text text-[10px] px-2 py-1 rounded-sm hover:bg-theme-border transition">+ Add Step</button>
             </div>
         </div>
     `;
@@ -1109,7 +1228,7 @@ function renderEditDay(dateStr, dayName) {
 }
 
 function addWorkoutRow(dateStr, dayName) {
-    editingDayWorkouts.push({ sport: 'Rest', description: '', target_tss: 0, details: '' });
+    editingDayWorkouts.push({ sport: 'Rest', description: '', target_tss: 0, details: '', _steps: [] });
     renderEditDay(dateStr, dayName);
 }
 
@@ -1119,13 +1238,13 @@ function removeWorkoutRow(dateStr, dayName, idx) {
 }
 
 async function saveDay(dateStr) {
-    // Scrape values back into array
-    const workoutsToSave = editingDayWorkouts.map((w, idx) => ({
-        sport: document.getElementById(`s-${dateStr}-${idx}`)?.value || w.sport,
-        description: document.getElementById(`d-${dateStr}-${idx}`)?.value || w.description,
-        target_tss: parseFloat(document.getElementById(`t-${dateStr}-${idx}`)?.value || 0),
-        details: document.getElementById(`det-${dateStr}-${idx}`)?.value || w.details,
-        steps_json: document.getElementById(`steps-${dateStr}-${idx}`)?.value || w.steps_json || '[]'
+    // values are already bound to editingDayWorkouts via oninput/onchange
+    const workoutsToSave = editingDayWorkouts.map((w) => ({
+        sport: w.sport,
+        description: w.description,
+        target_tss: w.target_tss,
+        details: w.details,
+        steps_json: JSON.stringify(w._steps || [])
     }));
 
     await fetch('/api/micro-plan/day', {
