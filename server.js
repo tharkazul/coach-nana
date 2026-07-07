@@ -22,6 +22,11 @@ const geminiConfigs = [
         name: "Backup",
         model: "gemini-2.5-flash",
         apiKey: process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY // Uses backup key if it exists, otherwise re-uses the main one
+    },
+    {
+        name: "Tertiary",
+        model: "gemini-3.1-flash-lite",
+        apiKey: process.env.GEMINI_API_KEY_TERTIARY || process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY 
     }
 ];
 
