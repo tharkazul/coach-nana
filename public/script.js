@@ -2421,7 +2421,7 @@ async function loadPhysiqueLogs() {
                 </div>
                 ${l.photo_url ? `
                 <div class="w-full md:w-32 flex-shrink-0">
-                    <img src="${l.photo_url}" class="w-full h-32 object-cover rounded-lg border border-theme-border">
+                    <img src="${l.photo_url}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-32 object-cover rounded-lg border border-theme-border">
                 </div>
                 ` : ''}
             </div>
