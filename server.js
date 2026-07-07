@@ -734,6 +734,7 @@ CRITICAL RULES:
                     console.error("Checkin Server Error:", e);
                     res.status(500).json({ error: "AI failed to respond." });
                 }
+                });
             });
         });
     });
