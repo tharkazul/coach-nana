@@ -1668,6 +1668,7 @@ async function loadChatHistory() {
             } else {
                 let avatarImg = getCoachAvatar(msg.mood || 'default');
                 let formattedContent = msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
                 html += `
                             <div class="flex items-end gap-2 md:gap-3">
                                 <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
@@ -1730,6 +1731,7 @@ async function triggerProactiveCheckin() {
         const data = await res.json();
         let finalAvatar = getCoachAvatar(data.mood || 'default');
         let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
 
         const msgId = 'reply-content-' + Date.now();
         document.getElementById(loadId).outerHTML = `
@@ -1943,6 +1945,7 @@ async function sendMessage() {
 
         let finalAvatar = getCoachAvatar(data.mood || 'default');
         let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
 
         const msgId = 'reply-content-' + Date.now();
         document.getElementById(loadId).outerHTML = `
