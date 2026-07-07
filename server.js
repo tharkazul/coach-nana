@@ -1400,6 +1400,38 @@ function mapStravaSportToSpark(stravaSport) {
     return 'Other';
 }
 
+function formatStepsForStrava(stepsJson) {
+    if (!stepsJson || stepsJson === '[]' || stepsJson === 'null') return null;
+    try {
+        const steps = JSON.parse(stepsJson);
+        if (!steps || steps.length === 0) return null;
+        let output = "";
+        steps.forEach(s => {
+            if (s.type === 'repeat') {
+                output += `- Repeat ${s.iterations}x:\\n`;
+                if (s.steps) {
+                    s.steps.forEach(sub => {
+                        let dur = sub.condition_value + (sub.condition_type === 'time' ? ' min' : (sub.condition_type === 'distance' ? 'm' : ' reps'));
+                        let tgt = sub.target_value ? sub.target_value : (sub.zone ? `Zone ${sub.zone}` : (sub.target_type === 'no.target' ? 'Open' : sub.target_type.replace('.zone','')));
+                        let extra = sub.weight ? ` @ ${sub.weight}kg` : (sub.target_type !== 'no.target' ? ` @ ${tgt}` : '');
+                        let name = sub.exerciseName || sub.type;
+                        output += `    * ${name}: ${dur}${extra}\\n`;
+                    });
+                }
+            } else {
+                let dur = s.condition_value + (s.condition_type === 'time' ? ' min' : (s.condition_type === 'distance' ? 'm' : ' reps'));
+                let tgt = s.target_value ? s.target_value : (s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone','')));
+                let extra = s.weight ? ` @ ${s.weight}kg` : (s.target_type !== 'no.target' ? ` @ ${tgt}` : '');
+                let name = s.exerciseName || s.type;
+                output += `- ${name}: ${dur}${extra}\\n`;
+            }
+        });
+        return output.trim();
+    } catch (e) {
+        return null;
+    }
+}
+
 async function tagStravaActivity(userId, activity, token) {
     if (activity.description && activity.description.includes("Spark Target")) return;
 
@@ -1407,14 +1439,15 @@ async function tagStravaActivity(userId, activity, token) {
     const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
     const sparkSport = mapStravaSportToSpark(activity.sport_type || activity.type);
 
-    db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+    db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
         [userId, activityDate, sparkSport], async (err, plan) => {
 
             if (err || !plan) return;
 
-            const workoutContent = (plan.details && plan.details.trim().length > 0) ? plan.details : plan.description;
+            let stepsContent = formatStepsForStrava(plan.steps_json);
+            const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
 
-            const newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}`;
+            const newDescription = `Spark Target: ${plan.target_tss} TSS\\nActual: ${tss} TSS\\n\\nPlanned Workout:\\n${workoutContent}`;
 
             const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
 
@@ -1474,7 +1507,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         const activityDate = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
         const sparkSport = mapStravaSportToSpark(data.sport_type);
 
-        db.get("SELECT description, target_tss, details FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+        db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
             [internalUserId, activityDate, sparkSport], async (err, plan) => {
 
                 // Fetch the coach tone
@@ -1485,8 +1518,9 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                     let newDescription = null;
 
                     if (plan) {
-                        const workoutContent = (plan.details && plan.details.trim().length > 0) ? plan.details : plan.description;
-                        newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}`;
+                        let stepsContent = formatStepsForStrava(plan.steps_json);
+                        const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
+                        newDescription = `Spark Target: ${plan.target_tss} TSS\\nActual: ${tss} TSS\\n\\nPlanned Workout:\\n${workoutContent}`;
                         prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_tss} TSS. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
                     } else {
                         console.log(`⚠️ No matching ${sparkSport} plan found on ${activityDate}. Generating unplanned reaction.`);
