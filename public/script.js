@@ -1640,48 +1640,60 @@ async function loadChatHistory() {
         const chatWindow = document.getElementById('chat-window');
         if (!chatWindow) return;
 
+        let lastCoachMsg = null;
+        let lastCoachAvatar = getCoachAvatar('default');
+
         if (!history || history.length === 0) {
             chatWindow.innerHTML = `
                         <div class="flex items-end gap-2 md:gap-3">
                             <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
-                                <img onclick="enlargeAvatar(this.src)" src="${getCoachAvatar('default')}" alt="Coach" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
+                                <img onclick="enlargeAvatar(this.src)" src="${lastCoachAvatar}" alt="Coach" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                             </div>
                             <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
                                 <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
                                 <span class="whitespace-pre-wrap">Systems nominal. I have synchronized your latest profile settings. Ready to get to work?</span>
                             </div>
                         </div>`;
-            return;
+            lastCoachMsg = "Systems nominal. I have synchronized your latest profile settings. Ready to get to work?";
+        } else {
+            let html = '';
+            history.forEach(msg => {
+                if (msg.role === 'user') {
+                    let imgHtml = msg.image_path ? `<img src="${msg.image_path}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-md mb-2 border border-white/20">` : '';
+                    html += `
+                                <div class="flex justify-end">
+                                    <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
+                                        ${imgHtml}
+                                        <span class="whitespace-pre-wrap">${msg.content}</span>
+                                    </div>
+                                </div>`;
+                } else {
+                    let avatarImg = getCoachAvatar(msg.mood || 'default');
+                    lastCoachAvatar = avatarImg;
+                    let formattedContent = msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
+                    lastCoachMsg = formattedContent;
+                    html += `
+                                <div class="flex items-end gap-2 md:gap-3">
+                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
+                                        <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
+                                    </div>
+                                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
+                                        <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
+                                        <span class="whitespace-pre-wrap">${formattedContent}</span>
+                                    </div>
+                                </div>`;
+                }
+            });
+            chatWindow.innerHTML = html;
         }
 
-        let html = '';
-        history.forEach(msg => {
-            if (msg.role === 'user') {
-                let imgHtml = msg.image_path ? `<img src="${msg.image_path}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-md mb-2 border border-white/20">` : '';
-                html += `
-                            <div class="flex justify-end">
-                                <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
-                                    ${imgHtml}
-                                    <span class="whitespace-pre-wrap">${msg.content}</span>
-                                </div>
-                            </div>`;
-            } else {
-                let avatarImg = getCoachAvatar(msg.mood || 'default');
-                let formattedContent = msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
-                html += `
-                            <div class="flex items-end gap-2 md:gap-3">
-                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
-                                    <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
-                                </div>
-                                <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
-                                    <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
-                                    <span class="whitespace-pre-wrap">${formattedContent}</span>
-                                </div>
-                            </div>`;
-            }
-        });
-        chatWindow.innerHTML = html;
+        // Update Dashboard Coach's Desk
+        const deskAvatar = document.getElementById('desk-coach-avatar');
+        if (deskAvatar) deskAvatar.src = lastCoachAvatar;
+        const deskReflection = document.getElementById('daily-reflection');
+        if (deskReflection && lastCoachMsg) deskReflection.innerHTML = lastCoachMsg;
+
         chatWindow.scrollTop = chatWindow.scrollHeight;
         
         // Proactive Check-in Logic & Unread Badge
@@ -1739,14 +1751,27 @@ async function triggerProactiveCheckin() {
                 <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
                     <img src="${finalAvatar}" alt="Coach" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                 </div>
-                <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
+                <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text animate-fade-in">
                     <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
                     <span id="${msgId}" class="whitespace-pre-wrap"></span>
                 </div>
-            </div>`;
+            </div>
+        `;
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
         
+        // Update Dashboard Coach's Desk
+        const deskAvatar = document.getElementById('desk-coach-avatar');
+        if (deskAvatar) deskAvatar.src = finalAvatar;
+        const deskReflection = document.getElementById('daily-reflection');
+        if (deskReflection) deskReflection.innerHTML = formattedContent;
+
+        // Add a red dot to the chat tab if they aren't on it
+        if (typeof currentTab !== 'undefined' && currentTab !== 'coach') {
+            const chatBadge = document.getElementById('chat-badge');
+            if (chatBadge) chatBadge.classList.remove('hidden');
+        }
+
         speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
 
         updateUnreadBadge(Date.now());
@@ -1890,6 +1915,12 @@ function clearImageSelection() {
     document.getElementById('image-upload').value = '';
     document.getElementById('image-preview-container').classList.add('hidden');
     document.getElementById('image-preview').src = '';
+}
+
+async function sendQuickAction(msg) {
+    switchTab('coach');
+    document.getElementById('chat-input').value = msg;
+    sendMessage();
 }
 
 async function sendMessage() {
