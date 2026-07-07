@@ -554,7 +554,10 @@ function switchTab(t) {
     });
 
     if (t === 'history') loadHistory();
-    if (t === 'physique') loadPhysiqueLogs();
+    if (t === 'physique') {
+        loadPhysiqueLogs();
+        loadNutritionProtocol();
+    }
     if (t === 'coach') {
         loadChatHistory();
         setTimeout(() => {
@@ -2556,5 +2559,30 @@ async function loadPhysiqueLogs() {
 
     } catch (e) {
         console.error(e);
+    }
+}
+
+async function loadNutritionProtocol() {
+    try {
+        document.getElementById('nutrition-loading').classList.remove('hidden');
+        document.getElementById('nutrition-content').classList.add('hidden');
+        
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch('/api/physique/nutrition', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const protocol = await res.json();
+        
+        document.getElementById('nutrition-focus-title').innerText = protocol.title || 'Balanced Protocol';
+        document.getElementById('nutrition-rationale').innerText = protocol.rationale || '';
+        document.getElementById('macro-carbs').innerText = `${protocol.carbs || '--'}g`;
+        document.getElementById('macro-protein').innerText = `${protocol.protein || '--'}g`;
+        document.getElementById('macro-fat').innerText = `${protocol.fat || '--'}g`;
+        
+        document.getElementById('nutrition-loading').classList.add('hidden');
+        document.getElementById('nutrition-content').classList.remove('hidden');
+    } catch (e) {
+        console.error("Failed to load nutrition protocol", e);
+        document.getElementById('nutrition-loading').innerText = 'Failed to load';
     }
 }

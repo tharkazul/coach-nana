@@ -852,6 +852,45 @@
                     <p class="text-xs text-theme-muted mt-1">Track your daily wellness and upload progress photos.</p>
                 </div>
 
+                <!-- AI NUTRITION PROTOCOL -->
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 relative">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-theme-accent to-purple-500"></div>
+                    <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
+                        <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                            <span class="text-lg">🥗</span> Daily AI Nutrition Protocol
+                        </h3>
+                        <span id="nutrition-loading" class="text-xs text-theme-muted animate-pulse">Generating...</span>
+                    </div>
+                    <div id="nutrition-content" class="p-6 hidden">
+                        <div class="flex flex-col md:flex-row gap-6 items-center">
+                            <div class="flex-1 space-y-2">
+                                <h4 id="nutrition-focus-title" class="text-md font-bold text-theme-text">--</h4>
+                                <p id="nutrition-rationale" class="text-sm text-theme-muted leading-relaxed">--</p>
+                            </div>
+                            <div class="flex gap-4 md:gap-6 justify-center">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 rounded-full border-4 border-blue-500 flex items-center justify-center mb-2">
+                                        <span id="macro-carbs" class="font-bold text-theme-text text-sm">--g</span>
+                                    </div>
+                                    <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
+                                </div>
+                                <div class="text-center">
+                                    <div class="w-16 h-16 rounded-full border-4 border-red-500 flex items-center justify-center mb-2">
+                                        <span id="macro-protein" class="font-bold text-theme-text text-sm">--g</span>
+                                    </div>
+                                    <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
+                                </div>
+                                <div class="text-center">
+                                    <div class="w-16 h-16 rounded-full border-4 border-yellow-500 flex items-center justify-center mb-2">
+                                        <span id="macro-fat" class="font-bold text-theme-text text-sm">--g</span>
+                                    </div>
+                                    <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                     <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
                         <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">

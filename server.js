@@ -425,6 +425,25 @@ app.get('/api/chat/history', authenticateToken, (req, res) => {
     });
 });
 
+async function getUserMacroPhase(userId) {
+    return new Promise((resolve) => {
+        db.all(`SELECT * FROM milestones WHERE user_id = ? AND is_main = 1 ORDER BY date ASC`, [userId], (err, rows) => {
+            let phase = "BASE";
+            if (!err && rows && rows.length > 0) {
+                const today = new Date();
+                let nextRace = rows.find(m => new Date(m.date) >= today);
+                if (nextRace) {
+                    let daysUntil = Math.floor((new Date(nextRace.date) - today) / (1000 * 60 * 60 * 24));
+                    if (daysUntil <= 14) phase = "TAPER";
+                    else if (daysUntil <= 56) phase = "PEAK";
+                    else if (daysUntil <= 112) phase = "BUILD";
+                }
+            }
+            resolve(phase);
+        });
+    });
+}
+
 app.post('/api/chat', authenticateToken, async (req, res) => {
     const { message, imageBase64 } = req.body;
     db.run(`UPDATE users SET chat_count = chat_count + 1 WHERE id = ?`, [req.user.id]);
@@ -457,7 +476,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ')
                 : 'None explicitly recorded yet.';
 
-            const phase = user.training_phase || 'Base';
+            const phase = await getUserMacroPhase(req.user.id);
             try {
                 db.all(`SELECT name, sport_type, distance_km, moving_time_min, tss, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
                     const recentActivitiesText = (recentActivities && recentActivities.length > 0)
@@ -501,9 +520,16 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     Upcoming Calendar Reference: ${next7Days}
                     Athlete Context: ${user.athlete_context || 'General endurance athlete'}
                     Key Physiological Metrics: ${metricsText}
+                    Current Macro Phase: ${phase}
                     Recent Completed Workouts (Last 3):
                     ${recentActivitiesText}
                     Your Tone & Persona: ${user.coach_tone || 'empathetic'}
+
+                    MACRO BLOCK FOCUS RULES:
+                    - If phase is BASE: Focus intensely on keeping their volume high and heart rate low (Zone 2). Discourage speedwork.
+                    - If phase is BUILD: Focus on progressing their threshold and VO2max intervals. Tell them it's time to push.
+                    - If phase is PEAK: Focus on race-specific intensity and sharpening. Keep them focused on executing race pace perfectly.
+                    - If phase is TAPER: Focus heavily on recovery and shedding fatigue. Ensure they rest up for the race.
 
                     CRITICAL RULES:
                     1. Act like a real human in a continuous text message thread: keep your responses concise, focused, and natural.
@@ -662,24 +688,38 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
                 ? recentActivities.map(a => `- ${a.start_date.split('T')[0]}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n')
                 : 'No recent activities recorded.';
 
-            db.all(`SELECT date, sport, description FROM micro_plan WHERE user_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 2`, [req.user.id], async (err, upcomingPlan) => {
-                const upcomingText = (upcomingPlan && upcomingPlan.length > 0)
-                    ? upcomingPlan.map(p => `- ${p.date}: ${p.sport} - ${p.description}`).join('\n')
-                    : 'No upcoming workouts scheduled.';
+            
+            db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metrics) => {
+                const metricsText = (metrics && metrics.length > 0) 
+                    ? metrics.map(m => `${m.metric}: ${m.value}`).join(', ') 
+                    : 'No metrics recorded.';
 
-                const todayStr = new Date().toISOString().split('T')[0];
-                const systemPrompt = `You are Spark, an elite Ironman Triathlon and endurance coach.
+                db.all(`SELECT date, sport, description FROM micro_plan WHERE user_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 2`, [req.user.id], async (err, upcomingPlan) => {
+                    const upcomingText = (upcomingPlan && upcomingPlan.length > 0)
+                        ? upcomingPlan.map(p => `- ${p.date}: ${p.sport} - ${p.description}`).join('\n')
+                        : 'No upcoming workouts scheduled.';
+
+                    const phase = await getUserMacroPhase(req.user.id);
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    let systemPrompt = `You are Spark, an elite Ironman Triathlon and endurance coach.
 Today is ${todayStr}.
 Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+Current Macro Phase: ${phase}
 Recent Completed Workouts:
 ${recentActivitiesText}
 Upcoming Workouts (Next 2 days):
 ${upcomingText}
 Your Tone & Persona: ${user.coach_tone || 'empathetic'}
 
+MACRO BLOCK FOCUS RULES:
+- If phase is BASE: Focus intensely on keeping their volume high and heart rate low (Zone 2). Discourage speedwork.
+- If phase is BUILD: Focus on progressing their threshold and VO2max intervals. Tell them it's time to push.
+- If phase is PEAK: Focus on race-specific intensity and sharpening. Keep them focused on executing race pace perfectly.
+- If phase is TAPER: Focus heavily on recovery and shedding fatigue. Ensure they rest up for the race.
+
 CRITICAL RULES:
 1. Generate a single, highly personalized, proactive 1-2 sentence greeting for the athlete who just opened the app.
-2. Reference either a recent workout they crushed OR an upcoming workout they have planned.
+2. Reference either a recent workout they crushed, an upcoming workout they have planned, or their current Macro Phase.
 3. Keep it brief, extremely human, and supportive. 
 4. DO NOT generate any JSON or workout plan updates. Just the greeting.
 5. GENERATIVE REWARDS: You have the ability to generate images by outputting Markdown: \`![description of image](https://image.pollinations.ai/prompt/{URL-encoded-description}?width=800&height=400&nologo=true)\`. IF the athlete recently crushed a massive workout (e.g., high TSS) or you just want to motivate them, you MUST include a highly stylized, cinematic, conceptual reward image (e.g., a glowing golden running shoe, a heroic finish line, a futuristic bicycle). Put the image markdown at the END of your greeting.`;
@@ -1410,6 +1450,60 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
             }
         }
     );
+});
+app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
+    db.get(`SELECT weight_kg FROM biometrics WHERE user_id = ? ORDER BY date DESC LIMIT 1`, [req.user.id], async (err, weightRow) => {
+        const weight = weightRow ? weightRow.weight_kg : 75; // Default to 75kg if unknown
+        const phase = await getUserMacroPhase(req.user.id);
+        
+        db.all(`SELECT date, tss, description FROM micro_plan WHERE user_id = ? AND date >= date('now') LIMIT 1`, [req.user.id], async (err, todayPlan) => {
+            const todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].tss : 0;
+            const todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
+
+            const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
+Their latest weight is ${weight}kg.
+Today's training plan: ${todayDesc} (TSS: ${todayTSS}).
+
+Based on today's training load and their current macro phase, recommend a daily macro nutrition target.
+- For high TSS / intense days, prescribe higher carbohydrates.
+- For rest / low TSS days, prescribe lower carbohydrates and higher protein/fat.
+- Ensure total calories make sense for an endurance athlete of their weight.
+
+You MUST respond with ONLY a raw JSON object containing exactly these keys:
+{
+  "title": "String (e.g. 'High Carb / Big Session')",
+  "rationale": "String (1-2 sentences explaining why)",
+  "carbs": Number (grams),
+  "protein": Number (grams),
+  "fat": Number (grams)
+}`;
+
+            try {
+                let aiReply = await generateWithFallback("Generate the macro protocol.", systemPrompt, []);
+                aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').replace(/```[\s\S]*?```/gi, '').trim();
+                
+                // Sometimes it might still include the backticks, try to parse JSON safely
+                const firstBrace = aiReply.indexOf('{');
+                const lastBrace = aiReply.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1) {
+                    aiReply = aiReply.substring(firstBrace, lastBrace + 1);
+                }
+
+                const protocol = JSON.parse(aiReply);
+                res.json(protocol);
+            } catch (e) {
+                console.error("Nutrition AI failed:", e);
+                // Fallback to a safe baseline if AI fails to parse
+                res.json({
+                    title: "Balanced Maintenance",
+                    rationale: "AI is currently resting. Here is a balanced baseline protocol for your weight.",
+                    carbs: Math.round(weight * 4),
+                    protein: Math.round(weight * 1.8),
+                    fat: Math.round(weight * 1)
+                });
+            }
+        });
+    });
 });
 
 app.get('/api/weight', authenticateToken, (req, res) => {
