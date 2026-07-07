@@ -906,9 +906,9 @@ app.post('/api/micro-plan/day', authenticateToken, (req, res) => {
 
         if (workouts.length === 0) return res.json({ success: true });
 
-        const stmt = db.prepare(`INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details) VALUES (?, ?, ?, ?, ?, ?)`);
+        const stmt = db.prepare(`INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`);
         workouts.forEach(w => {
-            stmt.run(req.user.id, date, w.sport, w.description, w.target_tss, w.details);
+            stmt.run(req.user.id, date, w.sport, w.description, w.target_tss, w.details, w.steps_json || '[]');
         });
         stmt.finalize();
         res.json({ success: true });

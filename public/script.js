@@ -1064,7 +1064,12 @@ function editDay(dateStr, dayName) {
 }
 
 function renderEditDay(dateStr, dayName) {
-    let rowsHtml = editingDayWorkouts.map((w, idx) => `
+    let rowsHtml = editingDayWorkouts.map((w, idx) => {
+        let prettySteps = '';
+        try { prettySteps = (w.steps_json && w.steps_json !== 'null') ? JSON.stringify(JSON.parse(w.steps_json), null, 2) : '[]'; } 
+        catch (e) { prettySteps = w.steps_json || '[]'; }
+
+        return `
         <div class="flex flex-col mt-2 border border-theme-border bg-theme-bg p-2 md:p-3 rounded-sm shadow-sm" id="edit-row-${dateStr}-${idx}">
             <div class="flex items-center w-full">
                 <select id="s-${dateStr}-${idx}" class="w-20 md:w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent shrink-0">
@@ -1079,11 +1084,13 @@ function renderEditDay(dateStr, dayName) {
                 <input id="t-${dateStr}-${idx}" type="number" value="${w.target_tss || 0}" class="w-14 md:w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm text-right mr-2 focus:border-theme-accent shrink-0">
                 <button onclick="removeWorkoutRow('${dateStr}', '${dayName}', ${idx})" class="text-red-500 hover:text-red-400 text-xs px-2 shrink-0 border border-transparent hover:border-red-500 rounded transition" title="Remove">X</button>
             </div>
-            <div class="w-full mt-2">
+            <div class="w-full mt-2 space-y-2">
                 <textarea id="det-${dateStr}-${idx}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[50px]" placeholder="Workout drills/structure...">${w.details || ''}</textarea>
+                <textarea id="steps-${dateStr}-${idx}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[80px]" placeholder="Steps JSON (Advanced)...">${prettySteps}</textarea>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 
     document.getElementById(`row-${dateStr}`).innerHTML = `
         <div class="flex flex-col px-4 md:px-6 py-3 w-full bg-theme-card border-b border-theme-border shadow-inner">
@@ -1117,7 +1124,8 @@ async function saveDay(dateStr) {
         sport: document.getElementById(`s-${dateStr}-${idx}`)?.value || w.sport,
         description: document.getElementById(`d-${dateStr}-${idx}`)?.value || w.description,
         target_tss: parseFloat(document.getElementById(`t-${dateStr}-${idx}`)?.value || 0),
-        details: document.getElementById(`det-${dateStr}-${idx}`)?.value || w.details
+        details: document.getElementById(`det-${dateStr}-${idx}`)?.value || w.details,
+        steps_json: document.getElementById(`steps-${dateStr}-${idx}`)?.value || w.steps_json || '[]'
     }));
 
     await fetch('/api/micro-plan/day', {
