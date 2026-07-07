@@ -1486,9 +1486,7 @@ You MUST respond with ONLY a raw JSON object containing exactly these keys:
 
             try {
                 let aiReply = await generateWithFallback("Generate the macro protocol.", systemPrompt, []);
-                aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').replace(/```[\s\S]*?```/gi, '').trim();
-                
-                // Sometimes it might still include the backticks, try to parse JSON safely
+                // Extract JSON between the first { and last } to avoid markdown formatting issues
                 const firstBrace = aiReply.indexOf('{');
                 const lastBrace = aiReply.lastIndexOf('}');
                 if (firstBrace !== -1 && lastBrace !== -1) {
