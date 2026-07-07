@@ -637,6 +637,18 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 res.status(500).json({ error: "AI failed to respond." });
             }
         });
+});
+
+app.get('/api/dashboard/briefing', authenticateToken, (req, res) => {
+    db.get(`SELECT content, mood, timestamp FROM chat_history 
+            WHERE user_id = ? AND role = 'coach' AND date(timestamp, 'localtime') = date('now', 'localtime') 
+            ORDER BY timestamp ASC LIMIT 1`, 
+    [req.user.id], (err, row) => {
+        if (err) {
+            console.error("Error fetching briefing:", err);
+            return res.status(500).json({ error: "Failed to fetch briefing." });
+        }
+        res.json({ briefing: row || null });
     });
 });
 

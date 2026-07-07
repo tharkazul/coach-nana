@@ -699,11 +699,12 @@ function getWeatherEmoji(code) {
 // --- CORE DATA FUNCTIONS ---
 async function buildDashboard() {
     try {
-        // 1. Fetch TSS, Weight, AND Milestones
-        const [tssRes, weightRes, msRes] = await Promise.all([
+        // 1. Fetch TSS, Weight, Milestones, and Briefing
+        const [tssRes, weightRes, msRes, briefRes] = await Promise.all([
             fetch('/api/dashboard-data', { headers: getAuthHeaders() }),
             fetch('/api/weight', { headers: getAuthHeaders() }),
-            fetch('/api/milestones', { headers: getAuthHeaders() })
+            fetch('/api/milestones', { headers: getAuthHeaders() }),
+            fetch('/api/dashboard/briefing', { headers: getAuthHeaders() })
         ]);
 
         if (!tssRes.ok || !weightRes.ok) return; // Prevent crash if backend is not ready
@@ -714,6 +715,26 @@ async function buildDashboard() {
         // 2. Store milestones globally for charts & editor
         globalMilestones = msRes.ok ? await msRes.json() : [];
         renderMilestoneEditor(); // Populate the settings tab
+
+        // 2.5 Process Daily Briefing
+        const deskReflection = document.getElementById('daily-reflection');
+        const deskAvatar = document.getElementById('desk-coach-avatar');
+        if (briefRes && briefRes.ok) {
+            const briefData = await briefRes.json();
+            if (briefData && briefData.briefing && briefData.briefing.content) {
+                if (deskAvatar) deskAvatar.src = getCoachAvatar(briefData.briefing.mood || 'default');
+                if (deskReflection) {
+                    let formattedContent = briefData.briefing.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
+                    deskReflection.innerHTML = formattedContent;
+                }
+            } else {
+                if (deskReflection) deskReflection.innerHTML = "<span class='text-theme-muted italic'>Checking in with Coach...</span>";
+                if (deskAvatar) deskAvatar.src = getCoachAvatar('default');
+                // No briefing today, trigger one
+                triggerProactiveCheckin();
+            }
+        }
 
         // 3. Process Weight & Biometrics Table
         if (weightData && weightData.length > 0) {
@@ -1687,12 +1708,6 @@ async function loadChatHistory() {
             });
             chatWindow.innerHTML = html;
         }
-
-        // Update Dashboard Coach's Desk
-        const deskAvatar = document.getElementById('desk-coach-avatar');
-        if (deskAvatar) deskAvatar.src = lastCoachAvatar;
-        const deskReflection = document.getElementById('daily-reflection');
-        if (deskReflection && lastCoachMsg) deskReflection.innerHTML = lastCoachMsg;
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
         
