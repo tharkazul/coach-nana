@@ -699,12 +699,13 @@ function getWeatherEmoji(code) {
 // --- CORE DATA FUNCTIONS ---
 async function buildDashboard() {
     try {
-        // 1. Fetch TSS, Weight, Milestones, and Briefing
-        const [tssRes, weightRes, msRes, briefRes] = await Promise.all([
+        // 1. Fetch TSS, Weight, Milestones, Briefing, and Physique
+        const [tssRes, weightRes, msRes, briefRes, physRes] = await Promise.all([
             fetch('/api/dashboard-data', { headers: getAuthHeaders() }),
             fetch('/api/weight', { headers: getAuthHeaders() }),
             fetch('/api/milestones', { headers: getAuthHeaders() }),
-            fetch('/api/dashboard/briefing', { headers: getAuthHeaders() })
+            fetch('/api/dashboard/briefing', { headers: getAuthHeaders() }),
+            fetch('/api/physique', { headers: getAuthHeaders() })
         ]);
 
         if (!tssRes.ok || !weightRes.ok) return; // Prevent crash if backend is not ready
@@ -789,6 +790,38 @@ async function buildDashboard() {
         // Update Top Dashboard Metrics
         document.getElementById('ctl-metric').innerText = Math.round(ctl * 10) / 10;
         document.getElementById('atl-metric').innerText = Math.round(atl * 10) / 10;
+
+        // Calculate Readiness Score
+        let readiness = 50; // Base score
+        let tsb = ctl - atl;
+        // Form (TSB) contribution: bounded [-20, +20]
+        let tsbContrib = Math.max(-20, Math.min(20, tsb * 0.5));
+        readiness += tsbContrib;
+
+        if (physRes && physRes.ok) {
+            const physData = await physRes.json();
+            if (physData && physData.length > 0) {
+                const latestPhys = physData[0]; // Already sorted descending by backend
+                const todayStr = new Date().toISOString().split('T')[0];
+                const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                
+                // Apply sleep/fatigue if logged today or yesterday
+                if (latestPhys.date === todayStr || latestPhys.date === yesterdayStr) {
+                    if (latestPhys.sleep_quality) readiness += (latestPhys.sleep_quality - 3) * 10;
+                    if (latestPhys.fatigue_level) readiness -= (latestPhys.fatigue_level - 3) * 10;
+                }
+            }
+        }
+        
+        readiness = Math.max(0, Math.min(100, Math.round(readiness)));
+        const readinessEl = document.getElementById('readiness-metric');
+        if (readinessEl) {
+            readinessEl.innerText = readiness;
+            if (readiness < 40) readinessEl.className = "text-2xl md:text-4xl font-semibold text-red-500 tracking-tight";
+            else if (readiness < 70) readinessEl.className = "text-2xl md:text-4xl font-semibold text-amber-500 tracking-tight";
+            else readinessEl.className = "text-2xl md:text-4xl font-semibold text-green-500 tracking-tight";
+        }
+
         updateDailyReflection(ctl, atl);
 
         // 6. Loop 2: Dynamic Target Line & Future Projection
@@ -853,7 +886,12 @@ async function buildDashboard() {
                     scales: {
                         y: { type: 'linear', position: 'left', grid: { color: 'rgba(156, 163, 175, 0.2)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
                         yWeight: { type: 'linear', position: 'right', min: 85, max: 110, grid: { drawOnChartArea: false }, ticks: { color: '#10b981', font: { size: 10 } } },
-                        x: { grid: { display: false }, ticks: { maxTicksLimit: 6, color: '#9ca3af', font: { size: 10 } } }
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { maxTicksLimit: 6, color: '#9ca3af', font: { size: 10 } },
+                            min: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            max: new Date().toISOString().split('T')[0]
+                        }
                     },
                     plugins: {
                         legend: { position: 'bottom', labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 6, font: { size: 11 } } },
