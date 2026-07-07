@@ -202,7 +202,7 @@ db.serialize(() => {
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
-    db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, UNIQUE(user_id, date))`);
+    db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
     db.run(`CREATE TABLE IF NOT EXISTS weight_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, weight_kg REAL, body_fat_percent REAL, bmi REAL, lean_mass_kg REAL, UNIQUE(user_id, date))`);
     db.run(`CREATE TABLE IF NOT EXISTS chat_history (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, role TEXT, content TEXT, mood TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     db.run(`CREATE TABLE IF NOT EXISTS athlete_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, metric TEXT, value TEXT, UNIQUE(user_id, metric))`);
@@ -888,8 +888,7 @@ app.get('/api/history', authenticateToken, (req, res) => {
 app.post('/api/micro-plan', authenticateToken, (req, res) => {
     const { date, sport, description, target_tss, details } = req.body;
     db.run(
-        `INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details) VALUES (?, ?, ?, ?, ?, ?) 
-         ON CONFLICT(user_id, date) DO UPDATE SET sport=excluded.sport, description=excluded.description, target_tss=excluded.target_tss, details=excluded.details`,
+        `INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details) VALUES (?, ?, ?, ?, ?, ?)`,
         [req.user.id, date, sport, description, target_tss, details],
         (err) => {
             if (err) return res.status(500).json({ error: "Failed to update plan" });
@@ -897,6 +896,25 @@ app.post('/api/micro-plan', authenticateToken, (req, res) => {
         }
     );
 });
+
+app.post('/api/micro-plan/day', authenticateToken, (req, res) => {
+    const { date, workouts } = req.body;
+    if (!date || !Array.isArray(workouts)) return res.status(400).json({ error: "Invalid data format" });
+
+    db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date = ?`, [req.user.id, date], (err) => {
+        if (err) return res.status(500).json({ error: "Failed to update plan" });
+
+        if (workouts.length === 0) return res.json({ success: true });
+
+        const stmt = db.prepare(`INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details) VALUES (?, ?, ?, ?, ?, ?)`);
+        workouts.forEach(w => {
+            stmt.run(req.user.id, date, w.sport, w.description, w.target_tss, w.details);
+        });
+        stmt.finalize();
+        res.json({ success: true });
+    });
+});
+
 
 app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     const { targetDate } = req.body;

@@ -687,12 +687,7 @@ function updateDailyReflection(currentCtl, currentAtl) {
 
 function estimateWorkoutDetails(sport, desc, tss) {
     if (!tss || tss === 0 || sport === 'Rest') return '<span class="text-theme-muted">Rest</span>';
-    let d = desc.toLowerCase(), tssPerHour = 55, zone = 'Z2';
-    if (d.includes('recovery') || d.includes('easy')) { tssPerHour = 35; zone = 'Z1'; }
-    else if (d.includes('threshold') || d.includes('tempo')) { tssPerHour = 80; zone = 'Z3/Z4'; }
-    else if (d.includes('interval') || d.includes('sprint') || d.includes('test')) { tssPerHour = 90; zone = 'Z4/Z5'; }
-    let mins = Math.round((tss / tssPerHour) * 60), h = Math.floor(mins / 60), m = mins % 60; let timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
-    return `<div class="flex flex-col items-end"><div class="whitespace-nowrap"><span class="text-theme-text font-medium">~${timeStr}</span> <span class="text-[10px] uppercase bg-theme-bg text-theme-muted px-1 py-0.5 rounded-sm border border-theme-border hidden md:inline-block">${zone}</span></div></div>`;
+    return ''; // Hide estimated TSS time and zone per user request
 }
 
 function getWeatherEmoji(code) {
@@ -879,7 +874,7 @@ async function loadMicroPlan() {
         const weatherObj = await weatherRes.json();
 
         // 1. Group workouts into arrays by date (Prevents Overwriting!)
-        const currentPlan = {};
+        currentPlan = {}; // Update global variable instead of shadowing
         data.forEach(d => {
             if (!currentPlan[d.date]) currentPlan[d.date] = [];
             currentPlan[d.date].push(d);
@@ -1060,33 +1055,77 @@ async function loadMicroPlan() {
     } catch (e) { console.error("Micro Plan Load Error:", e); }
 }
 
+let editingDayWorkouts = [];
+
 function editDay(dateStr, dayName) {
-    let p = currentPlan[dateStr] || { sport: 'Rest', description: '', target_tss: 0, details: '' };
+    let workouts = currentPlan[dateStr] || [{ sport: 'Rest', description: '', target_tss: 0, details: '' }];
+    editingDayWorkouts = JSON.parse(JSON.stringify(workouts)); // Deep copy
+    renderEditDay(dateStr, dayName);
+}
+
+function renderEditDay(dateStr, dayName) {
+    let rowsHtml = editingDayWorkouts.map((w, idx) => `
+        <div class="flex flex-col mt-2 border border-theme-border bg-theme-bg p-2 md:p-3 rounded-sm shadow-sm" id="edit-row-${dateStr}-${idx}">
+            <div class="flex items-center w-full">
+                <select id="s-${dateStr}-${idx}" class="w-20 md:w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent shrink-0">
+                    <option ${w.sport === 'Swim' ? 'selected' : ''}>Swim</option>
+                    <option ${w.sport === 'Bike' ? 'selected' : ''}>Bike</option>
+                    <option ${w.sport === 'Run' ? 'selected' : ''}>Run</option>
+                    <option ${w.sport === 'Strength' ? 'selected' : ''}>Strength</option>
+                    <option ${w.sport === 'Brick' ? 'selected' : ''}>Brick</option>
+                    <option ${w.sport === 'Rest' ? 'selected' : ''}>Rest</option>
+                </select>
+                <input id="d-${dateStr}-${idx}" value="${w.description || ''}" placeholder="Title..." class="flex-1 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 focus:border-theme-accent min-w-[100px]">
+                <input id="t-${dateStr}-${idx}" type="number" value="${w.target_tss || 0}" class="w-14 md:w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm text-right mr-2 focus:border-theme-accent shrink-0">
+                <button onclick="removeWorkoutRow('${dateStr}', '${dayName}', ${idx})" class="text-red-500 hover:text-red-400 text-xs px-2 shrink-0 border border-transparent hover:border-red-500 rounded transition" title="Remove">X</button>
+            </div>
+            <div class="w-full mt-2">
+                <textarea id="det-${dateStr}-${idx}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[50px]" placeholder="Workout drills/structure...">${w.details || ''}</textarea>
+            </div>
+        </div>
+    `).join('');
+
     document.getElementById(`row-${dateStr}`).innerHTML = `
-                <div class="flex flex-col px-4 md:px-6 py-3 w-full bg-theme-bg border-b border-theme-border">
-                    <div class="flex items-center w-full">
-                        <div class="w-28 md:w-40 flex items-center space-x-2 md:space-x-3 shrink-0"><span class="text-xs md:text-sm font-medium text-theme-accent">${dateStr.slice(5)}</span><span class="text-[9px] md:text-[10px] uppercase font-bold text-theme-accent tracking-wider">${dayName}</span></div>
-                        <select id="s-${dateStr}" class="w-20 md:w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent shrink-0"><option ${p.sport === 'Swim' ? 'selected' : ''}>Swim</option><option ${p.sport === 'Bike' ? 'selected' : ''}>Bike</option><option ${p.sport === 'Run' ? 'selected' : ''}>Run</option><option ${p.sport === 'Strength' ? 'selected' : ''}>Strength</option><option ${p.sport === 'Brick' ? 'selected' : ''}>Brick</option><option ${p.sport === 'Rest' ? 'selected' : ''}>Rest</option></select>
-                        <input id="d-${dateStr}" value="${p.description}" placeholder="Title..." class="flex-1 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent min-w-[100px]">
-                        <input id="t-${dateStr}" type="number" value="${p.target_tss}" class="w-14 md:w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm text-right mr-2 md:mr-6 focus:border-theme-accent shrink-0">
-                        <div class="flex space-x-1 md:space-x-2 shrink-0"><button onclick="saveDay('${dateStr}')" class="bg-theme-accent text-white text-[10px] md:text-xs px-2 py-1.5 rounded-sm">Save</button><button onclick="loadMicroPlan()" class="bg-theme-border text-theme-text text-[10px] md:text-xs px-2 py-1.5 rounded-sm">X</button></div>
-                    </div>
-                    <div class="pl-28 md:pl-40 pr-16 mt-2 w-full">
-                        <textarea id="det-${dateStr}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[60px]" placeholder="Workout drills/structure...">${p.details || ''}</textarea>
-                    </div>
-                </div>`;
+        <div class="flex flex-col px-4 md:px-6 py-3 w-full bg-theme-card border-b border-theme-border shadow-inner">
+            <div class="flex justify-between items-center w-full mb-1">
+                <div class="w-28 md:w-40 flex items-center space-x-2 md:space-x-3 shrink-0"><span class="text-xs md:text-sm font-medium text-theme-accent">${dateStr.slice(5)}</span><span class="text-[9px] md:text-[10px] uppercase font-bold text-theme-accent tracking-wider">${dayName}</span></div>
+                <div class="flex space-x-1 md:space-x-2 shrink-0">
+                    <button onclick="addWorkoutRow('${dateStr}', '${dayName}')" class="bg-theme-bg border border-theme-border text-theme-text text-[10px] md:text-xs px-2 py-1.5 rounded-sm hover:bg-theme-border transition">+ Add Workout</button>
+                    <button onclick="saveDay('${dateStr}')" class="bg-theme-accent text-white text-[10px] md:text-xs px-2 py-1.5 rounded-sm hover:opacity-90 transition">Save Day</button>
+                    <button onclick="loadMicroPlan()" class="bg-theme-border text-theme-text text-[10px] md:text-xs px-2 py-1.5 rounded-sm hover:bg-theme-bg transition">Cancel</button>
+                </div>
+            </div>
+            <div class="w-full pl-0 md:pl-28 md:pr-16">
+                ${rowsHtml}
+            </div>
+        </div>`;
+}
+
+function addWorkoutRow(dateStr, dayName) {
+    editingDayWorkouts.push({ sport: 'Rest', description: '', target_tss: 0, details: '' });
+    renderEditDay(dateStr, dayName);
+}
+
+function removeWorkoutRow(dateStr, dayName, idx) {
+    editingDayWorkouts.splice(idx, 1);
+    renderEditDay(dateStr, dayName);
 }
 
 async function saveDay(dateStr) {
-    await fetch('/api/micro-plan', {
+    // Scrape values back into array
+    const workoutsToSave = editingDayWorkouts.map((w, idx) => ({
+        sport: document.getElementById(`s-${dateStr}-${idx}`)?.value || w.sport,
+        description: document.getElementById(`d-${dateStr}-${idx}`)?.value || w.description,
+        target_tss: parseFloat(document.getElementById(`t-${dateStr}-${idx}`)?.value || 0),
+        details: document.getElementById(`det-${dateStr}-${idx}`)?.value || w.details
+    }));
+
+    await fetch('/api/micro-plan/day', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
             date: dateStr,
-            sport: document.getElementById(`s-${dateStr}`).value,
-            description: document.getElementById(`d-${dateStr}`).value,
-            target_tss: parseFloat(document.getElementById(`t-${dateStr}`).value),
-            details: document.getElementById(`det-${dateStr}`).value
+            workouts: workoutsToSave
         })
     });
     loadMicroPlan();
