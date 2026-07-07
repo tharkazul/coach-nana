@@ -2364,6 +2364,7 @@ async function submitPhysiqueLog(e) {
     }
 
     try {
+        const token = localStorage.getItem('nana_token');
         const res = await fetch('/api/physique', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
@@ -2387,6 +2388,7 @@ async function submitPhysiqueLog(e) {
 
 async function loadPhysiqueLogs() {
     try {
+        const token = localStorage.getItem('nana_token');
         const res = await fetch('/api/physique', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
