@@ -35,6 +35,21 @@ app.use('/uploads', express.static('uploads'));
 app.use(bodyParser.json({ limit: '15mb' }));
 app.use(express.static('public'));
 
+const physiqueStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = path.join(__dirname, 'public/uploads/physique');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, Date.now() + ext);
+    }
+});
+const uploadPhysique = multer({ storage: physiqueStorage });
+
 // Image Cleanup Routine (Every Hour)
 setInterval(() => {
     const dir = path.join(__dirname, 'public/uploads/chat_images');
@@ -215,6 +230,18 @@ db.serialize(() => {
         bmi REAL,
         lean_mass_kg REAL,
         UNIQUE(user_id, date),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )`);
+    db.run(`CREATE TABLE IF NOT EXISTS physique_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        date TEXT,
+        weight_kg REAL,
+        sleep_quality INTEGER,
+        fatigue_level INTEGER,
+        notes TEXT,
+        photo_url TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
     db.run(`CREATE TABLE IF NOT EXISTS milestones (
@@ -1315,6 +1342,53 @@ app.post('/api/weight', authenticateToken, (req, res) => {
         (err) => {
             if (err) return res.status(500).json({ error: "Failed to log weight." });
             res.json({ success: true });
+        }
+    );
+});
+app.get('/api/physique', authenticateToken, (req, res) => {
+    db.all(`SELECT * FROM physique_logs WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 50`, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Failed to fetch physique logs." });
+        res.json(rows);
+    });
+});
+
+app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), async (req, res) => {
+    const { date, weight_kg, sleep_quality, fatigue_level, notes } = req.body;
+    const photoUrl = req.file ? `/uploads/physique/${req.file.filename}` : null;
+    
+    db.run(
+        `INSERT INTO physique_logs (user_id, date, weight_kg, sleep_quality, fatigue_level, notes, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [req.user.id, date, weight_kg || null, sleep_quality || null, fatigue_level || null, notes || null, photoUrl],
+        async function (err) {
+            if (err) return res.status(500).json({ error: "Failed to save physique log." });
+            
+            res.json({ success: true });
+
+            // Proactive AI Coach message
+            try {
+                let prompt = `The athlete just logged their daily physique and wellness data for ${date}.\\n`;
+                if (weight_kg) prompt += `Weight: ${weight_kg}kg\\n`;
+                if (sleep_quality) prompt += `Sleep Quality (1-5): ${sleep_quality}\\n`;
+                if (fatigue_level) prompt += `Fatigue Level (1-5): ${fatigue_level}\\n`;
+                if (notes) prompt += `Notes: ${notes}\\n`;
+                
+                let imageBase64 = null;
+                if (req.file) {
+                    prompt += `They also uploaded a progress photo (attached).\\n`;
+                    const imageBytes = fs.readFileSync(req.file.path);
+                    imageBase64 = imageBytes.toString('base64');
+                }
+                
+                prompt += `Review their status. Keep it under 2 sentences, act as their friendly elite endurance coach, and give them a short piece of advice or encouragement based on their numbers (and the photo if attached).`;
+                
+                const aiReply = await generateWithFallback(prompt, null, null, imageBase64);
+                
+                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`, [req.user.id, aiReply]);
+                sendSSEEvent(req.user.id, 'unread_message', { message: aiReply, mood: 'support' });
+                
+            } catch (e) {
+                console.error("Proactive AI generation for physique failed:", e);
+            }
         }
     );
 });

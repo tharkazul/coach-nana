@@ -527,7 +527,7 @@ function updateUnreadBadge(latestMsgTime) {
 
 function switchTab(t) {
     // Safely toggle visibility to prevent missing ID crashes
-    const views = ['dashboard', 'coach', 'settings', 'history', 'admin'];
+    const views = ['dashboard', 'coach', 'settings', 'history', 'admin', 'physique'];
     views.forEach(view => {
         const el = document.getElementById(`view-${view}`);
         if (el) el.classList.toggle('hidden', t !== view);
@@ -539,7 +539,7 @@ function switchTab(t) {
         if (badge) badge.classList.add('hidden');
     }
 
-    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log' }[t];
+    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'physique': 'Physique & Recovery' }[t];
 
     views.forEach(tab => {
         const btn = document.getElementById(`nav-${tab}`);
@@ -554,11 +554,12 @@ function switchTab(t) {
     });
 
     if (t === 'history') loadHistory();
+    if (t === 'physique') loadPhysiqueLogs();
     if (t === 'coach') {
         setTimeout(() => {
             const chatWindow = document.getElementById('chat-window');
             if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
-        }, 10);
+        }, 50);
     }
 }
 
@@ -2343,3 +2344,80 @@ function speakResponse(text, mood, coachTone) {
 document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 checkLogin();
 checkStravaCallback();
+
+async function submitPhysiqueLog(e) {
+    e.preventDefault();
+    const btn = document.getElementById('physique-submit-btn');
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+
+    const formData = new FormData();
+    formData.append('date', document.getElementById('physique-date').value);
+    formData.append('weight_kg', document.getElementById('physique-weight').value);
+    formData.append('sleep_quality', document.getElementById('physique-sleep').value);
+    formData.append('fatigue_level', document.getElementById('physique-fatigue').value);
+    formData.append('notes', document.getElementById('physique-notes').value);
+    
+    const fileInput = document.getElementById('physique-photo');
+    if (fileInput.files.length > 0) {
+        formData.append('photo', fileInput.files[0]);
+    }
+
+    try {
+        const res = await fetch('/api/physique', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        if (res.ok) {
+            document.getElementById('physique-form').reset();
+            loadPhysiqueLogs();
+            alert("Physique log saved!");
+        } else {
+            alert("Failed to save log.");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("An error occurred.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Save Log';
+    }
+}
+
+async function loadPhysiqueLogs() {
+    try {
+        const res = await fetch('/api/physique', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const logs = await res.json();
+        
+        const container = document.getElementById('physique-history');
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<div class="text-xs text-theme-muted text-center py-4">No logs yet.</div>';
+            return;
+        }
+
+        container.innerHTML = logs.map(l => `
+            <div class="p-4 bg-theme-bg border border-theme-border rounded-lg flex flex-col md:flex-row gap-4">
+                <div class="flex-1 space-y-2">
+                    <div class="font-bold text-theme-text">${l.date}</div>
+                    <div class="text-sm text-theme-muted grid grid-cols-2 md:grid-cols-3 gap-2">
+                        ${l.weight_kg ? `<div><span class="font-bold">Weight:</span> ${l.weight_kg}kg</div>` : ''}
+                        ${l.sleep_quality ? `<div><span class="font-bold">Sleep:</span> ${l.sleep_quality}/5</div>` : ''}
+                        ${l.fatigue_level ? `<div><span class="font-bold">Fatigue:</span> ${l.fatigue_level}/5</div>` : ''}
+                    </div>
+                    ${l.notes ? `<div class="text-sm text-theme-text mt-2 p-2 bg-theme-bg-hover rounded border border-theme-border/50">${l.notes}</div>` : ''}
+                </div>
+                ${l.photo_url ? `
+                <div class="w-full md:w-32 flex-shrink-0">
+                    <img src="${l.photo_url}" class="w-full h-32 object-cover rounded-lg border border-theme-border">
+                </div>
+                ` : ''}
+            </div>
+        `).join('');
+
+    } catch (e) {
+        console.error(e);
+    }
+}

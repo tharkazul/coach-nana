@@ -450,14 +450,14 @@
                 <span class="hidden md:inline">Settings</span>
             </button>
 
-            <button onclick="window.location.reload()"
+            <button onclick="switchTab('physique')" id="nav-physique"
                 class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
                 <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
                     </path>
                 </svg>
-                <span class="hidden md:inline">Refresh</span>
+                <span class="hidden md:inline">Physique</span>
             </button>
 
             <div class="hidden md:block absolute bottom-4 w-full">
@@ -828,6 +828,85 @@
                                         d="M12 19V5m0 0l-7 7m7-7l7 7"></path>
                                 </svg>
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHYSIQUE VIEW -->
+            <div id="view-physique"
+                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-32 max-w-4xl mx-auto w-full space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-theme-text">Physique & Recovery</h2>
+                    <p class="text-xs text-theme-muted mt-1">Track your daily wellness and upload progress photos.</p>
+                </div>
+
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                        <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Daily Log
+                        </h3>
+                    </div>
+                    <div class="p-6">
+                        <form id="physique-form" class="space-y-4" onsubmit="submitPhysiqueLog(event)">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Date</label>
+                                    <input type="date" id="physique-date" class="w-full text-sm bg-theme-bg border border-theme-border rounded-lg px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent transition-colors" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Weight (kg)</label>
+                                    <input type="number" step="0.1" id="physique-weight" placeholder="e.g. 75.5" class="w-full text-sm bg-theme-bg border border-theme-border rounded-lg px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent transition-colors">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Sleep Quality (1-5)</label>
+                                    <select id="physique-sleep" class="w-full text-sm bg-theme-bg border border-theme-border rounded-lg px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent transition-colors">
+                                        <option value="">--</option>
+                                        <option value="1">1 - Terrible</option>
+                                        <option value="2">2 - Poor</option>
+                                        <option value="3">3 - Okay</option>
+                                        <option value="4">4 - Good</option>
+                                        <option value="5">5 - Excellent</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Fatigue (1-5)</label>
+                                    <select id="physique-fatigue" class="w-full text-sm bg-theme-bg border border-theme-border rounded-lg px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent transition-colors">
+                                        <option value="">--</option>
+                                        <option value="1">1 - Very Fresh</option>
+                                        <option value="2">2 - Fresh</option>
+                                        <option value="3">3 - Normal</option>
+                                        <option value="4">4 - Tired</option>
+                                        <option value="5">5 - Exhausted</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Notes / Soreness</label>
+                                <textarea id="physique-notes" rows="2" placeholder="e.g. Left calf feels a bit tight..." class="w-full text-sm bg-theme-bg border border-theme-border rounded-lg px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent transition-colors resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Progress Photo</label>
+                                <input type="file" id="physique-photo" accept="image/*" class="w-full text-sm text-theme-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-theme-accent/10 file:text-theme-accent hover:file:bg-theme-accent/20 cursor-pointer">
+                            </div>
+                            <div class="flex justify-end pt-2">
+                                <button id="physique-submit-btn" type="submit" class="px-5 py-2 bg-theme-accent text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg transform transition-all active:scale-95 disabled:opacity-50">
+                                    Save Log
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                        <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-theme-accent"></span> History
+                        </h3>
+                    </div>
+                    <div class="p-6">
+                        <div id="physique-history" class="space-y-6">
+                            <div class="text-xs text-theme-muted text-center py-4">No logs yet.</div>
                         </div>
                     </div>
                 </div>
