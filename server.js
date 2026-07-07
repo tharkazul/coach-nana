@@ -637,6 +637,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 res.status(500).json({ error: "AI failed to respond." });
             }
         });
+    });
 });
 
 app.get('/api/dashboard/briefing', authenticateToken, (req, res) => {
