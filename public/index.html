@@ -542,28 +542,44 @@
                     <div
                         class="bg-theme-card border border-theme-border rounded-xl shadow-sm flex divide-x divide-theme-border overflow-hidden">
                         <div
-                            class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition">
+                            class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition relative group">
                             <h3
-                                class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold">
-                                Fitness</h3>
-                            <p id="ctl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--
-                            </p>
+                                class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-1 cursor-help">
+                                Fitness
+                                <svg class="w-3 h-3 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </h3>
+                            <div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 p-2 bg-theme-bg border border-theme-border text-[10px] text-theme-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+                                <strong>Fitness (CTL)</strong> is your 42-day average training load. It represents your long-term aerobic engine. Higher is better!
+                            </div>
+                            <p id="ctl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                            <p id="ctl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"></p>
                         </div>
                         <div
-                            class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition">
+                            class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition relative group">
                             <h3
-                                class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold">
-                                Fatigue</h3>
-                            <p id="atl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--
-                            </p>
+                                class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-1 cursor-help">
+                                Fatigue
+                                <svg class="w-3 h-3 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </h3>
+                            <div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 p-2 bg-theme-bg border border-theme-border text-[10px] text-theme-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+                                <strong>Fatigue (ATL)</strong> is your 7-day average training load. It shows your acute, short-term stress. Keep it balanced!
+                            </div>
+                            <p id="atl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                            <p id="atl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"></p>
                         </div>
                         <div
-                            class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition">
+                            class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition relative group">
                             <h3
-                                class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold">
-                                Readiness</h3>
-                            <p id="readiness-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--
-                            </p>
+                                class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-1 cursor-help">
+                                Readiness
+                                <svg class="w-3 h-3 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </h3>
+                            <div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 p-2 bg-theme-bg border border-theme-border text-[10px] text-theme-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+                                <strong>Readiness (0-100)</strong> combines your Form (Fitness minus Fatigue) with recent sleep and physical stress.
+                                <br><br>0-39: Recover<br>40-69: Maintain<br>70-100: Prime Condition
+                            </div>
+                            <p id="readiness-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                            <p id="readiness-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"></p>
                         </div>
                         <div
                             class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition bg-theme-accent-soft/30">
@@ -573,6 +589,7 @@
                             <p id="latest-weight-metric"
                                 class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--<span
                                     class="text-sm text-theme-muted ml-0.5">kg</span></p>
+                            <p class="text-[10px] text-theme-accent/70 mt-1 uppercase tracking-wider h-3"></p>
                         </div>
                     </div>
 

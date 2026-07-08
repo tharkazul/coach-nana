@@ -797,9 +797,19 @@ async function buildDashboard() {
         document.getElementById('ctl-metric').innerText = Math.round(ctl * 10) / 10;
         document.getElementById('atl-metric').innerText = Math.round(atl * 10) / 10;
 
+        // Subtitles for CTL and ATL/TSB
+        let tsb = ctl - atl;
+        document.getElementById('ctl-subtitle').innerText = "Aerobic Base";
+        
+        const atlSub = document.getElementById('atl-subtitle');
+        if (tsb < -30) { atlSub.innerText = "Overreaching"; atlSub.className = "text-[10px] text-red-500 mt-1 uppercase tracking-wider h-3"; }
+        else if (tsb < -10) { atlSub.innerText = "Optimal Training"; atlSub.className = "text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"; }
+        else if (tsb < 5) { atlSub.innerText = "Maintaining"; atlSub.className = "text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"; }
+        else if (tsb < 25) { atlSub.innerText = "Fresh / Tapering"; atlSub.className = "text-[10px] text-theme-accent mt-1 uppercase tracking-wider h-3"; }
+        else { atlSub.innerText = "Detraining"; atlSub.className = "text-[10px] text-amber-500 mt-1 uppercase tracking-wider h-3"; }
+
         // Calculate Readiness Score
         let readiness = 50; // Base score
-        let tsb = ctl - atl;
         // Form (TSB) contribution: bounded [-20, +20]
         let tsbContrib = Math.max(-20, Math.min(20, tsb * 0.5));
         readiness += tsbContrib;
@@ -821,11 +831,19 @@ async function buildDashboard() {
         
         readiness = Math.max(0, Math.min(100, Math.round(readiness)));
         const readinessEl = document.getElementById('readiness-metric');
+        const readinessSub = document.getElementById('readiness-subtitle');
         if (readinessEl) {
             readinessEl.innerText = readiness;
-            if (readiness < 40) readinessEl.className = "text-2xl md:text-4xl font-semibold text-red-500 tracking-tight";
-            else if (readiness < 70) readinessEl.className = "text-2xl md:text-4xl font-semibold text-amber-500 tracking-tight";
-            else readinessEl.className = "text-2xl md:text-4xl font-semibold text-green-500 tracking-tight";
+            if (readiness < 40) {
+                readinessEl.className = "text-2xl md:text-4xl font-semibold text-red-500 tracking-tight";
+                if (readinessSub) { readinessSub.innerText = "Need Recovery"; readinessSub.className = "text-[10px] text-red-500/70 mt-1 uppercase tracking-wider h-3"; }
+            } else if (readiness < 70) {
+                readinessEl.className = "text-2xl md:text-4xl font-semibold text-amber-500 tracking-tight";
+                if (readinessSub) { readinessSub.innerText = "Adequate"; readinessSub.className = "text-[10px] text-amber-500/70 mt-1 uppercase tracking-wider h-3"; }
+            } else {
+                readinessEl.className = "text-2xl md:text-4xl font-semibold text-green-500 tracking-tight";
+                if (readinessSub) { readinessSub.innerText = "Prime Condition"; readinessSub.className = "text-[10px] text-green-500/70 mt-1 uppercase tracking-wider h-3"; }
+            }
         }
 
         updateDailyReflection(ctl, atl);
