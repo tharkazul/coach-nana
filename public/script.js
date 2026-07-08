@@ -746,6 +746,32 @@ async function buildDashboard() {
             const latest = sortedData[0];
             document.getElementById('latest-weight-metric').innerHTML = `${latest.weight_kg.toFixed(1)} <span class="text-sm text-theme-muted">kg</span>`;
 
+            // Weight Trend (vs 7 days ago)
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() - 7);
+            const targetDateStr = targetDate.toISOString().split('T')[0];
+            
+            let pastWeight = null;
+            for (let w of sortedData) {
+                if (w.date <= targetDateStr) {
+                    pastWeight = w.weight_kg;
+                    break;
+                }
+            }
+            const weightTrendEl = document.getElementById('weight-trend');
+            if (weightTrendEl && pastWeight) {
+                let diff = latest.weight_kg - pastWeight;
+                if (Math.abs(diff) < 0.2) {
+                    weightTrendEl.innerHTML = `<span class="text-theme-muted">~</span>`;
+                } else if (diff > 0) {
+                    weightTrendEl.innerHTML = `<span class="text-red-500">↑${Math.abs(diff).toFixed(1)}</span>`;
+                } else {
+                    weightTrendEl.innerHTML = `<span class="text-green-500">↓${Math.abs(diff).toFixed(1)}</span>`;
+                }
+            } else if (weightTrendEl) {
+                weightTrendEl.innerHTML = "";
+            }
+
             let bioHtml = '';
             sortedData.slice(0, 10).forEach(w => {
                 bioHtml += `<tr class="hover:bg-theme-bg transition">
@@ -860,6 +886,39 @@ async function buildDashboard() {
             // Map TSB (-40 to +20) to 0-100%
             let tsbPercent = Math.min(100, Math.max(0, ((tsb + 40) / 60) * 100));
             fMarker.style.left = `${tsbPercent}%`;
+        }
+
+        // --- TRENDS FOR CTL, ATL, READINESS ---
+        let idx7 = Math.max(0, dates.length - 8);
+        if (dates.length > 0) {
+            let ctl7 = ctlData[idx7] || ctl;
+            let atl7 = atlData[idx7] || atl;
+            let tsb7 = ctl7 - atl7;
+            let readiness7 = 50 + Math.max(-20, Math.min(20, tsb7 * 0.5));
+
+            let ctlTrendEl = document.getElementById('ctl-trend');
+            if (ctlTrendEl) {
+                let diff = ctl - ctl7;
+                if (Math.abs(diff) < 1) ctlTrendEl.innerHTML = `<span class="text-theme-muted">~</span>`;
+                else if (diff > 0) ctlTrendEl.innerHTML = `<span class="text-green-500">↑${Math.abs(diff).toFixed(0)}</span>`;
+                else ctlTrendEl.innerHTML = `<span class="text-red-500">↓${Math.abs(diff).toFixed(0)}</span>`;
+            }
+
+            let atlTrendEl = document.getElementById('atl-trend');
+            if (atlTrendEl) {
+                let diff = atl - atl7;
+                if (Math.abs(diff) < 1) atlTrendEl.innerHTML = `<span class="text-theme-muted">~</span>`;
+                else if (diff > 0) atlTrendEl.innerHTML = `<span class="text-amber-500">↑${Math.abs(diff).toFixed(0)}</span>`;
+                else atlTrendEl.innerHTML = `<span class="text-green-500">↓${Math.abs(diff).toFixed(0)}</span>`;
+            }
+
+            let readTrendEl = document.getElementById('readiness-trend');
+            if (readTrendEl) {
+                let diff = readiness - readiness7;
+                if (Math.abs(diff) < 2) readTrendEl.innerHTML = `<span class="text-theme-muted">~</span>`;
+                else if (diff > 0) readTrendEl.innerHTML = `<span class="text-green-500">↑${Math.abs(diff).toFixed(0)}</span>`;
+                else readTrendEl.innerHTML = `<span class="text-red-500">↓${Math.abs(diff).toFixed(0)}</span>`;
+            }
         }
 
         updateDailyReflection(ctl, atl);

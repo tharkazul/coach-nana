@@ -562,10 +562,11 @@
                                 class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-1">
                                 Fitness
                             </h3>
-                            <p id="ctl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--
-                            </p>
-                            <p id="ctl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3">
-                            </p>
+                            <div class="flex items-baseline justify-center gap-1">
+                                <p id="ctl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                                <span id="ctl-trend" class="text-sm font-medium"></span>
+                            </div>
+                            <p id="ctl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"></p>
                         </div>
                         <div
                             class="flex-1 p-4 md:p-6 flex flex-col items-center justify-center text-center hover:bg-theme-bg transition">
@@ -573,10 +574,11 @@
                                 class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-1">
                                 Fatigue
                             </h3>
-                            <p id="atl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--
-                            </p>
-                            <p id="atl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3">
-                            </p>
+                            <div class="flex items-baseline justify-center gap-1">
+                                <p id="atl-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                                <span id="atl-trend" class="text-sm font-medium"></span>
+                            </div>
+                            <p id="atl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"></p>
                             <div class="w-full max-w-[80px] mt-2 h-1.5 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 rounded-full relative mx-auto hidden"
                                 id="fatigue-slider-container">
                                 <div id="fatigue-slider-marker"
@@ -590,8 +592,10 @@
                                 class="text-theme-muted text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-1">
                                 Readiness
                             </h3>
-                            <p id="readiness-metric"
-                                class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                            <div class="flex items-baseline justify-center gap-1">
+                                <p id="readiness-metric" class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--</p>
+                                <span id="readiness-trend" class="text-sm font-medium"></span>
+                            </div>
                             <p id="readiness-subtitle"
                                 class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"></p>
                             <div class="w-full max-w-[80px] mt-2 h-1.5 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 rounded-full relative mx-auto hidden"
@@ -606,9 +610,12 @@
                             <h3
                                 class="text-theme-accent text-[10px] md:text-xs uppercase tracking-wider mb-1 font-semibold">
                                 Weight</h3>
-                            <p id="latest-weight-metric"
-                                class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--<span
-                                    class="text-sm text-theme-muted ml-0.5">kg</span></p>
+                            <div class="flex items-baseline justify-center gap-1">
+                                <p id="latest-weight-metric"
+                                    class="text-2xl md:text-4xl font-light text-theme-text tracking-tight">--<span
+                                        class="text-sm text-theme-muted ml-0.5">kg</span></p>
+                                <span id="weight-trend" class="text-sm font-medium"></span>
+                            </div>
                             <p class="text-[10px] text-theme-accent/70 mt-1 uppercase tracking-wider h-3"></p>
                         </div>
                     </div>
