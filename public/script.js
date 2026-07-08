@@ -2638,7 +2638,10 @@ async function loadPhysiqueLogs() {
         }
 
         container.innerHTML = logs.map(l => `
-            <div class="p-4 bg-theme-bg border border-theme-border rounded-lg flex flex-col md:flex-row gap-4">
+            <div class="p-4 bg-theme-bg border border-theme-border rounded-lg flex flex-col md:flex-row gap-4 relative group">
+                <button onclick="deletePhysiqueLog(${l.id})" class="absolute top-2 right-2 text-theme-muted hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition" title="Delete Log">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
                 <div class="flex-1 space-y-2">
                     <div class="font-bold text-theme-text">${l.date}</div>
                     <div class="text-sm text-theme-muted grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -2658,6 +2661,26 @@ async function loadPhysiqueLogs() {
 
     } catch (e) {
         console.error(e);
+    }
+}
+
+async function deletePhysiqueLog(id) {
+    if (!confirm("Delete this physique log? This will also remove the weight from the chart if it was logged here.")) return;
+    try {
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch(`/api/physique/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            loadPhysiqueLogs();
+            loadBiometrics(); // Refresh chart/table
+        } else {
+            alert("Failed to delete log.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error deleting log.");
     }
 }
 

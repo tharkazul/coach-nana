@@ -1029,7 +1029,24 @@ app.post('/api/micro-plan/day', authenticateToken, (req, res) => {
         res.json({ success: true });
     });
 });
+app.put('/api/micro-plan/:id', authenticateToken, (req, res) => {
+    const { sport, description, target_tss, details } = req.body;
+    db.run(
+        `UPDATE micro_plan SET sport = ?, description = ?, target_tss = ?, details = ? WHERE id = ? AND user_id = ?`,
+        [sport, description, target_tss, details, req.params.id, req.user.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: "Failed to update plan" });
+            res.json({ success: true });
+        }
+    );
+});
 
+app.delete('/api/micro-plan/:id', authenticateToken, (req, res) => {
+    db.run(`DELETE FROM micro_plan WHERE id = ? AND user_id = ?`, [req.params.id, req.user.id], (err) => {
+        if (err) return res.status(500).json({ error: "Failed to delete plan" });
+        res.json({ success: true });
+    });
+});
 
 app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     const { targetDate } = req.body;
@@ -1450,6 +1467,11 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
         async function (err) {
             if (err) return res.status(500).json({ error: "Failed to save physique log." });
             
+            // Also insert weight into biometrics for charting
+            if (weight_kg) {
+                db.run(`INSERT INTO biometrics (user_id, date, weight_kg) VALUES (?, ?, ?) ON CONFLICT(user_id, date) DO UPDATE SET weight_kg=excluded.weight_kg`, [req.user.id, date, weight_kg]);
+            }
+
             res.json({ success: true });
 
             // Proactive AI Coach message
@@ -1479,6 +1501,23 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
             }
         }
     );
+});
+
+app.delete('/api/physique/:id', authenticateToken, (req, res) => {
+    // First find the date so we can optionally remove the biometric weight log for that day
+    db.get(`SELECT date FROM physique_logs WHERE id = ? AND user_id = ?`, [req.params.id, req.user.id], (err, row) => {
+        if (!row) return res.status(404).json({ error: "Log not found." });
+        
+        db.run(`DELETE FROM physique_logs WHERE id = ? AND user_id = ?`, [req.params.id, req.user.id], (err) => {
+            if (err) return res.status(500).json({ error: "Failed to delete log." });
+            
+            // Also nullify/remove weight from biometrics for this date if we are deleting the physique log
+            // (Assuming weight_kg was the primary entry method for that date)
+            db.run(`DELETE FROM biometrics WHERE user_id = ? AND date = ?`, [req.user.id, row.date]);
+            
+            res.json({ success: true });
+        });
+    });
 });
 app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
     const todayStr = new Date().toISOString().split('T')[0];
