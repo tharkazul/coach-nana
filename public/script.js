@@ -844,6 +844,22 @@ async function buildDashboard() {
                 readinessEl.className = "text-2xl md:text-4xl font-semibold text-green-500 tracking-tight";
                 if (readinessSub) { readinessSub.innerText = "Prime Condition"; readinessSub.className = "text-[10px] text-green-500/70 mt-1 uppercase tracking-wider h-3"; }
             }
+            
+            const rSlider = document.getElementById('readiness-slider-container');
+            const rMarker = document.getElementById('readiness-slider-marker');
+            if (rSlider && rMarker) {
+                rSlider.classList.remove('hidden');
+                rMarker.style.left = `${readiness}%`;
+            }
+        }
+
+        const fSlider = document.getElementById('fatigue-slider-container');
+        const fMarker = document.getElementById('fatigue-slider-marker');
+        if (fSlider && fMarker) {
+            fSlider.classList.remove('hidden');
+            // Map TSB (-40 to +20) to 0-100%
+            let tsbPercent = Math.min(100, Math.max(0, ((tsb + 40) / 60) * 100));
+            fMarker.style.left = `${tsbPercent}%`;
         }
 
         updateDailyReflection(ctl, atl);
