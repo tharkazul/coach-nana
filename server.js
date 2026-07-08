@@ -266,6 +266,13 @@ db.serialize(() => {
         is_main INTEGER DEFAULT 0,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
+    db.run(`CREATE TABLE IF NOT EXISTS nutrition_protocols (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        date TEXT,
+        protocol_json TEXT,
+        UNIQUE(user_id, date)
+    )`);
 });
 
 // --- AUTHENTICATION MIDDLEWARE ---
@@ -1474,15 +1481,27 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
     );
 });
 app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
-    db.get(`SELECT weight_kg FROM biometrics WHERE user_id = ? ORDER BY date DESC LIMIT 1`, [req.user.id], async (err, weightRow) => {
-        const weight = weightRow ? weightRow.weight_kg : 75; // Default to 75kg if unknown
-        const phase = await getUserMacroPhase(req.user.id);
-        
-        db.all(`SELECT date, tss, description FROM micro_plan WHERE user_id = ? AND date >= date('now') LIMIT 1`, [req.user.id], async (err, todayPlan) => {
-            const todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].tss : 0;
-            const todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
+    const todayStr = new Date().toISOString().split('T')[0];
 
-            const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
+    db.get(`SELECT protocol_json FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [req.user.id, todayStr], async (err, cachedRow) => {
+        if (cachedRow && cachedRow.protocol_json) {
+            try {
+                return res.json(JSON.parse(cachedRow.protocol_json));
+            } catch (e) {
+                // Parse error, ignore and regenerate
+                console.error("Cache parse error", e);
+            }
+        }
+
+        db.get(`SELECT weight_kg FROM biometrics WHERE user_id = ? ORDER BY date DESC LIMIT 1`, [req.user.id], async (err, weightRow) => {
+            const weight = weightRow ? weightRow.weight_kg : 75; // Default to 75kg if unknown
+            const phase = await getUserMacroPhase(req.user.id);
+            
+            db.all(`SELECT date, tss, description FROM micro_plan WHERE user_id = ? AND date >= date('now') LIMIT 1`, [req.user.id], async (err, todayPlan) => {
+                const todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].tss : 0;
+                const todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
+
+                const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
 Their latest weight is ${weight}kg.
 Today's training plan: ${todayDesc} (TSS: ${todayTSS}).
 
@@ -1500,28 +1519,34 @@ You MUST respond with ONLY a raw JSON object containing exactly these keys:
   "fat": Number (grams)
 }`;
 
-            try {
-                let aiReply = await generateWithFallback("Generate the macro protocol.", systemPrompt, []);
-                // Extract JSON between the first { and last } to avoid markdown formatting issues
-                const firstBrace = aiReply.indexOf('{');
-                const lastBrace = aiReply.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1) {
-                    aiReply = aiReply.substring(firstBrace, lastBrace + 1);
-                }
+                try {
+                    let aiReply = await generateWithFallback("Generate the macro protocol.", systemPrompt, []);
+                    // Extract JSON between the first { and last } to avoid markdown formatting issues
+                    const firstBrace = aiReply.indexOf('{');
+                    const lastBrace = aiReply.lastIndexOf('}');
+                    if (firstBrace !== -1 && lastBrace !== -1) {
+                        aiReply = aiReply.substring(firstBrace, lastBrace + 1);
+                    }
 
-                const protocol = JSON.parse(aiReply);
-                res.json(protocol);
-            } catch (e) {
-                console.error("Nutrition AI failed:", e);
-                // Fallback to a safe baseline if AI fails to parse
-                res.json({
-                    title: "Balanced Maintenance",
-                    rationale: "AI is currently resting. Here is a balanced baseline protocol for your weight.",
-                    carbs: Math.round(weight * 4),
-                    protein: Math.round(weight * 1.8),
-                    fat: Math.round(weight * 1)
-                });
-            }
+                    const protocol = JSON.parse(aiReply);
+                    
+                    // Cache the result
+                    db.run(`INSERT OR REPLACE INTO nutrition_protocols (user_id, date, protocol_json) VALUES (?, ?, ?)`, 
+                        [req.user.id, todayStr, JSON.stringify(protocol)]);
+
+                    res.json(protocol);
+                } catch (e) {
+                    console.error("Nutrition AI failed:", e);
+                    // Fallback to a safe baseline if AI fails to parse
+                    res.json({
+                        title: "Balanced Maintenance",
+                        rationale: "AI is currently resting. Here is a balanced baseline protocol for your weight.",
+                        carbs: Math.round(weight * 4),
+                        protein: Math.round(weight * 1.8),
+                        fat: Math.round(weight * 1)
+                    });
+                }
+            });
         });
     });
 });
