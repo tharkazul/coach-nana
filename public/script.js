@@ -2685,3 +2685,16 @@ async function loadNutritionProtocol() {
         document.getElementById('nutrition-loading').innerText = 'Failed to load';
     }
 }
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Pre-fill Physique date to today
+    const physDate = document.getElementById('physique-date');
+    if (physDate) {
+        const today = new Date();
+        // Adjust for local timezone offset to get correct YYYY-MM-DD
+        const offset = today.getTimezoneOffset() * 60000;
+        const localDate = new Date(today.getTime() - offset).toISOString().split('T')[0];
+        physDate.value = localDate;
+    }
+});
