@@ -758,7 +758,10 @@ async function buildDashboard() {
         }
 
         // 4. Prepare dictionaries and set start date
-        const tssDict = Object.fromEntries(data.map(d => [d.date, d.daily_tss]));
+        const tssDict = {};
+        data.forEach(d => {
+            tssDict[d.date] = (tssDict[d.date] || 0) + d.daily_tss;
+        });
         const weightMap = Object.fromEntries(weightData.map(w => [w.date, w.weight_kg]));
 
         let minTssDate = data.length > 0 ? data[0].date : new Date().toISOString().split('T')[0];
@@ -944,7 +947,10 @@ async function loadMicroPlan() {
             currentPlan[d.date].push(d);
         });
 
-        const actualTssMap = Object.fromEntries(actualData.map(d => [d.date, Math.round(d.daily_tss)]));
+        const actualTssMap = {};
+        actualData.forEach(d => {
+            actualTssMap[`${d.date}_${d.sport_type}`] = Math.round(d.daily_tss);
+        });
         const weatherMap = {};
         if (weatherObj && weatherObj.daily && weatherObj.daily.time) {
             weatherObj.daily.time.forEach((wDate, idx) => {
@@ -988,7 +994,7 @@ async function loadMicroPlan() {
             // 3. Nested Loop: Draw each sport for this day
             workoutsForDay.forEach((p, wIdx) => {
                 let humanData = estimateWorkoutDetails(p.sport, p.description, p.target_tss);
-                let actualTss = actualTssMap[dateStr] || 0;
+                let actualTss = actualTssMap[`${dateStr}_${p.sport}`] || 0;
                 let actColor = actualTss > 0 ? (actualTss >= (p.target_tss * 0.9) ? 'text-theme-accent font-bold' : 'text-amber-500 font-bold') : 'text-theme-muted';
 
                 // Only show weather on the first row of the day
