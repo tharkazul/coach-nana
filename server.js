@@ -30,6 +30,14 @@ const geminiConfigs = [
     }
 ];
 
+function getAMSDateString(date = new Date()) {
+    return new Date(date).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+}
+
+function getAMSWeekday(date = new Date()) {
+    return new Date(date).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Europe/Amsterdam' });
+}
+
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
@@ -485,7 +493,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             try {
                 db.all(`SELECT name, sport_type, distance_km, moving_time_min, tss, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
                     const recentActivitiesText = (recentActivities && recentActivities.length > 0)
-                        ? recentActivities.map(a => `- ${a.start_date.split('T')[0]}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n                    ')
+                        ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n                    ')
                         : 'No recent activities recorded.';
 
                     db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
@@ -512,11 +520,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                             cleanHistory.pop();
                         }
 
-                        const todayStr = new Date().toISOString().split('T')[0];
+                        const todayStr = getAMSDateString();
                         const next7Days = Array.from({ length: 7 }, (_, i) => {
                             const d = new Date();
                             d.setDate(d.getDate() + i);
-                            return `${d.toLocaleDateString('en-US', { weekday: 'long' })}: ${d.toISOString().split('T')[0]}`;
+                            return `${getAMSWeekday(d)}: ${getAMSDateString(d)}`;
                         }).join(', ');
 
                         const systemPrompt =
@@ -690,7 +698,7 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
 
         db.all(`SELECT name, sport_type, distance_km, moving_time_min, tss, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
             const recentActivitiesText = (recentActivities && recentActivities.length > 0)
-                ? recentActivities.map(a => `- ${a.start_date.split('T')[0]}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n')
+                ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n')
                 : 'No recent activities recorded.';
 
             
@@ -705,7 +713,7 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
                         : 'No upcoming workouts scheduled.';
 
                     const phase = await getUserMacroPhase(req.user.id);
-                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayStr = getAMSDateString();
                     let systemPrompt = `You are Spark, an elite Ironman Triathlon and endurance coach.
 Today is ${todayStr}.
 Athlete Context: ${user.athlete_context || 'General endurance athlete'}
@@ -1200,7 +1208,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
         const client = GCClient.client || GCClient.http;
         if (!client) throw new Error("Garmin client initialization failed.");
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getAMSDateString();
         const workouts = await new Promise((resolve, reject) => {
             db.all(`SELECT date, sport, description, target_tss, steps_json FROM micro_plan WHERE user_id = ? AND date >= ?`,
                 [req.user.id, todayStr], (err, rows) => {
