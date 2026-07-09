@@ -1191,11 +1191,31 @@ function openEditWorkoutModal(workoutData, dateStr) {
     document.getElementById('edit-workout-sport').onchange = () => { renderWbSteps(); };
     
     renderWbSteps();
-    document.getElementById('edit-workout-modal').classList.remove('hidden');
+    
+    const modal = document.getElementById('edit-workout-modal');
+    const content = document.getElementById('edit-workout-modal-content');
+    modal.classList.remove('hidden');
+    // Force reflow
+    void modal.offsetWidth;
+    modal.classList.remove('opacity-0');
+    content.classList.remove('translate-y-full', 'md:scale-95');
+    content.classList.add('translate-y-0', 'md:scale-100');
 }
 
 function closeEditWorkoutModal() {
-    document.getElementById('edit-workout-modal').classList.add('hidden');
+    const modal = document.getElementById('edit-workout-modal');
+    const content = document.getElementById('edit-workout-modal-content');
+    
+    modal.classList.add('opacity-0');
+    content.classList.remove('translate-y-0', 'md:scale-100');
+    content.classList.add('translate-y-full', 'md:scale-95');
+    
+    // Wait for transition to finish
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        wbCurrentWorkoutId = null;
+        document.getElementById('edit-workout-desc').value = '';
+    }, 300);
 }
 
 function calculateWbTss() {
@@ -2797,6 +2817,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only swipe dismiss on mobile (where the bottom sheet is active)
             if (window.innerWidth < 768) {
                 closeModal();
+            }
+        });
+    }
+    
+    // Initialize Swipe-to-dismiss for Edit Workout Modal Bottom Sheet
+    const editModalContent = document.getElementById('edit-workout-modal-content');
+    if (editModalContent && typeof Hammer !== 'undefined') {
+        const hammerEdit = new Hammer(editModalContent);
+        hammerEdit.get('swipe').set({ direction: Hammer.DIRECTION_DOWN });
+        hammerEdit.on('swipedown', () => {
+            if (window.innerWidth < 768) {
+                closeEditWorkoutModal();
             }
         });
     }

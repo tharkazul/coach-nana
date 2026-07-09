@@ -354,7 +354,7 @@
                         </path>
                     </svg></button>
             </div>
-            <div class="flex-1 overflow-y-auto p-4 md:p-6 bg-theme-card relative">
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-32 md:pb-6 bg-theme-card relative">
                 <div id="modal-loader"
                     class="absolute inset-0 flex flex-col justify-center items-center bg-theme-card z-10">
                     <div
@@ -1300,9 +1300,15 @@
 
     <!-- Edit Workout Modal -->
     <div id="edit-workout-modal"
-        class="fixed inset-0 z-[10000] hidden flex items-center justify-center bg-black/80 overflow-y-auto p-4">
-        <div class="bg-theme-card w-full max-w-3xl rounded-xl shadow-2xl border border-theme-border my-auto">
-            <div class="p-6 border-b border-theme-border flex justify-between items-center bg-theme-bg/50 rounded-t-xl">
+        class="fixed inset-0 z-[10000] hidden flex items-end p-0 md:items-center md:justify-center md:p-8 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div id="edit-workout-modal-content"
+            class="pt-safe bg-theme-card rounded-t-[2rem] md:rounded-sm shadow-2xl w-full max-w-3xl h-[90vh] md:h-auto md:max-h-[80vh] flex flex-col overflow-hidden relative border border-theme-border translate-y-full md:translate-y-0 md:scale-95 transition-all duration-300 ease-out">
+            <!-- Drag Handle for Mobile -->
+            <div class="w-full flex justify-center py-3 md:hidden shrink-0 bg-theme-bg/50 border-b border-theme-border">
+                <div class="w-12 h-1.5 bg-theme-border rounded-full"></div>
+            </div>
+            
+            <div class="p-4 md:p-6 border-b border-theme-border flex justify-between items-center bg-theme-bg/50 shrink-0 md:rounded-t-sm">
                 <h3 class="text-lg font-bold text-theme-text">Edit Planned Workout</h3>
                 <button onclick="closeEditWorkoutModal()" class="text-theme-muted hover:text-theme-accent">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1311,7 +1317,7 @@
                     </svg>
                 </button>
             </div>
-            <div class="p-6 space-y-6">
+            <div class="p-4 md:p-6 space-y-6 flex-1 overflow-y-auto pb-32 md:pb-6">
                 <!-- Meta Info -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
