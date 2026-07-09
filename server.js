@@ -221,8 +221,15 @@ db.serialize(() => {
         garmin_username TEXT, 
         garmin_password TEXT, 
         coach_tone TEXT DEFAULT 'Empathetic but demanding elite endurance coach.', 
-        athlete_context TEXT DEFAULT 'No context provided yet.'
+        athlete_context TEXT DEFAULT 'No context provided yet.',
+        long_term_memory TEXT DEFAULT ''
     )`);
+    // Add column if it doesn't exist (fails silently if it does)
+    db.run(`ALTER TABLE users ADD COLUMN long_term_memory TEXT DEFAULT ''`, (err) => {
+        if (err && !err.message.includes("duplicate column name")) {
+            console.error("Error adding long_term_memory column:", err.message);
+        }
+    });
     db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -490,7 +497,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    db.get(`SELECT coach_tone, athlete_context, training_phase FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    db.get(`SELECT coach_tone, athlete_context, training_phase, long_term_memory FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
 
         db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metricsRows) => {
@@ -505,7 +512,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n                    ')
                         : 'No recent activities recorded.';
 
-                    db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
+                    db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
 
                         let cleanHistory = [];
 
@@ -541,6 +548,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     Today is ${todayStr}.
                     Upcoming Calendar Reference: ${next7Days}
                     Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+                    Athlete Long-Term Summary: ${user.long_term_memory || 'No long-term summary generated yet.'}
                     Key Physiological Metrics: ${metricsText}
                     Current Macro Phase: ${phase}
                     Recent Completed Workouts (Last 3):
@@ -705,6 +713,12 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
                         db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
                         db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
+
+                        db.get(`SELECT COUNT(*) as count FROM chat_history WHERE user_id = ?`, [req.user.id], (err, row) => {
+                            if (row && row.count > 0 && row.count % 6 === 0) {
+                                triggerBackgroundSummary(req.user.id);
+                            }
+                        });
 
                         res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
                     });
@@ -1912,6 +1926,41 @@ async function syncAllStravaUsersOnStartup() {
                 console.error(`❌ Startup sync failed for user ${user.id}:`, err);
             }
         }
+    });
+}
+
+async function triggerBackgroundSummary(userId) {
+    console.log(`🤖 Triggering background rolling summary for user ${userId}...`);
+    
+    db.get(`SELECT long_term_memory, coach_tone FROM users WHERE id = ?`, [userId], async (err, user) => {
+        if (err || !user) return;
+        
+        db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 10) ORDER BY id ASC`, [userId], async (err, historyRows) => {
+            if (err || !historyRows || historyRows.length === 0) return;
+            
+            const historyText = historyRows.map(r => `${r.role.toUpperCase()}: ${r.content}`).join('\n');
+            const currentSummary = user.long_term_memory || 'No summary yet.';
+            
+            const prompt = `You are a background AI assistant for an endurance coach app. Your job is to update the athlete's long-term memory summary based on recent chat history.
+            
+CURRENT LONG-TERM MEMORY:
+${currentSummary}
+
+RECENT CHAT HISTORY:
+${historyText}
+
+INSTRUCTIONS:
+Update the long-term memory summary to incorporate any new important facts (injuries, new goals, shifts in mood, new baseline numbers). 
+Keep it extremely concise (under 150 words). Do not include pleasantries. Only output the new summary text.`;
+
+            try {
+                const newSummary = await generateWithFallback(prompt);
+                db.run(`UPDATE users SET long_term_memory = ? WHERE id = ?`, [newSummary.trim(), userId]);
+                console.log(`✅ Updated long-term memory for user ${userId}`);
+            } catch (e) {
+                console.error(`❌ Failed to update long-term memory for user ${userId}:`, e);
+            }
+        });
     });
 }
 
