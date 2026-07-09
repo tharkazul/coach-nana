@@ -1060,6 +1060,10 @@ async function loadMicroPlan() {
         const container = document.getElementById('micro-plan-container');
         if (!container) return;
 
+        // Make the container a grid
+        container.className = "grid grid-cols-1 md:grid-cols-7 gap-2 w-full";
+        container.innerHTML = '';
+
         let weekEnd = new Date(viewingWeekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
         const opts = { month: 'short', day: 'numeric' };
@@ -1079,348 +1083,320 @@ async function loadMicroPlan() {
             let workoutsForDay = currentPlan[dateStr] || [{ sport: 'Rest', description: 'Active recovery', target_tss: 0, details: '' }];
 
             let isToday = (dateStr === todayStr);
-            let rowClasses = isToday ? "bg-theme-accent-soft" : "hover:bg-theme-bg";
 
             // Open Day Container
-            html += `<div id="row-${dateStr}" class="flex flex-col border-b border-theme-border group ${rowClasses} transition py-1">`;
+            html += `<div id="row-${dateStr}" class="flex flex-col bg-theme-card border ${isToday ? 'border-theme-accent ring-1 ring-theme-accent/50' : 'border-theme-border'} rounded-lg overflow-hidden h-full min-h-[150px]">`;
+            
+            // Header for the day
+            html += `<div class="bg-theme-bg/50 px-3 py-2 border-b border-theme-border flex justify-between items-center">`;
+            html += `<div class="flex flex-col"><span class="text-[10px] uppercase font-bold text-theme-muted tracking-wider">${dayName}</span><span class="text-xs font-medium text-theme-text">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>`;
+            
+            // Weather
+            if (weatherMap[dateStr]) {
+                const w = weatherMap[dateStr];
+                html += `<div class="text-right flex flex-col items-end leading-none"><span class="text-sm" title="${w.temp}°C">${w.emoji}</span><span class="text-[9px] font-mono text-theme-muted mt-1">${w.temp}°C</span></div>`;
+            }
+            html += `</div>`; // End Header
 
-            // 3. Nested Loop: Draw each sport for this day
+            // Body for workouts
+            html += `<div class="p-2 flex flex-col gap-2 flex-grow">`;
+            
             workoutsForDay.forEach((p, wIdx) => {
-                let humanData = estimateWorkoutDetails(p.sport, p.description, p.target_tss);
                 let actualTss = actualTssMap[`${dateStr}_${p.sport}`] || 0;
-                let actColor = actualTss > 0 ? (actualTss >= (p.target_tss * 0.9) ? 'text-theme-accent font-bold' : 'text-amber-500 font-bold') : 'text-theme-muted';
+                
+                // Color coding
+                let sportColor = "bg-gray-500/10 border-gray-500/20 text-gray-500";
+                if (p.sport === 'Run') sportColor = "bg-red-500/10 border-red-500/20 text-red-500";
+                else if (p.sport === 'Bike') sportColor = "bg-green-500/10 border-green-500/20 text-green-500";
+                else if (p.sport === 'Swim') sportColor = "bg-blue-500/10 border-blue-500/20 text-blue-500";
+                else if (p.sport === 'Strength') sportColor = "bg-purple-500/10 border-purple-500/20 text-purple-500";
 
-                // Only show weather on the first row of the day
-                let weatherHtml = `<div class="w-12 md:w-16 shrink-0"></div>`;
-                let weatherMobileHtml = '';
-                if (wIdx === 0 && weatherMap[dateStr]) {
-                    const w = weatherMap[dateStr];
-                    const precipAlert = w.precip > 0 ? `<span class="text-blue-400">${w.precip}mm</span>` : `<span class="text-theme-muted opacity-50">0mm</span>`;
-                    weatherHtml = `<div class="w-12 md:w-16 flex flex-col items-center justify-center shrink-0 border-l border-theme-border pl-2"><span class="text-lg leading-none">${w.emoji}</span><span class="text-[9px] md:text-[10px] font-mono text-theme-muted mt-1">${w.temp}°C</span><span class="text-[8px] md:text-[9px] font-mono">${precipAlert}</span></div>`;
-                    weatherMobileHtml = `<span class="text-[10px] mr-2 font-mono flex items-center gap-1 bg-theme-bg px-1.5 py-0.5 rounded border border-theme-border">${w.emoji} ${w.temp}°C</span>`;
-                }
-
-                let detailsHtml = '';
-                if (p.steps_json && p.steps_json !== '[]' && p.steps_json !== 'null') {
-                    try {
-                        let steps = JSON.parse(p.steps_json);
-                        let stepsList = steps.map(step => {
-                            // Handle Repeat Blocks visually
-                            if (step.type === 'repeat') {
-                                let subStepsList = (step.steps || []).map(s => {
-                                    let dur;
-                                    if (s.condition_type === 'time') dur = `${s.condition_value} min`;
-                                    else if (s.condition_type === 'distance') dur = `${s.condition_value}m`;
-                                    else if (s.condition_type === 'reps') dur = `${s.condition_value} reps`;
-                                    else dur = s.condition_value;
-
-                                    let tgt = s.target_value ? s.target_value : (s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone', '')));
-                                    let extra = s.weight ? ` @ ${s.weight}kg` : ` @ <span class="font-bold">${tgt}</span>`;
-                                    let stepName = s.exerciseName || s.type;
-
-                                    return `<div class="flex justify-between items-center py-1 pl-3 pr-2 border-l-2 border-theme-border ml-2"><span class="capitalize font-medium text-theme-text text-[10px] truncate pr-2">${stepName}</span><span class="text-theme-muted text-[10px] text-right shrink-0">${dur}${extra}</span></div>`;
-                                }).join('');
-
-                                return `<div class="py-1.5 border-b border-theme-border last:border-0">
-                                        <div class="font-bold text-theme-accent mb-1 flex items-center gap-1">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                            Repeat ${step.iterations}x
-                                        </div>
-                                        ${subStepsList}
-                                    </div>`;
-                            } else {
-                                // Standard Steps
-                                let dur;
-                                if (step.condition_type === 'time') dur = `${step.condition_value} min`;
-                                else if (step.condition_type === 'distance') dur = `${step.condition_value}m`;
-                                else if (step.condition_type === 'reps') dur = `${step.condition_value} reps`;
-                                else dur = step.condition_value;
-
-                                let tgt = step.target_value ? step.target_value : (step.zone ? `Zone ${step.zone}` : (step.target_type === 'no.target' ? 'Open' : step.target_type.replace('.zone', '')));
-                                let extra = step.weight ? ` @ ${step.weight}kg` : ` @ <span class="font-bold">${tgt}</span>`;
-                                let stepName = step.exerciseName || step.type;
-
-                                return `<div class="flex justify-between items-center border-b border-theme-border last:border-0 py-1.5 pr-2"><span class="capitalize font-bold text-theme-text truncate pr-2">${stepName}</span><span class="text-theme-muted text-right shrink-0">${dur}${extra}</span></div>`;
-                            }
-                        }).join('');
-
-                        detailsHtml = `<div class="w-full pl-2 pr-2 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 pr-2 py-2 bg-theme-card shadow-sm rounded-r-sm border border-theme-border flex flex-col">${p.details && p.details.trim() !== '' ? `<div class="mb-2 pb-2 border-b border-theme-border italic">${p.details.replace(/\n/g, '<br>')}</div>` : ''}<div class="space-y-0.5">${stepsList}</div></div></div>`;
-                    } catch (e) { }
-                } else if (p.details && p.details.trim() !== '') {
-                    detailsHtml = `<div class="w-full pl-2 pr-2 md:pl-40 md:pr-6 pb-3 pt-0 text-[10px] md:text-[11px] text-theme-muted font-mono leading-relaxed group-hover:bg-theme-bg transition"><div class="border-l-2 border-theme-accent pl-3 pr-2 py-1.5 bg-theme-card shadow-sm rounded-r-sm border border-theme-border">${p.details.replace(/\n/g, '<br>')}</div></div>`;
-                }
-
-                // Only show the Date text on the first row of the day
-                let dateDisplay = wIdx === 0
-                    ? `<span class="text-xs md:text-sm font-medium ${isToday ? 'text-theme-accent font-bold' : 'text-theme-text'}">${dateStr.slice(5)}</span><span class="text-[9px] md:text-[10px] uppercase font-bold ${isToday ? 'text-theme-accent' : 'text-theme-muted'} tracking-wider">${dayName}</span>`
-                    : ``;
-
-                // NEW: Checkbox HTML (Hidden for Rest days)
-                let isPastDate = (dateStr < todayStr);
-                let cbHtml = (p.sport !== 'Rest' && !isPastDate)
-                    ? `<input type="checkbox" class="garmin-sync-cb cursor-pointer w-4 h-4 accent-theme-accent" data-date="${dateStr}" data-sport="${p.sport}" onchange="toggleGarminBtn()">`
-                    : (p.sport !== 'Rest' ? `<span class="w-4 h-4 block opacity-20 cursor-not-allowed"></span>` : ``);
+                const isStructured = p.steps_json && p.steps_json !== '[]' && p.steps_json !== 'null';
+                // Escape JSON to prevent breaking HTML attributes
+                const pJson = JSON.stringify(p).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
 
                 html += `
-                            <div class="flex flex-col md:flex-row md:items-center px-4 md:px-6 py-3 md:py-2 w-full gap-2 md:gap-0 border-b border-theme-border last:border-b-0">
-                                
-                                <!-- Mobile row top: Checkbox + Date + Sport + Mobile Weather + Edit button -->
-                                <div class="flex items-center justify-between w-full md:w-auto shrink-0">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-8 shrink-0 flex items-center justify-center">${cbHtml}</div>
-                                        <div class="w-20 md:w-32 flex items-baseline md:items-center space-x-2 shrink-0">${dateDisplay}</div>
-                                        <span class="text-[10px] md:text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${p.sport === 'Rest' ? 'bg-theme-border text-theme-muted' : 'bg-theme-accent-soft text-theme-accent'}">${p.sport}</span>
-                                    </div>
-                                    <div class="flex items-center md:hidden">
-                                        ${weatherMobileHtml}
-                                        <button onclick="editDay('${dateStr}', '${dayName}')" class="text-[10px] text-theme-accent font-bold px-2 py-0.5 bg-theme-bg rounded border border-theme-border">Edit</button>
-                                    </div>
-                                </div>
-
-                                <!-- Description & Estimate/Target info -->
-                                <div class="flex-1 min-w-0 md:pl-2">
-                                    <div class="text-xs md:text-sm font-medium text-theme-text truncate">${p.description}</div>
-                                    <div class="text-[10px] md:text-xs text-theme-muted mt-0.5 md:hidden">${humanData}</div>
-                                </div>
-
-                                <!-- Right side info (Desktop layout & Mobile details) -->
-                                <div class="flex items-center justify-between md:justify-end w-full md:w-auto shrink-0 mt-1 md:mt-0 gap-3">
-                                    <!-- Mobile view TSS info -->
-                                    <div class="flex items-center gap-2 font-mono text-[9px] md:hidden bg-theme-bg/60 px-2 py-1 rounded border border-theme-border/50">
-                                        <span class="text-theme-muted">Tgt: ${p.target_tss}</span>
-                                        <span class="text-theme-muted">/</span>
-                                        <span class="${actColor}">Act: ${actualTss}</span>
-                                    </div>
-
-                                    <!-- Desktop Estimate/Details -->
-                                    <span class="hidden md:inline w-28 md:w-36 text-xs md:text-sm text-right pr-2 md:pr-4 shrink-0">${humanData}</span>
-
-                                    <!-- Desktop TSS stats -->
-                                    <div class="hidden md:flex flex-col items-end w-16 md:w-20 pr-2 md:pr-4 shrink-0 font-mono text-[10px] md:text-xs">
-                                        <span class="text-theme-muted">Tgt: ${p.target_tss}</span>
-                                        <span class="${actColor}">Act: ${actualTss}</span>
-                                    </div>
-
-                                    <!-- Desktop Weather & Edit button -->
-                                    <div class="hidden md:flex items-center">
-                                        ${weatherHtml}
-                                        <button onclick="editDay('${dateStr}', '${dayName}')" class="text-xs text-theme-muted hover:text-theme-accent font-medium md:opacity-0 group-hover:opacity-100 transition shrink-0 p-2 md:p-0 ml-2">Edit</button>
-                                    </div>
-                                </div>
-
-                            </div>
-                            ${detailsHtml}
-                        `;
+                <div class="relative group p-2 rounded-md border ${sportColor} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider">${p.sport}</span>
+                        <span class="text-[9px] font-mono opacity-80">${actualTss > 0 ? actualTss + '/' : ''}${p.target_tss || 0} TSS</span>
+                    </div>
+                    <div class="text-xs font-medium text-theme-text line-clamp-2 leading-tight">${p.description || 'Rest Day'}</div>
+                    <div class="mt-2 text-[9px] opacity-70 flex justify-between items-end">
+                        <span class="truncate pr-2">${isStructured ? 'Structured' : 'Basic'}</span>
+                        ${p.sport !== 'Rest' && dateStr >= todayStr ? `
+                        <button onclick="event.stopPropagation(); syncSingleToGarmin(${p.id || null}, '${dateStr}', '${p.sport}')" class="p-1 rounded hover:bg-black/10 transition" title="Send to Garmin">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        </button>` : ''}
+                    </div>
+                </div>`;
             });
 
-            // Close Day Container
-            html += `</div>`;
+            // Add workout button
+            html += `
+                <button onclick="openEditWorkoutModal(null, '${dateStr}')" class="mt-auto py-1.5 border border-dashed border-theme-border rounded-md text-theme-muted text-[10px] font-medium hover:text-theme-accent hover:border-theme-accent transition flex items-center justify-center gap-1 w-full">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add
+                </button>
+            `;
+
+            html += `</div></div>`; // End body and day container
         }
         container.innerHTML = html;
     } catch (e) { console.error("Micro Plan Load Error:", e); }
 }
 
-let editingDayWorkouts = [];
-let editingDateStr = '';
-let editingDayName = '';
+// --- NEW EDIT WORKOUT MODAL ---
 
-function editDay(dateStr, dayName) {
-    editingDateStr = dateStr;
-    editingDayName = dayName;
-    let workouts = currentPlan[dateStr] || [{ sport: 'Rest', description: '', target_tss: 0, details: '' }];
-    editingDayWorkouts = JSON.parse(JSON.stringify(workouts)); // Deep copy
-    editingDayWorkouts.forEach(w => {
-        try { 
-            w._steps = (w.steps_json && w.steps_json !== 'null') ? JSON.parse(w.steps_json) : []; 
-            if (!Array.isArray(w._steps)) w._steps = [];
+let wbCurrentWorkoutId = null;
+let wbCurrentDateStr = '';
+let wbSteps = [];
+
+function openEditWorkoutModal(workoutData, dateStr) {
+    wbCurrentDateStr = dateStr;
+    const isNew = !workoutData;
+    
+    if (isNew) {
+        wbCurrentWorkoutId = null;
+        document.getElementById('edit-workout-date').value = dateStr;
+        document.getElementById('edit-workout-sport').value = 'Run';
+        document.getElementById('edit-workout-desc').value = '';
+        document.getElementById('edit-workout-tss').value = 50;
+        wbSteps = [];
+        document.getElementById('btn-edit-workout-delete').style.display = 'none';
+        document.getElementById('btn-edit-workout-garmin').style.display = 'none';
+    } else {
+        const p = typeof workoutData === 'string' ? JSON.parse(workoutData) : workoutData;
+        wbCurrentWorkoutId = p.id;
+        document.getElementById('edit-workout-date').value = p.date || dateStr;
+        document.getElementById('edit-workout-sport').value = p.sport;
+        document.getElementById('edit-workout-desc').value = p.description || '';
+        document.getElementById('edit-workout-tss').value = p.target_tss || 0;
+        
+        try {
+            wbSteps = (p.steps_json && p.steps_json !== 'null') ? JSON.parse(p.steps_json) : [];
+        } catch(e) {
+            wbSteps = [];
         }
-        catch (e) { w._steps = []; }
-    });
-    renderEditDay(dateStr, dayName);
+        document.getElementById('btn-edit-workout-delete').style.display = 'block';
+        document.getElementById('btn-edit-workout-garmin').style.display = 'flex';
+    }
+    
+    renderWbSteps();
+    document.getElementById('edit-workout-modal').classList.remove('hidden');
 }
 
-function updateStep(wIdx, stepIdx, subStepIdx, field, el) {
-    let w = editingDayWorkouts[wIdx];
-    let step = subStepIdx === null ? w._steps[stepIdx] : w._steps[stepIdx].steps[subStepIdx];
-    let val = el.value;
-    if (field === 'condition_value' || field === 'zone' || field === 'iterations' || field === 'weight') val = Number(val);
+function closeEditWorkoutModal() {
+    document.getElementById('edit-workout-modal').classList.add('hidden');
+}
+
+// Workout Builder Logic
+function wbAddStep(type) {
+    const step = { type: type, condition_type: 'time', condition_value: 5, target_type: 'no.target' };
+    wbSteps.push(step);
+    renderWbSteps();
+}
+
+function wbAddRepeat() {
+    const step = { type: 'repeat', iterations: 2, steps: [
+        { type: 'interval', condition_type: 'time', condition_value: 5, target_type: 'no.target' },
+        { type: 'recovery', condition_type: 'time', condition_value: 2, target_type: 'no.target' }
+    ] };
+    wbSteps.push(step);
+    renderWbSteps();
+}
+
+function wbRemoveStep(idx, subIdx = null) {
+    if (subIdx === null) {
+        wbSteps.splice(idx, 1);
+    } else {
+        wbSteps[idx].steps.splice(subIdx, 1);
+    }
+    renderWbSteps();
+}
+
+function wbMoveStep(idx, dir, subIdx = null) {
+    const arr = subIdx === null ? wbSteps : wbSteps[idx].steps;
+    const targetIdx = subIdx === null ? idx : subIdx;
+    if (targetIdx + dir < 0 || targetIdx + dir >= arr.length) return;
+    
+    const temp = arr[targetIdx];
+    arr[targetIdx] = arr[targetIdx + dir];
+    arr[targetIdx + dir] = temp;
+    renderWbSteps();
+}
+
+function wbUpdateStep(idx, subIdx, field, val) {
+    const step = subIdx === null ? wbSteps[idx] : wbSteps[idx].steps[subIdx];
+    if (field === 'condition_value' || field === 'iterations' || field === 'zone') val = Number(val);
     step[field] = val;
+    // Special rule for target_type changing to zone
+    if (field === 'target_type' && val.endsWith('.zone') && !step.zone) {
+        step.zone = 2;
+        renderWbSteps();
+    }
+}
+
+function renderWbSteps() {
+    const container = document.getElementById('wb-steps-container');
+    if (!container) return;
     
-    // Structure management
-    if (field === 'type' && val === 'repeat' && !step.steps) step.steps = [];
-    if (field === 'type' && val !== 'repeat') delete step.steps;
+    if (wbSteps.length === 0) {
+        container.innerHTML = `<div class="text-xs text-theme-muted italic py-4 text-center border border-dashed border-theme-border rounded-lg">No structured steps. Click above to add blocks.</div>`;
+        return;
+    }
     
-    // Only re-render if it's a structural change like type changing
-    if (field === 'type') {
-       renderEditDay(editingDateStr, editingDayName);
-    }
-}
-
-function addStep(wIdx, parentStepIdx) {
-    let w = editingDayWorkouts[wIdx];
-    let newStep = { type: 'interval', condition_type: 'time', condition_value: 5, target_type: 'no.target' };
-    if (parentStepIdx === null) {
-        w._steps.push(newStep);
-    } else {
-        w._steps[parentStepIdx].steps = w._steps[parentStepIdx].steps || [];
-        w._steps[parentStepIdx].steps.push(newStep);
-    }
-    renderEditDay(editingDateStr, editingDayName);
-}
-
-function removeStep(wIdx, stepIdx, subStepIdx) {
-    let w = editingDayWorkouts[wIdx];
-    if (subStepIdx === null) {
-        w._steps.splice(stepIdx, 1);
-    } else {
-        w._steps[stepIdx].steps.splice(subStepIdx, 1);
-    }
-    renderEditDay(editingDateStr, editingDayName);
-}
-
-function renderStepsUI(steps, wIdx, parentStepIdx = null) {
-    if (!steps || !Array.isArray(steps)) return '';
-    return steps.map((s, idx) => {
-        let isRepeat = s.type === 'repeat';
-        let html = `<div class="flex flex-col mt-1 p-2 bg-theme-bg border border-theme-border rounded-sm">`;
-        
-        // Header row
-        html += `<div class="flex flex-wrap items-center gap-2 w-full">`;
-        // Type dropdown
-        html += `<select onchange="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'type', this)" class="w-20 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent shrink-0">
-            <option value="warmup" ${s.type === 'warmup'?'selected':''}>Warmup</option>
-            <option value="interval" ${s.type === 'interval'?'selected':''}>Interval</option>
-            <option value="recovery" ${s.type === 'recovery'?'selected':''}>Recovery</option>
-            <option value="cooldown" ${s.type === 'cooldown'?'selected':''}>Cooldown</option>
-            <option value="repeat" ${s.type === 'repeat'?'selected':''}>Repeat</option>
-        </select>`;
-
-        if (isRepeat) {
-            html += `<input type="number" placeholder="x" oninput="updateStep(${wIdx}, ${idx}, null, 'iterations', this)" value="${s.iterations || 1}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
-            html += `<span class="text-[10px] text-theme-muted">times</span>`;
-        } else {
-            // Condition value and type
-            html += `<input type="number" oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'condition_value', this)" value="${s.condition_value || 0}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
-            html += `<select onchange="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'condition_type', this)" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent shrink-0">
-                <option value="time" ${s.condition_type === 'time'?'selected':''}>min</option>
-                <option value="distance" ${s.condition_type === 'distance'?'selected':''}>m</option>
-                <option value="reps" ${s.condition_type === 'reps'?'selected':''}>reps</option>
-            </select>`;
-
-            // Target Type
-            html += `<select onchange="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'target_type', this); renderEditDay(editingDateStr, editingDayName);" class="w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent shrink-0">
-                <option value="no.target" ${s.target_type === 'no.target'?'selected':''}>Open</option>
-                <option value="heart.rate.zone" ${s.target_type === 'heart.rate.zone'?'selected':''}>HR Zone</option>
-                <option value="power.zone" ${s.target_type === 'power.zone'?'selected':''}>Power Zone</option>
-                <option value="pace.zone" ${s.target_type === 'pace.zone'?'selected':''}>Pace Zone</option>
-                <option value="speed.zone" ${s.target_type === 'speed.zone'?'selected':''}>Speed Zone</option>
-            </select>`;
-            
-            // Target Value / Zone
-            let isZone = s.target_type && s.target_type.endsWith('.zone');
-            if (isZone) {
-                html += `<input type="number" placeholder="Zone 1-5" oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'zone', this)" value="${s.zone || ''}" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
-            } else if (s.target_type !== 'no.target') {
-                html += `<input type="text" placeholder="Target..." oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'target_value', this)" value="${s.target_value || ''}" class="flex-1 min-w-[60px] bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
-            }
-
-            // Strength extensions
-            html += `<input type="text" placeholder="Exercise name..." oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'exerciseName', this)" value="${s.exerciseName || ''}" class="flex-1 min-w-[80px] bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
-            html += `<input type="number" placeholder="kg" oninput="updateStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'}, 'weight', this)" value="${s.weight || ''}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
-        }
-        
-        // Remove button
-        html += `<button onclick="removeStep(${wIdx}, ${parentStepIdx !== null ? parentStepIdx : idx}, ${parentStepIdx !== null ? idx : 'null'})" class="text-red-500 hover:text-red-400 text-[10px] px-2 shrink-0 transition" title="Remove Step">X</button>`;
-        html += `</div>`; // End Header Row
-        
-        if (isRepeat) {
-            html += `<div class="ml-4 pl-2 border-l border-theme-border mt-1">`;
-            html += renderStepsUI(s.steps || [], wIdx, idx);
-            html += `<button onclick="addStep(${wIdx}, ${idx})" class="mt-1 bg-theme-card border border-theme-border text-theme-text text-[9px] px-1.5 py-1 rounded-sm hover:bg-theme-border transition">+ Add Sub-step</button>`;
-            html += `</div>`;
-        }
-
-        html += `</div>`;
-        return html;
-    }).join('');
-}
-
-function renderEditDay(dateStr, dayName) {
-    let rowsHtml = editingDayWorkouts.map((w, idx) => {
-        let stepsHtml = renderStepsUI(w._steps, idx, null);
-
-        return `
-        <div class="flex flex-col mt-2 border border-theme-border bg-theme-bg p-2 md:p-3 rounded-sm shadow-sm" id="edit-row-${dateStr}-${idx}">
-            <div class="flex items-center w-full">
-                <select id="s-${dateStr}-${idx}" class="w-20 md:w-24 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 md:mr-4 focus:border-theme-accent shrink-0" onchange="editingDayWorkouts[${idx}].sport = this.value; renderEditDay('${dateStr}', '${dayName}')">
-                    <option ${w.sport === 'Swim' ? 'selected' : ''}>Swim</option>
-                    <option ${w.sport === 'Bike' ? 'selected' : ''}>Bike</option>
-                    <option ${w.sport === 'Run' ? 'selected' : ''}>Run</option>
-                    <option ${w.sport === 'Strength' ? 'selected' : ''}>Strength</option>
-                    <option ${w.sport === 'Brick' ? 'selected' : ''}>Brick</option>
-                    <option ${w.sport === 'Rest' ? 'selected' : ''}>Rest</option>
-                </select>
-                <input id="d-${dateStr}-${idx}" value="${w.description || ''}" placeholder="Title..." class="flex-1 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm mr-2 focus:border-theme-accent min-w-[100px]" oninput="editingDayWorkouts[${idx}].description = this.value">
-                <input id="t-${dateStr}-${idx}" type="number" value="${w.target_tss || 0}" class="w-14 md:w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-xs md:text-sm text-right mr-2 focus:border-theme-accent shrink-0" oninput="editingDayWorkouts[${idx}].target_tss = parseFloat(this.value)">
-                <button onclick="removeWorkoutRow('${dateStr}', '${dayName}', ${idx})" class="text-red-500 hover:text-red-400 text-xs px-2 shrink-0 border border-transparent hover:border-red-500 rounded transition" title="Remove">X</button>
-            </div>
-            <div class="w-full mt-2 space-y-2">
-                <textarea id="det-${dateStr}-${idx}" class="w-full bg-theme-card text-theme-text border border-theme-border rounded-sm p-2 text-xs font-mono focus:border-theme-accent min-h-[50px]" placeholder="Workout drills/structure..." oninput="editingDayWorkouts[${idx}].details = this.value">${w.details || ''}</textarea>
-            </div>
-            <div class="w-full mt-2 pt-2 border-t border-theme-border">
-                <div class="text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-1">Steps</div>
-                ${stepsHtml}
-                <button onclick="addStep(${idx}, null)" class="mt-2 bg-theme-card border border-theme-border text-theme-text text-[10px] px-2 py-1 rounded-sm hover:bg-theme-border transition">+ Add Step</button>
-            </div>
-        </div>
-    `;
-    }).join('');
-
-    document.getElementById(`row-${dateStr}`).innerHTML = `
-        <div class="flex flex-col px-4 md:px-6 py-3 w-full bg-theme-card border-b border-theme-border shadow-inner">
-            <div class="flex justify-between items-center w-full mb-1">
-                <div class="w-28 md:w-40 flex items-center space-x-2 md:space-x-3 shrink-0"><span class="text-xs md:text-sm font-medium text-theme-accent">${dateStr.slice(5)}</span><span class="text-[9px] md:text-[10px] uppercase font-bold text-theme-accent tracking-wider">${dayName}</span></div>
-                <div class="flex space-x-1 md:space-x-2 shrink-0">
-                    <button onclick="addWorkoutRow('${dateStr}', '${dayName}')" class="bg-theme-bg border border-theme-border text-theme-text text-[10px] md:text-xs px-2 py-1.5 rounded-sm hover:bg-theme-border transition">+ Add Workout</button>
-                    <button onclick="saveDay('${dateStr}')" class="bg-theme-accent text-white text-[10px] md:text-xs px-2 py-1.5 rounded-sm hover:opacity-90 transition">Save Day</button>
-                    <button onclick="loadMicroPlan()" class="bg-theme-border text-theme-text text-[10px] md:text-xs px-2 py-1.5 rounded-sm hover:bg-theme-bg transition">Cancel</button>
-                </div>
-            </div>
-            <div class="w-full pl-0 md:pl-28 md:pr-16">
-                ${rowsHtml}
-            </div>
-        </div>`;
-}
-
-function addWorkoutRow(dateStr, dayName) {
-    editingDayWorkouts.push({ sport: 'Rest', description: '', target_tss: 0, details: '', _steps: [] });
-    renderEditDay(dateStr, dayName);
-}
-
-function removeWorkoutRow(dateStr, dayName, idx) {
-    editingDayWorkouts.splice(idx, 1);
-    renderEditDay(dateStr, dayName);
-}
-
-async function saveDay(dateStr) {
-    // values are already bound to editingDayWorkouts via oninput/onchange
-    const workoutsToSave = editingDayWorkouts.map((w) => ({
-        sport: w.sport,
-        description: w.description,
-        target_tss: w.target_tss,
-        details: w.details,
-        steps_json: JSON.stringify(w._steps || [])
-    }));
-
-    await fetch('/api/micro-plan/day', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-            date: dateStr,
-            workouts: workoutsToSave
-        })
+    let html = '';
+    wbSteps.forEach((s, idx) => {
+        html += renderWbBlock(s, idx, null);
     });
-    loadMicroPlan();
+    container.innerHTML = html;
+}
+
+function renderWbBlock(s, idx, parentIdx) {
+    const isSub = parentIdx !== null;
+    const isRepeat = s.type === 'repeat';
+    
+    // Color coding for blocks
+    let bgClass = "bg-theme-bg border-theme-border";
+    if (s.type === 'warmup') bgClass = "bg-green-500/10 border-green-500/30";
+    if (s.type === 'interval') bgClass = "bg-blue-500/10 border-blue-500/30";
+    if (s.type === 'recovery') bgClass = "bg-amber-500/10 border-amber-500/30";
+    if (s.type === 'cooldown') bgClass = "bg-purple-500/10 border-purple-500/30";
+    if (s.type === 'repeat') bgClass = "bg-theme-accent/5 border-theme-accent/30";
+    
+    let html = `<div class="flex flex-col border rounded-md ${bgClass} p-2 relative ${isSub ? 'mt-2' : ''}">`;
+    
+    // Top Row
+    html += `<div class="flex flex-wrap items-center gap-2">`;
+    
+    // Drag/Reorder handles
+    html += `<div class="flex flex-col gap-0.5 opacity-50 hover:opacity-100">
+        <button onclick="wbMoveStep(${isSub ? parentIdx : idx}, -1, ${isSub ? idx : 'null'})" class="hover:text-theme-accent"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg></button>
+        <button onclick="wbMoveStep(${isSub ? parentIdx : idx}, 1, ${isSub ? idx : 'null'})" class="hover:text-theme-accent"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+    </div>`;
+    
+    html += `<div class="text-[10px] uppercase font-bold text-theme-text w-16 truncate">${s.type}</div>`;
+    
+    if (isRepeat) {
+        html += `<input type="number" onchange="wbUpdateStep(${idx}, null, 'iterations', this.value)" value="${s.iterations || 1}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+        html += `<span class="text-[10px] text-theme-muted">times</span>`;
+    } else {
+        html += `<input type="number" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'condition_value', this.value)" value="${s.condition_value || 0}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+        html += `<select onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'condition_type', this.value)" class="bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">
+            <option value="time" ${s.condition_type === 'time'?'selected':''}>min</option>
+            <option value="distance" ${s.condition_type === 'distance'?'selected':''}>m</option>
+            <option value="reps" ${s.condition_type === 'reps'?'selected':''}>reps</option>
+        </select>`;
+        
+        html += `<span class="text-[10px] text-theme-muted px-1">@</span>`;
+        
+        html += `<select onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_type', this.value); renderWbSteps();" class="bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">
+            <option value="no.target" ${s.target_type === 'no.target'?'selected':''}>Open</option>
+            <option value="heart.rate.zone" ${s.target_type === 'heart.rate.zone'?'selected':''}>HR Zone</option>
+            <option value="power.zone" ${s.target_type === 'power.zone'?'selected':''}>Power Zone</option>
+            <option value="pace.zone" ${s.target_type === 'pace.zone'?'selected':''}>Pace Zone</option>
+            <option value="speed.zone" ${s.target_type === 'speed.zone'?'selected':''}>Speed Zone</option>
+        </select>`;
+        
+        if (s.target_type && s.target_type.endsWith('.zone')) {
+            html += `<input type="number" placeholder="Zone (1-5)" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'zone', this.value)" value="${s.zone || ''}" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+        } else if (s.target_type !== 'no.target') {
+            html += `<input type="text" placeholder="Target..." onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_value', this.value)" value="${s.target_value || ''}" class="w-20 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
+        }
+    }
+    
+    html += `<div class="ml-auto flex items-center">
+        <button onclick="wbRemoveStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'})" class="text-red-500 hover:text-red-400 p-1 rounded hover:bg-red-500/10 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+    </div>`;
+    
+    html += `</div>`; // End Top Row
+    
+    // Sub-steps for Repeat
+    if (isRepeat) {
+        html += `<div class="pl-6 ml-2 mt-2 border-l-2 border-theme-accent/30 space-y-2">`;
+        (s.steps || []).forEach((subStep, subIdx) => {
+            html += renderWbBlock(subStep, subIdx, idx);
+        });
+        html += `<div class="flex gap-2">
+            <button onclick="wbSteps[${idx}].steps.push({type:'interval', condition_type:'time', condition_value:1, target_type:'no.target'}); renderWbSteps();" class="text-[9px] px-2 py-1 bg-theme-bg border border-theme-border rounded hover:bg-theme-border transition">+ Add Substep</button>
+        </div>`;
+        html += `</div>`;
+    }
+    
+    html += `</div>`;
+    return html;
+}
+
+if (document.getElementById('btn-edit-workout-save')) {
+    document.getElementById('btn-edit-workout-save').addEventListener('click', async () => {
+        const date = document.getElementById('edit-workout-date').value;
+        const sport = document.getElementById('edit-workout-sport').value;
+        const desc = document.getElementById('edit-workout-desc').value;
+        const tss = parseFloat(document.getElementById('edit-workout-tss').value) || 0;
+        const stepsJson = JSON.stringify(wbSteps);
+        
+        if (wbCurrentWorkoutId) {
+            // UPDATE
+            await fetch(`/api/micro-plan/${wbCurrentWorkoutId}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ date: date, sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson })
+            });
+        } else {
+            // CREATE
+            await fetch(`/api/micro-plan/day`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ date: date, workouts: [{ sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson }] })
+            });
+        }
+        closeEditWorkoutModal();
+        loadMicroPlan();
+    });
+}
+
+if (document.getElementById('btn-edit-workout-delete')) {
+    document.getElementById('btn-edit-workout-delete').addEventListener('click', async () => {
+        if (!wbCurrentWorkoutId || !confirm("Are you sure you want to delete this workout?")) return;
+        await fetch(`/api/micro-plan/${wbCurrentWorkoutId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        closeEditWorkoutModal();
+        loadMicroPlan();
+    });
+}
+
+if (document.getElementById('btn-edit-workout-garmin')) {
+    document.getElementById('btn-edit-workout-garmin').addEventListener('click', async () => {
+        const sport = document.getElementById('edit-workout-sport').value;
+        const date = document.getElementById('edit-workout-date').value;
+        if (wbCurrentWorkoutId) {
+            syncSingleToGarmin(wbCurrentWorkoutId, date, sport);
+        }
+    });
+}
+
+async function syncSingleToGarmin(id, dateStr, sport) {
+    if (sport === 'Rest') return;
+    showToast(`Syncing ${sport} to Garmin...`);
+    
+    try {
+        const res = await fetch('/api/sync-garmin', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ workouts: [{ date: dateStr, sport: sport }] })
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            showToast(`✅ Synced successfully!`, 'success');
+        } else {
+            showToast(`❌ Sync failed: ${result.error || result.message}`, 'error');
+        }
+    } catch (e) {
+        showToast(`❌ Connection error`, 'error');
+    }
 }
 
 async function generateTemplate() {

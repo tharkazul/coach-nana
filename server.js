@@ -1075,10 +1075,10 @@ app.post('/api/micro-plan/day', authenticateToken, (req, res) => {
     });
 });
 app.put('/api/micro-plan/:id', authenticateToken, (req, res) => {
-    const { sport, description, target_tss, details } = req.body;
+    const { date, sport, description, target_tss, details, steps_json } = req.body;
     db.run(
-        `UPDATE micro_plan SET sport = ?, description = ?, target_tss = ?, details = ? WHERE id = ? AND user_id = ?`,
-        [sport, description, target_tss, details, req.params.id, req.user.id],
+        `UPDATE micro_plan SET date = ?, sport = ?, description = ?, target_tss = ?, details = ?, steps_json = ? WHERE id = ? AND user_id = ?`,
+        [date, sport, description, target_tss, details, steps_json, req.params.id, req.user.id],
         (err) => {
             if (err) return res.status(500).json({ error: "Failed to update plan" });
             res.json({ success: true });
