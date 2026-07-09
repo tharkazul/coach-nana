@@ -812,7 +812,7 @@ CRITICAL RULES:
 2. Reference either a recent workout they crushed, an upcoming workout they have planned, or their current Macro Phase.
 3. Keep it brief, extremely human, and supportive. 
 4. DO NOT generate any JSON or workout plan updates. Just the greeting.
-5. GENERATIVE REWARDS: You have the ability to generate images by outputting Markdown: \`![description of image](https://image.pollinations.ai/prompt/{URL-encoded-description}?width=800&height=400&nologo=true)\`. IF the athlete recently crushed a massive workout (e.g., high TSS) or you just want to motivate them, you MUST include a highly stylized, cinematic, conceptual reward image (e.g., a glowing golden running shoe, a heroic finish line, a futuristic bicycle). Put the image markdown at the END of your greeting.`;
+5. GENERATIVE REWARDS: You have the ability to generate images by outputting Markdown: \`![description of image](https://image.pollinations.ai/prompt/{URL-encoded-description}?nologo=true)\`. IF the athlete recently crushed a massive workout (e.g., high TSS) or you just want to motivate them, you MUST include a highly stylized, cinematic, conceptual reward image (e.g., a glowing golden running shoe, a heroic finish line, a futuristic bicycle). Put the image markdown at the END of your greeting.`;
 
                 try {
                     let aiReply = await generateWithFallback("Generate the proactive greeting.", systemPrompt, []);
