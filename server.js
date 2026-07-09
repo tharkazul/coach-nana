@@ -240,12 +240,31 @@ db.serialize(() => {
     )`);
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
-    // Ensure steps_json exists for legacy DBs
+    
+    // Ensure steps_json exists for legacy DBs (if table has id but no steps_json)
     db.run(`ALTER TABLE micro_plan ADD COLUMN steps_json TEXT DEFAULT '[]'`, (err) => {
         if (err && !err.message.includes("duplicate column name")) {
             console.error("Error adding steps_json column:", err.message);
         }
     });
+
+    // Migration: check if micro_plan is missing the 'id' column. If so, rebuild it.
+    // This also implicitly drops the legacy UNIQUE(user_id, date, sport) constraint so users can have 2 runs in a day.
+    db.all(`PRAGMA table_info(micro_plan);`, (err, rows) => {
+        if (!err && rows && rows.length > 0) {
+            const hasId = rows.some(r => r.name === 'id');
+            if (!hasId) {
+                console.log("Migrating micro_plan table to include id column and drop unique constraints...");
+                db.serialize(() => {
+                    db.run(`CREATE TABLE IF NOT EXISTS micro_plan_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
+                    db.run(`INSERT INTO micro_plan_new (user_id, date, sport, description, target_tss, details, steps_json) SELECT user_id, date, sport, description, target_tss, details, steps_json FROM micro_plan`);
+                    db.run(`DROP TABLE micro_plan`);
+                    db.run(`ALTER TABLE micro_plan_new RENAME TO micro_plan`);
+                });
+            }
+        }
+    });
+
     db.run(`CREATE TABLE IF NOT EXISTS weight_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, weight_kg REAL, body_fat_percent REAL, bmi REAL, lean_mass_kg REAL, UNIQUE(user_id, date))`);
     db.run(`CREATE TABLE IF NOT EXISTS chat_history (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, role TEXT, content TEXT, mood TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     db.run(`CREATE TABLE IF NOT EXISTS athlete_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, metric TEXT, value TEXT, UNIQUE(user_id, metric))`);
