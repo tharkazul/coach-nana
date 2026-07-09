@@ -1520,7 +1520,14 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
                     imageBase64 = imageBytes.toString('base64');
                 }
                 
-                prompt += `Review their status. Keep it under 2 sentences, act as their friendly elite endurance coach, and give them a short piece of advice or encouragement based on their numbers (and the photo if attached).`;
+                db.all(`SELECT sport, description, target_tss FROM micro_plan WHERE user_id = ? AND date = ?`, [req.user.id, date], (err, planRows) => {
+                    if (planRows && planRows.length > 0) {
+                        prompt += `Their planned workouts for today are: ` + planRows.map(r => `${r.sport} (${r.description})`).join(', ') + `.\\n`;
+                    } else {
+                        prompt += `They have a Rest day planned for today.\\n`;
+                    }
+                    
+                    prompt += `Review their status. Keep it under 2 sentences, act as their friendly elite endurance coach, and give them a short piece of advice or encouragement based on their numbers (and the photo if attached).`;
                 
                 db.get("SELECT coach_tone FROM users WHERE id = ?", [req.user.id], async (err, row) => {
                     const tone = row ? row.coach_tone : 'Friendly';
@@ -1532,6 +1539,7 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
                     } catch (e) {
                         console.error("Proactive AI generation for physique failed:", e);
                     }
+                });
                 });
                 
             } catch (e) {
