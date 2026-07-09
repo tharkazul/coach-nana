@@ -23,10 +23,16 @@ if (!fs.existsSync(newChatDir)) fs.mkdirSync(newChatDir, { recursive: true });
 async function migratePhysiqueImages() {
     return new Promise((resolve, reject) => {
         db.all(`SELECT id, user_id, photo_url FROM physique_logs WHERE photo_url LIKE '/uploads/physique/%'`, (err, rows) => {
-            if (err) return reject(err);
+            if (err) {
+                if (err.message.includes('no such table')) {
+                    console.log("Table physique_logs does not exist yet. Skipping physique image migration.");
+                    return resolve();
+                }
+                return reject(err);
+            }
             
             let processed = 0;
-            if (rows.length === 0) return resolve();
+            if (!rows || rows.length === 0) return resolve();
 
             rows.forEach(row => {
                 const oldFilename = row.photo_url.split('/').pop();
@@ -58,10 +64,16 @@ async function migratePhysiqueImages() {
 async function migrateChatImages() {
     return new Promise((resolve, reject) => {
         db.all(`SELECT id, user_id, image_path FROM chat_history WHERE image_path LIKE '/uploads/chat_images/%'`, (err, rows) => {
-            if (err) return reject(err);
+            if (err) {
+                if (err.message.includes('no such table')) {
+                    console.log("Table chat_history does not exist yet. Skipping chat image migration.");
+                    return resolve();
+                }
+                return reject(err);
+            }
             
             let processed = 0;
-            if (rows.length === 0) return resolve();
+            if (!rows || rows.length === 0) return resolve();
 
             rows.forEach(row => {
                 const oldFilename = row.image_path.split('/').pop();
