@@ -2224,12 +2224,18 @@ async function sendMessage() {
         typeStep();
 
     } catch (error) {
-        document.getElementById(loadId).outerHTML = `
-                    <div class="flex justify-center my-4">
-                        <div class="bg-red-900 border border-red-700 text-xs px-3 py-1.5 rounded-full text-red-100 shadow-sm">
-                            Connection interrupted. Please try again.
-                        </div>
-                    </div>`;
+        console.error("Chat Error:", error);
+        const loadEl = document.getElementById(loadId);
+        if (loadEl) {
+            loadEl.outerHTML = `
+                <div class="flex justify-center my-4">
+                    <div class="bg-red-50 text-red-500 text-xs px-4 py-2 rounded-full border border-red-100 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Connection interrupted. Please try again.
+                    </div>
+                </div>
+            `;
+        }
     }
 }
 
@@ -2537,7 +2543,7 @@ function stopRecording() {
 
 if ('speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = () => {
-        availableVoices = window.speechSynthesis.getVoices();
+        availableVoices = Array.from(window.speechSynthesis.getVoices());
     };
 }
 
@@ -2553,6 +2559,11 @@ function speakResponse(text, mood, coachTone) {
     // Map voice based on coachTone
     let selectedVoice = null;
     const tone = (coachTone || '').toLowerCase();
+    
+    // Ensure availableVoices is populated (fallback if onvoiceschanged hasn't fired or was missed)
+    if (availableVoices.length === 0) {
+        availableVoices = Array.from(window.speechSynthesis.getVoices());
+    }
     
     if (tone.includes('goggins') || tone.includes('intense')) {
         selectedVoice = availableVoices.find(v => v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('uk english male'));
