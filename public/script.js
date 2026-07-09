@@ -1880,43 +1880,53 @@ async function loadChatHistory() {
         let lastCoachAvatar = getCoachAvatar('default');
 
         if (!history || history.length === 0) {
+            let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             chatWindow.innerHTML = `
                         <div class="flex items-end gap-2 md:gap-3">
                             <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                                 <img onclick="enlargeAvatar(this.src)" src="${lastCoachAvatar}" alt="Coach" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                             </div>
-                            <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
+                            <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative">
                                 <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
-                                <span class="whitespace-pre-wrap">Systems nominal. I have synchronized your latest profile settings. Ready to get to work?</span>
+                                <div class="whitespace-pre-wrap leading-relaxed">Systems nominal. I have synchronized your latest profile settings. Ready to get to work?</div>
+                                <div class="text-[9px] text-theme-muted text-right mt-1">${timeStr}</div>
                             </div>
                         </div>`;
             lastCoachMsg = "Systems nominal. I have synchronized your latest profile settings. Ready to get to work?";
         } else {
             let html = '';
             history.forEach(msg => {
+                let timeStr = '';
+                if (msg.timestamp) {
+                    let dateObj = new Date(msg.timestamp + 'Z');
+                    timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+
                 if (msg.role === 'user') {
-                    let imgHtml = msg.image_path ? `<img src="${msg.image_path}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-md mb-2 border border-white/20">` : '';
+                    let imgHtml = msg.image_path ? `<img src="${msg.image_path}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-xl mb-1 object-cover">` : '';
                     html += `
                                 <div class="flex justify-end">
-                                    <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
+                                    <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
                                         ${imgHtml}
-                                        <span class="whitespace-pre-wrap">${msg.content}</span>
+                                        <div class="whitespace-pre-wrap leading-relaxed">${msg.content}</div>
+                                        ${timeStr ? `<div class="text-[9px] text-white/70 text-right mt-1">${timeStr}</div>` : ''}
                                     </div>
                                 </div>`;
                 } else {
                     let avatarImg = getCoachAvatar(msg.mood || 'default');
                     lastCoachAvatar = avatarImg;
                     let formattedContent = msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                    formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
+                    formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-xl my-1 shadow-sm object-cover">');
                     lastCoachMsg = formattedContent;
                     html += `
                                 <div class="flex items-end gap-2 md:gap-3">
                                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                                         <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                                     </div>
-                                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
-                                        <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
-                                        <span class="whitespace-pre-wrap">${formattedContent}</span>
+                                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative">
+                                        ${msg.mood !== 'default' ? `<span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>` : ''}
+                                        <div class="whitespace-pre-wrap leading-relaxed">${formattedContent}</div>
+                                        ${timeStr ? `<div class="text-[9px] text-theme-muted text-right mt-1">${timeStr}</div>` : ''}
                                     </div>
                                 </div>`;
                 }
@@ -1953,7 +1963,7 @@ async function triggerProactiveCheckin() {
 
     const loadId = 'typing-' + Date.now();
     chatWindow.insertAdjacentHTML('beforeend', `
-        <div id="${loadId}" class="flex items-end gap-2 md:gap-3 text-theme-text/50">
+        <div id="${loadId}" class="flex items-end gap-2 md:gap-3 text-theme-text/50 animate-msg">
             <span class="text-xs italic">Spark is typing...</span>
         </div>
     `);
@@ -2198,16 +2208,19 @@ async function sendMessage() {
 
     const chatWindow = document.getElementById('chat-window');
 
+    let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     let userImgHtml = '';
     if (currentImageBase64) {
-        userImgHtml = `<img src="${currentImageBase64}" class="w-full rounded-md mb-2 border border-white/20">`;
+        userImgHtml = `<img src="${currentImageBase64}" class="w-full rounded-xl mb-1 object-cover animate-pop">`;
     }
 
     chatWindow.innerHTML += `
-                <div class="flex justify-end">
-                    <div class="bg-theme-accent text-white text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-br-sm max-w-[85%] md:max-w-[75%] shadow-sm">
+                <div class="flex justify-end animate-msg">
+                    <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
                         ${userImgHtml}
-                        <span class="whitespace-pre-wrap">${message}</span>
+                        <div class="whitespace-pre-wrap leading-relaxed">${message}</div>
+                        <div class="text-[9px] text-white/70 text-right mt-1">${timeStr}</div>
                     </div>
                 </div>`;
 
@@ -2222,11 +2235,11 @@ async function sendMessage() {
     let thinkingAvatar = getCoachAvatar('thinking');
 
     chatWindow.innerHTML += `
-                <div class="flex items-end gap-2 md:gap-3" id="${loadId}">
+                <div class="flex items-end gap-2 md:gap-3 animate-msg" id="${loadId}">
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                         <img src="${thinkingAvatar}" alt="Coach" class="w-full h-full object-cover opacity-70">
                     </div>
-                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm shadow-sm text-theme-text flex items-center gap-1.5 h-[44px]">
+                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none shadow-sm text-theme-text flex items-center gap-1.5 h-[44px]">
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce"></span>
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
@@ -2244,17 +2257,19 @@ async function sendMessage() {
 
         let finalAvatar = getCoachAvatar(data.mood || 'default');
         let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
+        formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-xl my-1 shadow-sm object-cover animate-pop">');
 
+        let replyTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const msgId = 'reply-content-' + Date.now();
         document.getElementById(loadId).outerHTML = `
-                    <div class="flex items-end gap-2 md:gap-3">
+                    <div class="flex items-end gap-2 md:gap-3 animate-msg">
                         <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
                             <img src="${finalAvatar}" alt="Coach" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
                         </div>
-                        <div class="bg-theme-card border border-theme-border text-xs md:text-sm p-3 md:p-4 rounded-2xl rounded-bl-sm max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text">
-                            <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
-                            <span id="${msgId}" class="whitespace-pre-wrap"></span>
+                        <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative">
+                            ${data.mood !== 'default' ? `<span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>` : ''}
+                            <div id="${msgId}" class="whitespace-pre-wrap leading-relaxed"></div>
+                            <div class="text-[9px] text-theme-muted text-right mt-1">${replyTimeStr}</div>
                         </div>
                     </div>`;
 
