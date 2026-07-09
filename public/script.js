@@ -1168,14 +1168,20 @@ function openEditWorkoutModal(workoutData, dateStr) {
         document.getElementById('edit-workout-date').value = p.date || dateStr;
         document.getElementById('edit-workout-sport').value = p.sport;
         document.getElementById('edit-workout-desc').value = p.description || '';
+        document.getElementById('edit-workout-tss').value = p.target_tss || 0;
         
         try {
             wbSteps = (p.steps_json && p.steps_json !== 'null') ? JSON.parse(p.steps_json) : [];
         } catch(e) {
             wbSteps = [];
         }
-        document.getElementById('btn-edit-workout-delete').style.display = 'block';
-        document.getElementById('btn-edit-workout-garmin').style.display = 'flex';
+        if (p.id) {
+            document.getElementById('btn-edit-workout-delete').style.display = 'block';
+            document.getElementById('btn-edit-workout-garmin').style.display = p.sport !== 'Rest' ? 'flex' : 'none';
+        } else {
+            document.getElementById('btn-edit-workout-delete').style.display = 'none';
+            document.getElementById('btn-edit-workout-garmin').style.display = 'none';
+        }
     }
     
     // Add event listener to sport to re-render steps (for strength)
