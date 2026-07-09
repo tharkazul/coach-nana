@@ -603,6 +603,21 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         "Squat Weight": "80kg"
                       }
                     }
+                    \`\`\`
+
+                    ACTIVITY LOGGING (CRITICAL):
+                    If the athlete mentions they just completed a workout/activity that is NOT on Strava (e.g., "I just hit the gym", "I went for a 30 min run"), you MUST output an additional JSON block at the very end of your response to log it. Estimate the TSS (Training Stress Score) based on duration and intensity (e.g. 1 hour all out = 100 TSS, 1 hour easy = 50 TSS, 30 min weights = 25 TSS). Format it EXACTLY like this inside triple backticks:
+                    \`\`\`json
+                    {
+                      "type": "log_activity",
+                      "data": {
+                        "name": "Gym Workout",
+                        "sport_type": "Strength",
+                        "distance_km": 0,
+                        "moving_time_min": 30,
+                        "tss": 25
+                      }
+                    }
                     \`\`\``;
 
                         let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data);
@@ -641,6 +656,20 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                         stmt.run(req.user.id, key, String(val));
                                     }
                                     stmt.finalize();
+                                } else if (parsedData && parsedData.type === 'log_activity' && parsedData.data) {
+                                    const act = parsedData.data;
+                                    // Use negative ID to avoid collision with real Strava IDs
+                                    const manualId = -Date.now();
+                                    const startDate = new Date().toISOString();
+                                    
+                                    db.run(
+                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, tss) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.tss || 0],
+                                        (err) => {
+                                            if (err) console.error("Failed to insert manual activity:", err);
+                                        }
+                                    );
+                                    planUpdated = true; // Signal frontend to reload data/charts
                                 }
                             } catch (e) {
                                 console.error("Failed to parse an AI JSON block", e);

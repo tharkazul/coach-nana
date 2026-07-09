@@ -2186,7 +2186,10 @@ async function sendMessage() {
                     </div>`;
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
-        if (data.planUpdated) { loadMicroPlan(); }
+        if (data.planUpdated) { 
+            loadMicroPlan(); 
+            loadDashboard(); // Refresh graphs if a manual activity was logged
+        }
         
         speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
         
