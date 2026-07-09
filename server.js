@@ -106,7 +106,8 @@ setInterval(() => {
             const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${user.coach_tone || 'Friendly and motivating'}. Keep it under 2 sentences.`;
 
             try {
-                const aiReply = await generateWithFallback(prompt);
+                const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${user.coach_tone || 'Friendly and motivating'}. Act like a real human in a continuous text message thread.`;
+                const aiReply = await generateWithFallback(prompt, systemPrompt);
                 db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'curious')`, [user.id, aiReply]);
                 sendSSEEvent(user.id, 'unread_message', { message: aiReply, mood: 'curious' });
             } catch (e) {
@@ -124,7 +125,8 @@ app.post('/api/admin/simulate-24h', authenticateToken, async (req, res) => {
     db.get(`SELECT coach_tone FROM users WHERE id = ?`, [user.id], async (err, row) => {
         const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${row ? row.coach_tone : 'Friendly and motivating'}. Keep it under 2 sentences.`;
         try {
-            const aiReply = await generateWithFallback(prompt);
+            const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${row ? row.coach_tone : 'Friendly and motivating'}. Act like a real human in a continuous text message thread.`;
+            const aiReply = await generateWithFallback(prompt, systemPrompt);
             db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'curious')`, [user.id, aiReply]);
             sendSSEEvent(user.id, 'unread_message', { message: aiReply, mood: 'curious' });
             res.json({ success: true, message: "Trigger fired." });
@@ -1520,10 +1522,17 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
                 
                 prompt += `Review their status. Keep it under 2 sentences, act as their friendly elite endurance coach, and give them a short piece of advice or encouragement based on their numbers (and the photo if attached).`;
                 
-                const aiReply = await generateWithFallback(prompt, null, null, imageBase64);
-                
-                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`, [req.user.id, aiReply]);
-                sendSSEEvent(req.user.id, 'unread_message', { message: aiReply, mood: 'support' });
+                db.get("SELECT coach_tone FROM users WHERE id = ?", [req.user.id], async (err, row) => {
+                    const tone = row ? row.coach_tone : 'Friendly';
+                    const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
+                    try {
+                        const aiReply = await generateWithFallback(prompt, systemPrompt, null, imageBase64);
+                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`, [req.user.id, aiReply]);
+                        sendSSEEvent(req.user.id, 'unread_message', { message: aiReply, mood: 'support' });
+                    } catch (e) {
+                        console.error("Proactive AI generation for physique failed:", e);
+                    }
+                });
                 
             } catch (e) {
                 console.error("Proactive AI generation for physique failed:", e);
@@ -1829,7 +1838,8 @@ async function getStravaActivity(stravaAthleteId, activityId) {
 
                     // 1. Generate AI Coach Response
                     try {
-                        const aiReply = await generateWithFallback(prompt);
+                        const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
+                        const aiReply = await generateWithFallback(prompt, systemPrompt);
                         db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [internalUserId, aiReply]);
                         sendSSEEvent(internalUserId, 'unread_message', { message: aiReply, mood: 'hype' });
                         console.log(`🤖 Sent proactive coach update for activity ${activityId}`);
