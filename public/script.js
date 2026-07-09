@@ -780,7 +780,10 @@ async function buildDashboard() {
                             <td class="p-3 md:p-4 font-mono text-theme-muted text-right">${w.body_fat_percent ? w.body_fat_percent.toFixed(1) : '--'}</td>                            
                         </tr>`;
             });
-            document.getElementById('biometrics-table-body').innerHTML = bioHtml;
+            const tbody = document.getElementById('biometrics-table-body');
+            if (tbody) {
+                tbody.innerHTML = bioHtml;
+            }
         }
 
         // 4. Prepare dictionaries and set start date
