@@ -1160,7 +1160,6 @@ function openEditWorkoutModal(workoutData, dateStr) {
         document.getElementById('edit-workout-date').value = dateStr;
         document.getElementById('edit-workout-sport').value = 'Run';
         document.getElementById('edit-workout-desc').value = '';
-        document.getElementById('edit-workout-tss').value = 50;
         wbSteps = [];
         document.getElementById('btn-edit-workout-delete').style.display = 'none';
         document.getElementById('btn-edit-workout-garmin').style.display = 'none';
@@ -1170,7 +1169,6 @@ function openEditWorkoutModal(workoutData, dateStr) {
         document.getElementById('edit-workout-date').value = p.date || dateStr;
         document.getElementById('edit-workout-sport').value = p.sport;
         document.getElementById('edit-workout-desc').value = p.description || '';
-        document.getElementById('edit-workout-tss').value = p.target_tss || 0;
         
         try {
             wbSteps = (p.steps_json && p.steps_json !== 'null') ? JSON.parse(p.steps_json) : [];
@@ -1181,6 +1179,9 @@ function openEditWorkoutModal(workoutData, dateStr) {
         document.getElementById('btn-edit-workout-garmin').style.display = 'flex';
     }
     
+    // Add event listener to sport to re-render steps (for strength)
+    document.getElementById('edit-workout-sport').onchange = () => { renderWbSteps(); };
+    
     renderWbSteps();
     document.getElementById('edit-workout-modal').classList.remove('hidden');
 }
@@ -1189,16 +1190,44 @@ function closeEditWorkoutModal() {
     document.getElementById('edit-workout-modal').classList.add('hidden');
 }
 
+function calculateWbTss() {
+    let totalMins = 0;
+    wbSteps.forEach(s => {
+        if (s.type === 'repeat') {
+            let repeatMins = 0;
+            (s.steps || []).forEach(sub => {
+                if (sub.condition_type === 'time') repeatMins += Number(sub.condition_value) || 0;
+            });
+            totalMins += repeatMins * (s.iterations || 1);
+        } else {
+            if (s.condition_type === 'time') totalMins += Number(s.condition_value) || 0;
+        }
+    });
+    const tssInput = document.getElementById('edit-workout-tss');
+    if (totalMins > 0) {
+        // Roughly 1 TSS per minute as a generic estimate
+        tssInput.value = Math.round(totalMins * 1.0);
+    } else {
+        tssInput.value = '';
+    }
+}
+
 // Workout Builder Logic
 function wbAddStep(type) {
-    const step = { type: type, condition_type: 'time', condition_value: 5, target_type: 'no.target' };
+    const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
+    const step = isStrength ? 
+        { type: type, condition_type: 'reps', condition_value: 10, target_type: 'no.target', weight: 0, exerciseName: '' } :
+        { type: type, condition_type: 'time', condition_value: 5, target_type: 'no.target' };
     wbSteps.push(step);
     renderWbSteps();
 }
 
 function wbAddRepeat() {
-    const step = { type: 'repeat', iterations: 2, steps: [
-        { type: 'interval', condition_type: 'time', condition_value: 5, target_type: 'no.target' },
+    const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
+    const step = { type: 'repeat', iterations: 3, steps: [
+        isStrength ? 
+            { type: 'interval', condition_type: 'reps', condition_value: 10, target_type: 'no.target', weight: 0, exerciseName: '' } :
+            { type: 'interval', condition_type: 'time', condition_value: 5, target_type: 'no.target' },
         { type: 'recovery', condition_type: 'time', condition_value: 2, target_type: 'no.target' }
     ] };
     wbSteps.push(step);
@@ -1227,12 +1256,16 @@ function wbMoveStep(idx, dir, subIdx = null) {
 
 function wbUpdateStep(idx, subIdx, field, val) {
     const step = subIdx === null ? wbSteps[idx] : wbSteps[idx].steps[subIdx];
-    if (field === 'condition_value' || field === 'iterations' || field === 'zone') val = Number(val);
+    if (field === 'condition_value' || field === 'iterations' || field === 'zone' || field === 'weight') val = Number(val);
     step[field] = val;
     // Special rule for target_type changing to zone
     if (field === 'target_type' && val.endsWith('.zone') && !step.zone) {
         step.zone = 2;
         renderWbSteps();
+    }
+    // Only re-calculate TSS if condition_type or value changes
+    if (field === 'condition_type' || field === 'condition_value' || field === 'iterations') {
+        calculateWbTss();
     }
 }
 
@@ -1240,19 +1273,23 @@ function renderWbSteps() {
     const container = document.getElementById('wb-steps-container');
     if (!container) return;
     
+    calculateWbTss();
+    
     if (wbSteps.length === 0) {
         container.innerHTML = `<div class="text-xs text-theme-muted italic py-4 text-center border border-dashed border-theme-border rounded-lg">No structured steps. Click above to add blocks.</div>`;
         return;
     }
     
     let html = '';
+    const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
+    
     wbSteps.forEach((s, idx) => {
-        html += renderWbBlock(s, idx, null);
+        html += renderWbBlock(s, idx, null, isStrength);
     });
     container.innerHTML = html;
 }
 
-function renderWbBlock(s, idx, parentIdx) {
+function renderWbBlock(s, idx, parentIdx, isStrength) {
     const isSub = parentIdx !== null;
     const isRepeat = s.type === 'repeat';
     
@@ -1288,20 +1325,29 @@ function renderWbBlock(s, idx, parentIdx) {
             <option value="reps" ${s.condition_type === 'reps'?'selected':''}>reps</option>
         </select>`;
         
-        html += `<span class="text-[10px] text-theme-muted px-1">@</span>`;
-        
-        html += `<select onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_type', this.value); renderWbSteps();" class="bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">
-            <option value="no.target" ${s.target_type === 'no.target'?'selected':''}>Open</option>
-            <option value="heart.rate.zone" ${s.target_type === 'heart.rate.zone'?'selected':''}>HR Zone</option>
-            <option value="power.zone" ${s.target_type === 'power.zone'?'selected':''}>Power Zone</option>
-            <option value="pace.zone" ${s.target_type === 'pace.zone'?'selected':''}>Pace Zone</option>
-            <option value="speed.zone" ${s.target_type === 'speed.zone'?'selected':''}>Speed Zone</option>
-        </select>`;
-        
-        if (s.target_type && s.target_type.endsWith('.zone')) {
-            html += `<input type="number" placeholder="Zone (1-5)" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'zone', this.value)" value="${s.zone || ''}" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
-        } else if (s.target_type !== 'no.target') {
-            html += `<input type="text" placeholder="Target..." onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_value', this.value)" value="${s.target_value || ''}" class="w-20 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
+        if (isStrength) {
+            html += `<input type="text" placeholder="Exercise name..." onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'exerciseName', this.value)" value="${s.exerciseName || ''}" class="flex-1 min-w-[80px] bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
+            html += `<input type="number" placeholder="kg" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'weight', this.value)" value="${s.weight || ''}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent"><span class="text-[10px] text-theme-muted">kg</span>`;
+        } else {
+            html += `<span class="text-[10px] text-theme-muted px-1">@</span>`;
+            
+            html += `<select onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_type', this.value); renderWbSteps();" class="bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">
+                <option value="no.target" ${s.target_type === 'no.target'?'selected':''}>Open</option>
+                <option value="heart.rate.zone" ${s.target_type === 'heart.rate.zone'?'selected':''}>HR Zone</option>
+                <option value="power.zone" ${s.target_type === 'power.zone'?'selected':''}>Power Zone</option>
+                <option value="pace.zone" ${s.target_type === 'pace.zone'?'selected':''}>Pace Zone</option>
+                <option value="pace.exact" ${s.target_type === 'pace.exact'?'selected':''}>Pace (Exact)</option>
+                <option value="speed.zone" ${s.target_type === 'speed.zone'?'selected':''}>Speed Zone</option>
+            </select>`;
+            
+            if (s.target_type && s.target_type.endsWith('.zone')) {
+                html += `<input type="number" placeholder="Zone (1-5)" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'zone', this.value)" value="${s.zone || ''}" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
+            } else if (s.target_type === 'pace.exact') {
+                html += `<input type="text" placeholder="e.g. 5:00" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_value', this.value)" value="${s.target_value || ''}" class="w-20 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
+                html += `<span class="text-[10px] text-theme-muted">/km</span>`;
+            } else if (s.target_type !== 'no.target') {
+                html += `<input type="text" placeholder="Target..." onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_value', this.value)" value="${s.target_value || ''}" class="w-20 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
+            }
         }
     }
     
@@ -1315,10 +1361,10 @@ function renderWbBlock(s, idx, parentIdx) {
     if (isRepeat) {
         html += `<div class="pl-6 ml-2 mt-2 border-l-2 border-theme-accent/30 space-y-2">`;
         (s.steps || []).forEach((subStep, subIdx) => {
-            html += renderWbBlock(subStep, subIdx, idx);
+            html += renderWbBlock(subStep, subIdx, idx, isStrength);
         });
         html += `<div class="flex gap-2">
-            <button onclick="wbSteps[${idx}].steps.push({type:'interval', condition_type:'time', condition_value:1, target_type:'no.target'}); renderWbSteps();" class="text-[9px] px-2 py-1 bg-theme-bg border border-theme-border rounded hover:bg-theme-border transition">+ Add Substep</button>
+            <button onclick="wbSteps[${idx}].steps.push({type:'interval', condition_type: '${isStrength ? 'reps' : 'time'}', condition_value:1, target_type:'no.target', weight: 0, exerciseName: ''}); renderWbSteps();" class="text-[9px] px-2 py-1 bg-theme-bg border border-theme-border rounded hover:bg-theme-border transition">+ Add Substep</button>
         </div>`;
         html += `</div>`;
     }

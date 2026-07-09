@@ -1338,7 +1338,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                                 zoneNumber: subStep.zone ? parseInt(subStep.zone, 10) : null
                             };
                             if (subStep.target_value) {
-                                if (subStep.target_value.includes('min/km')) {
+                                if (subStep.target_value.includes('min/km') || subStep.target_type === 'pace.exact') {
                                     const match = subStep.target_value.match(/(\d+):(\d+)/);
                                     if (match) {
                                         const speedMs = 1000 / ((parseInt(match[1], 10) * 60) + parseInt(match[2], 10));
@@ -1389,7 +1389,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                     zoneNumber: step.zone ? parseInt(step.zone, 10) : null
                 };
                 if (step.target_value) {
-                    if (step.target_value.includes('min/km')) {
+                    if (step.target_value.includes('min/km') || step.target_type === 'pace.exact') {
                         const match = step.target_value.match(/(\d+):(\d+)/);
                         if (match) {
                             const speedMs = 1000 / ((parseInt(match[1], 10) * 60) + parseInt(match[2], 10));
