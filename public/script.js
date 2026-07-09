@@ -1411,7 +1411,7 @@ if (document.getElementById('btn-edit-workout-save')) {
 
 if (document.getElementById('btn-edit-workout-delete')) {
     document.getElementById('btn-edit-workout-delete').addEventListener('click', async () => {
-        if (!wbCurrentWorkoutId || !confirm("Are you sure you want to delete this workout?")) return;
+        if (!wbCurrentWorkoutId) return;
         await fetch(`/api/micro-plan/${wbCurrentWorkoutId}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
@@ -2709,7 +2709,7 @@ async function loadPhysiqueLogs() {
 }
 
 async function deletePhysiqueLog(id) {
-    if (!confirm("Delete this physique log? This will also remove the weight from the chart if it was logged here.")) return;
+    if (!id) return;
     try {
         const token = localStorage.getItem('nana_token');
         const res = await fetch(`/api/physique/${id}`, {
