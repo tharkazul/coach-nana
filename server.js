@@ -50,7 +50,7 @@ app.use(express.static('public'));
 
 const physiqueStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const dir = path.join(__dirname, 'public/uploads/physique');
+        const dir = path.join(__dirname, 'secure_uploads/physique');
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
@@ -58,14 +58,14 @@ const physiqueStorage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname);
-        cb(null, Date.now() + ext);
+        cb(null, `physique_${req.user.id}_${crypto.randomUUID()}${ext}`);
     }
 });
 const uploadPhysique = multer({ storage: physiqueStorage });
 
 // Image Cleanup Routine (Every Hour)
 setInterval(() => {
-    const dir = path.join(__dirname, 'public/uploads/chat_images');
+    const dir = path.join(__dirname, 'secure_uploads/chat_images');
     if (fs.existsSync(dir)) {
         fs.readdir(dir, (err, files) => {
             if (err) return console.error('Cleanup Error:', err);
@@ -512,10 +512,12 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             if (matches && matches.length === 3) {
                 const ext = matches[1];
                 base64Data = matches[2];
-                const fileName = `img_${req.user.id}_${Date.now()}.${ext}`;
-                const savePath = path.join(__dirname, 'public/uploads/chat_images', fileName);
+                const fileName = `img_${req.user.id}_${crypto.randomUUID()}.${ext}`;
+                const dir = path.join(__dirname, 'secure_uploads/chat_images');
+                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                const savePath = path.join(dir, fileName);
                 fs.writeFileSync(savePath, base64Data, 'base64');
-                imagePathDB = `/uploads/chat_images/${fileName}`;
+                imagePathDB = `/api/images/chat/${fileName}`;
             }
         } catch (e) {
             console.error("Image saving error:", e);
@@ -1543,9 +1545,30 @@ app.get('/api/physique', authenticateToken, (req, res) => {
     });
 });
 
+// Secure Image Endpoints
+app.get('/api/images/physique/:filename', authenticateToken, (req, res) => {
+    const filename = req.params.filename;
+    if (!filename.startsWith(`physique_${req.user.id}_`)) {
+        return res.status(403).json({ error: "Forbidden: You do not have access to this image." });
+    }
+    const filePath = path.join(__dirname, 'secure_uploads/physique', filename);
+    if (!fs.existsSync(filePath)) return res.status(404).send('Not found');
+    res.sendFile(filePath);
+});
+
+app.get('/api/images/chat/:filename', authenticateToken, (req, res) => {
+    const filename = req.params.filename;
+    if (!filename.startsWith(`img_${req.user.id}_`)) {
+        return res.status(403).json({ error: "Forbidden: You do not have access to this image." });
+    }
+    const filePath = path.join(__dirname, 'secure_uploads/chat_images', filename);
+    if (!fs.existsSync(filePath)) return res.status(404).send('Not found');
+    res.sendFile(filePath);
+});
+
 app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), async (req, res) => {
     const { date, weight_kg, sleep_quality, fatigue_level, notes } = req.body;
-    const photoUrl = req.file ? `/uploads/physique/${req.file.filename}` : null;
+    const photoUrl = req.file ? `/api/images/physique/${req.file.filename}` : null;
     
     db.run(
         `INSERT INTO physique_logs (user_id, date, weight_kg, sleep_quality, fatigue_level, notes, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
