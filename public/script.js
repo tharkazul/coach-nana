@@ -2847,4 +2847,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Hide mobile navigation when keyboard is open
+    if (window.visualViewport) {
+        const initialHeight = window.visualViewport.height;
+        const mainNav = document.getElementById('main-navigation');
+        window.visualViewport.addEventListener('resize', () => {
+            // If viewport shrinks by more than 100px (keyboard likely open) AND we are on mobile
+            if (window.visualViewport.height < initialHeight - 100 && window.innerWidth < 768) {
+                if (mainNav) mainNav.classList.add('hidden');
+            } else {
+                if (mainNav) mainNav.classList.remove('hidden');
+            }
+        });
+    }
 });
