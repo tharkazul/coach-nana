@@ -240,6 +240,12 @@ db.serialize(() => {
     )`);
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
+    // Ensure steps_json exists for legacy DBs
+    db.run(`ALTER TABLE micro_plan ADD COLUMN steps_json TEXT DEFAULT '[]'`, (err) => {
+        if (err && !err.message.includes("duplicate column name")) {
+            console.error("Error adding steps_json column:", err.message);
+        }
+    });
     db.run(`CREATE TABLE IF NOT EXISTS weight_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, weight_kg REAL, body_fat_percent REAL, bmi REAL, lean_mass_kg REAL, UNIQUE(user_id, date))`);
     db.run(`CREATE TABLE IF NOT EXISTS chat_history (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, role TEXT, content TEXT, mood TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     db.run(`CREATE TABLE IF NOT EXISTS athlete_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, metric TEXT, value TEXT, UNIQUE(user_id, metric))`);
@@ -1051,7 +1057,10 @@ app.post('/api/micro-plan', authenticateToken, (req, res) => {
         `INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [req.user.id, date, sport, description, target_tss, details, steps_json || '[]'],
         (err) => {
-            if (err) return res.status(500).json({ error: "Failed to update plan" });
+            if (err) {
+                console.error("POST /api/micro-plan error:", err.message);
+                return res.status(500).json({ error: "Failed to create plan", details: err.message });
+            }
             res.json({ success: true });
         }
     );
@@ -1080,7 +1089,10 @@ app.put('/api/micro-plan/:id', authenticateToken, (req, res) => {
         `UPDATE micro_plan SET date = ?, sport = ?, description = ?, target_tss = ?, details = ?, steps_json = ? WHERE id = ? AND user_id = ?`,
         [date, sport, description, target_tss, details, steps_json, req.params.id, req.user.id],
         (err) => {
-            if (err) return res.status(500).json({ error: "Failed to update plan" });
+            if (err) {
+                console.error("PUT /api/micro-plan error:", err.message);
+                return res.status(500).json({ error: "Failed to update plan", details: err.message });
+            }
             res.json({ success: true });
         }
     );
