@@ -1046,10 +1046,10 @@ app.get('/api/history', authenticateToken, (req, res) => {
 });
 
 app.post('/api/micro-plan', authenticateToken, (req, res) => {
-    const { date, sport, description, target_tss, details } = req.body;
+    const { date, sport, description, target_tss, details, steps_json } = req.body;
     db.run(
-        `INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details) VALUES (?, ?, ?, ?, ?, ?)`,
-        [req.user.id, date, sport, description, target_tss, details],
+        `INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [req.user.id, date, sport, description, target_tss, details, steps_json || '[]'],
         (err) => {
             if (err) return res.status(500).json({ error: "Failed to update plan" });
             res.json({ success: true });

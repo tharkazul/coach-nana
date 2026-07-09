@@ -1112,8 +1112,7 @@ async function loadMicroPlan() {
                 else if (p.sport === 'Strength') sportColor = "bg-purple-500/10 border-purple-500/20 text-purple-500";
 
                 const isStructured = p.steps_json && p.steps_json !== '[]' && p.steps_json !== 'null';
-                // Escape JSON to prevent breaking HTML attributes
-                const pJson = JSON.stringify(p).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                const pJson = encodeURIComponent(JSON.stringify(p));
 
                 html += `
                 <div class="relative group p-2 rounded-md border ${sportColor} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
@@ -1164,7 +1163,7 @@ function openEditWorkoutModal(workoutData, dateStr) {
         document.getElementById('btn-edit-workout-delete').style.display = 'none';
         document.getElementById('btn-edit-workout-garmin').style.display = 'none';
     } else {
-        const p = typeof workoutData === 'string' ? JSON.parse(workoutData) : workoutData;
+        const p = typeof workoutData === 'string' ? JSON.parse(decodeURIComponent(workoutData)) : workoutData;
         wbCurrentWorkoutId = p.id;
         document.getElementById('edit-workout-date').value = p.date || dateStr;
         document.getElementById('edit-workout-sport').value = p.sport;
@@ -1389,11 +1388,11 @@ if (document.getElementById('btn-edit-workout-save')) {
                 body: JSON.stringify({ date: date, sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson })
             });
         } else {
-            // CREATE
-            await fetch(`/api/micro-plan/day`, {
+            // CREATE - add a single new workout instead of overwriting the day
+            await fetch(`/api/micro-plan`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ date: date, workouts: [{ sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson }] })
+                body: JSON.stringify({ date: date, sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson })
             });
         }
         closeEditWorkoutModal();
