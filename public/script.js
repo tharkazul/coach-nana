@@ -2215,14 +2215,14 @@ async function sendMessage() {
         userImgHtml = `<img src="${currentImageBase64}" class="w-full rounded-xl mb-1 object-cover animate-pop">`;
     }
 
-    chatWindow.innerHTML += `
+    chatWindow.insertAdjacentHTML('beforeend', `
                 <div class="flex justify-end animate-msg">
                     <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
                         ${userImgHtml}
                         <div class="whitespace-pre-wrap leading-relaxed">${message}</div>
                         <div class="text-[9px] text-white/70 text-right mt-1">${timeStr}</div>
                     </div>
-                </div>`;
+                </div>`);
 
     const payload = { message, imageBase64: currentImageBase64 };
     
@@ -2234,7 +2234,7 @@ async function sendMessage() {
     const loadId = 'loading-' + Date.now();
     let thinkingAvatar = getCoachAvatar('thinking');
 
-    chatWindow.innerHTML += `
+    chatWindow.insertAdjacentHTML('beforeend', `
                 <div class="flex items-end gap-2 md:gap-3 animate-msg" id="${loadId}">
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                         <img src="${thinkingAvatar}" alt="Coach" class="w-full h-full object-cover opacity-70">
@@ -2244,7 +2244,7 @@ async function sendMessage() {
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
                     </div>
-                </div>`;
+                </div>`);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 
     try {
@@ -2852,17 +2852,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Hide mobile navigation when keyboard is open
-    if (window.visualViewport) {
-        const initialHeight = window.visualViewport.height;
-        const mainNav = document.getElementById('main-navigation');
-        window.visualViewport.addEventListener('resize', () => {
-            // If viewport shrinks by more than 100px (keyboard likely open) AND we are on mobile
-            if (window.visualViewport.height < initialHeight - 100 && window.innerWidth < 768) {
+    // Hide mobile navigation when keyboard is open using focus events (more reliable across iOS/Android)
+    const mainNav = document.getElementById('main-navigation');
+    const mainContent = document.getElementById('main-content');
+    
+    document.addEventListener('focusin', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            if (window.innerWidth < 768) {
                 if (mainNav) mainNav.classList.add('hidden');
-            } else {
-                if (mainNav) mainNav.classList.remove('hidden');
+                if (mainContent) mainContent.classList.remove('pb-24');
             }
-        });
-    }
+        }
+    });
+
+    document.addEventListener('focusout', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            if (window.innerWidth < 768) {
+                if (mainNav) mainNav.classList.remove('hidden');
+                if (mainContent) mainContent.classList.add('pb-24');
+            }
+        }
+    });
 });
