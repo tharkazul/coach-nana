@@ -2284,7 +2284,10 @@ async function sendMessage() {
         // Typewriter effect (token streaming simulation)
         const targetEl = document.getElementById(msgId);
         let i = 0;
+        let currentHTML = '';
         function typeStep() {
+            if (!document.getElementById(msgId)) return; // Stop if user switched tabs and chat reloaded
+            
             if (i < formattedContent.length) {
                 if (formattedContent.charAt(i) === '<') {
                     let tag = '';
@@ -2293,7 +2296,7 @@ async function sendMessage() {
                         i++;
                     }
                     tag += '>';
-                    targetEl.innerHTML += tag;
+                    currentHTML += tag;
                     i++;
                 } else {
                     let chunkLength = Math.floor(Math.random() * 5) + 3; // 3 to 7 characters
@@ -2303,8 +2306,9 @@ async function sendMessage() {
                         i++;
                         chunkLength--;
                     }
-                    targetEl.innerHTML += chunk;
+                    currentHTML += chunk;
                 }
+                targetEl.innerHTML = currentHTML;
                 chatWindow.scrollTop = chatWindow.scrollHeight;
                 setTimeout(typeStep, 25); // Delay between token chunks
             }
@@ -2740,11 +2744,11 @@ async function loadPhysiqueLogs() {
         }
 
         container.innerHTML = logs.map(l => `
-            <div class="p-4 bg-theme-bg border border-theme-border rounded-lg flex flex-col md:flex-row gap-4 relative group">
-                <button onclick="deletePhysiqueLog(${l.id})" class="absolute top-2 right-2 text-theme-muted hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition" title="Delete Log">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-                <div class="flex-1 space-y-2">
+            <div class="bg-theme-bg md:border border-theme-border md:rounded-lg flex flex-col md:flex-row relative group">
+                <div class="flex-1 p-4 md:p-4 space-y-2 relative">
+                    <button onclick="deletePhysiqueLog(${l.id})" class="absolute top-4 right-4 text-theme-muted hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition z-10" title="Delete Log">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
                     <div class="font-bold text-theme-text">${l.date}</div>
                     <div class="text-sm text-theme-muted grid grid-cols-2 md:grid-cols-3 gap-2">
                         ${l.weight_kg ? `<div><span class="font-bold">Weight:</span> ${l.weight_kg}kg</div>` : ''}
@@ -2754,8 +2758,8 @@ async function loadPhysiqueLogs() {
                     ${l.notes ? `<div class="text-sm text-theme-text mt-2 p-2 bg-theme-bg-hover rounded border border-theme-border/50">${l.notes}</div>` : ''}
                 </div>
                 ${l.photo_url ? `
-                <div class="w-full md:w-32 flex-shrink-0">
-                    <img src="${l.photo_url}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-32 object-cover rounded-lg border border-theme-border">
+                <div class="w-full md:w-32 flex-shrink-0 md:p-4 md:pl-0">
+                    <img src="${l.photo_url}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-[40vh] md:h-32 object-cover md:rounded-lg md:border border-theme-border">
                 </div>
                 ` : ''}
             </div>
