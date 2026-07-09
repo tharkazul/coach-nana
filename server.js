@@ -1087,10 +1087,14 @@ app.put('/api/micro-plan/:id', authenticateToken, (req, res) => {
 });
 
 app.delete('/api/micro-plan/:id', authenticateToken, (req, res) => {
-    db.run(`DELETE FROM micro_plan WHERE id = ? AND user_id = ?`, [req.params.id, req.user.id], (err) => {
-        if (err) return res.status(500).json({ error: "Failed to delete plan" });
-        res.json({ success: true });
-    });
+    db.run(
+        `DELETE FROM micro_plan WHERE id = ? AND user_id = ?`,
+        [req.params.id, req.user.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: "Failed to delete plan" });
+            res.json({ success: true });
+        }
+    );
 });
 
 app.post('/api/generate-plan', authenticateToken, async (req, res) => {

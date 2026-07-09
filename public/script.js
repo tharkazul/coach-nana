@@ -1112,7 +1112,7 @@ async function loadMicroPlan() {
                 else if (p.sport === 'Strength') sportColor = "bg-purple-500/10 border-purple-500/20 text-purple-500";
 
                 const isStructured = p.steps_json && p.steps_json !== '[]' && p.steps_json !== 'null';
-                const pJson = encodeURIComponent(JSON.stringify(p));
+                const pJson = encodeURIComponent(JSON.stringify(p)).replace(/'/g, "%27");
 
                 html += `
                 <div class="relative group p-2 rounded-md border ${sportColor} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
