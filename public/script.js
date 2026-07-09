@@ -1513,7 +1513,18 @@ function decodePolyline(str) {
 }
 
 async function openActivityModal(id) {
-    document.getElementById('activity-modal').classList.remove('hidden'); document.getElementById('modal-loader').classList.remove('hidden'); document.getElementById('modal-content').classList.add('hidden'); document.getElementById('modal-title').innerText = "Connecting to Strava...";
+    const modal = document.getElementById('activity-modal');
+    const content = document.getElementById('activity-modal-content');
+    modal.classList.remove('hidden');
+    // Force reflow
+    void modal.offsetWidth;
+    modal.classList.remove('opacity-0');
+    content.classList.remove('translate-y-full', 'md:scale-95');
+    content.classList.add('translate-y-0', 'md:scale-100');
+    
+    document.getElementById('modal-loader').classList.remove('hidden'); 
+    document.getElementById('modal-content').classList.add('hidden'); 
+    document.getElementById('modal-title').innerText = "Connecting to Strava...";
     try {
         const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
         document.getElementById('modal-title').innerText = data.name || "Activity Details";
@@ -1684,7 +1695,19 @@ async function openActivityModal(id) {
     } catch (e) { document.getElementById('modal-title').innerText = "Error Fetching Data"; document.getElementById('modal-loader').innerHTML = `<span class="text-red-500 font-bold uppercase tracking-widest text-xs">Connection Failed</span>`; }
 }
 
-function closeModal() { document.getElementById('activity-modal').classList.add('hidden'); }
+function closeModal() { 
+    const modal = document.getElementById('activity-modal');
+    const content = document.getElementById('activity-modal-content');
+    
+    modal.classList.add('opacity-0');
+    content.classList.remove('translate-y-0', 'md:scale-100');
+    content.classList.add('translate-y-full', 'md:scale-95');
+    
+    // Wait for transition to finish
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
 
 async function loadHistory() {
     try {
@@ -2763,5 +2786,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const offset = today.getTimezoneOffset() * 60000;
         const localDate = new Date(today.getTime() - offset).toISOString().split('T')[0];
         physDate.value = localDate;
+    }
+    
+    // Initialize Swipe-to-dismiss for Activity Modal Bottom Sheet
+    const modalContent = document.getElementById('activity-modal-content');
+    if (modalContent && typeof Hammer !== 'undefined') {
+        const hammer = new Hammer(modalContent);
+        hammer.get('swipe').set({ direction: Hammer.DIRECTION_DOWN });
+        hammer.on('swipedown', () => {
+            // Only swipe dismiss on mobile (where the bottom sheet is active)
+            if (window.innerWidth < 768) {
+                closeModal();
+            }
+        });
     }
 });

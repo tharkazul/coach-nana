@@ -339,9 +339,13 @@
     </div>
     <!-- ACTIVITY MODAL (Maps & Telemetry) -->
     <div id="activity-modal"
-        class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 md:p-8 backdrop-blur-sm transition-opacity">
-        <div
-            class="pt-safe bg-theme-card rounded-sm shadow-2xl w-full max-w-4xl h-full md:h-[80vh] flex flex-col overflow-hidden relative border border-theme-border">
+        class="fixed inset-0 bg-black/60 z-50 hidden flex items-end p-0 md:items-center md:justify-center md:p-8 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div id="activity-modal-content"
+            class="pt-safe bg-theme-card rounded-t-[2rem] md:rounded-sm shadow-2xl w-full max-w-4xl h-[90vh] md:h-[80vh] flex flex-col overflow-hidden relative border border-theme-border translate-y-full md:translate-y-0 md:scale-95 transition-all duration-300 ease-out">
+            <!-- Drag Handle for Mobile -->
+            <div class="w-full flex justify-center py-3 md:hidden shrink-0 bg-theme-bg">
+                <div class="w-12 h-1.5 bg-theme-border rounded-full"></div>
+            </div>
             <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg shrink-0">
                 <h2 id="modal-title" class="text-sm font-bold text-theme-text truncate pr-4">Loading Telemetry...</h2>
                 <button onclick="closeModal()" class="text-theme-muted hover:text-theme-text transition"><svg
