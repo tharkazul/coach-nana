@@ -134,7 +134,7 @@ app.post('/api/admin/simulate-24h', authenticateToken, async (req, res) => {
     });
 });
 
-async function generateWithFallback(prompt, systemInstruction = null, chatHistory = null, imageBase64 = null) {
+async function generateWithFallback(prompt, systemInstruction = null, chatHistory = null, imageBase64 = null, userId = null) {
     let lastError = null;
 
     for (let i = 0; i < geminiConfigs.length; i++) {
@@ -176,6 +176,9 @@ async function generateWithFallback(prompt, systemInstruction = null, chatHistor
             const usage = result.response.usageMetadata;
             if (usage) {
                 console.log(`🪙 Tokens Used -> Input: ${usage.promptTokenCount} | Output: ${usage.candidatesTokenCount} | Total: ${usage.totalTokenCount}`);
+                if (userId) {
+                    db.run(`UPDATE users SET daily_token_usage = daily_token_usage + ? WHERE id = ?`, [usage.totalTokenCount, userId]);
+                }
             }
 
             console.log(`✅ AI Success using ${config.name}!`);
@@ -225,14 +228,14 @@ db.serialize(() => {
         garmin_password TEXT, 
         coach_tone TEXT DEFAULT 'Empathetic but demanding elite endurance coach.', 
         athlete_context TEXT DEFAULT 'No context provided yet.',
-        long_term_memory TEXT DEFAULT ''
+        long_term_memory TEXT DEFAULT '',
+        daily_token_usage INTEGER DEFAULT 0,
+        last_token_reset_date TEXT
     )`);
-    // Add column if it doesn't exist (fails silently if it does)
-    db.run(`ALTER TABLE users ADD COLUMN long_term_memory TEXT DEFAULT ''`, (err) => {
-        if (err && !err.message.includes("duplicate column name")) {
-            console.error("Error adding long_term_memory column:", err.message);
-        }
-    });
+    // Add columns if they don't exist (fails silently if they do)
+    db.run(`ALTER TABLE users ADD COLUMN long_term_memory TEXT DEFAULT ''`, (err) => {});
+    db.run(`ALTER TABLE users ADD COLUMN daily_token_usage INTEGER DEFAULT 0`, (err) => {});
+    db.run(`ALTER TABLE users ADD COLUMN last_token_reset_date TEXT`, (err) => {});
     db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -527,8 +530,21 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    db.get(`SELECT coach_tone, athlete_context, training_phase, long_term_memory FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    db.get(`SELECT coach_tone, athlete_context, training_phase, long_term_memory, daily_token_usage, last_token_reset_date FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
+
+        // Token limit logic
+        const todayStr = new Date().toISOString().split('T')[0];
+        let currentDailyUsage = user.daily_token_usage || 0;
+        
+        if (user.last_token_reset_date !== todayStr) {
+            currentDailyUsage = 0;
+            db.run(`UPDATE users SET daily_token_usage = 0, last_token_reset_date = ? WHERE id = ?`, [todayStr, req.user.id]);
+        }
+        
+        if (currentDailyUsage > 50000) {
+            return res.status(429).json({ error: "Daily token limit reached. Please try again tomorrow!" });
+        }
 
         db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metricsRows) => {
             const metricsText = (metricsRows && metricsRows.length > 0)
@@ -573,20 +589,25 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                             return `${getAMSWeekday(d)}: ${getAMSDateString(d)}`;
                         }).join(', ');
 
-                        const systemPrompt =
-                            `You are Spark, an elite Ironman Triathlon and endurance coach. 
-                    Today is ${todayStr}.
-                    Upcoming Calendar Reference: ${next7Days}
-                    Athlete Context: ${user.athlete_context || 'General endurance athlete'}
-                    Athlete Long-Term Summary: ${user.long_term_memory || 'No long-term summary generated yet.'}
-                    Key Physiological Metrics: ${metricsText}
-                    Current Macro Phase: ${phase}
-                    Recent Completed Workouts (Last 3):
-                    ${recentActivitiesText}
-                    Your Tone & Persona: ${user.coach_tone || 'empathetic'}
+                        const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
+                    Name: Coach Nana
+                    Tone: ${user.coach_tone}
+                    Current Training Phase: ${phase || user.training_phase || 'Base/General'}
+                    
+                    ATHLETE CONTEXT:
+                    ${user.athlete_context}
+                    
+                    LONG-TERM MEMORY (From Past Conversations):
+                    ${user.long_term_memory}
 
-                    MACRO BLOCK FOCUS RULES:
-                    - If phase is BASE: Focus intensely on keeping their volume high and heart rate low (Zone 2). Discourage speedwork.
+                    PHYSIOLOGICAL METRICS:
+                    ${metricsText}
+                    
+                    RECENT COMPLETED WORKOUTS (For context):
+                    ${recentActivitiesText}
+
+                    PHASE GUIDANCE:
+                    - If phase is BASE: Focus on aerobic volume and consistency. Discourage racing or excessive intensity.
                     - If phase is BUILD: Focus on progressing their threshold and VO2max intervals. Tell them it's time to push.
                     - If phase is PEAK: Focus on race-specific intensity and sharpening. Keep them focused on executing race pace perfectly.
                     - If phase is TAPER: Focus heavily on recovery and shedding fatigue. Ensure they rest up for the race.
@@ -614,14 +635,6 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         "target_tss": 80,
                         "details": "Push hard on the intervals, recover fully on the rests.",
                         "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}, {\\"type\\": \\"repeat\\", \\"iterations\\": 8, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 3, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 4}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 1, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]}, {\\"type\\": \\"cooldown\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 10, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
-                      },
-                      {
-                        "date": "YYYY-MM-DD",
-                        "sport": "Strength", 
-                        "description": "Leg Day Burner",
-                        "target_tss": 40,
-                        "details": "Focus on depth and explosion.",
-                        "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 5, \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"repeat\\", \\"iterations\\": 3, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"reps\\", \\"condition_value\\": 10, \\"weight\\": 80, \\"exerciseName\\": \\"Barbell Squat\\", \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 2, \\"target_type\\": \\"no.target\\"}]}]"
                       }
                     ]
                     \`\`\`
@@ -638,15 +651,14 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     {
                       "type": "metrics",
                       "data": {
-                        "Cycling FTP": "250W",
-                        "5K Run PB": "19:30",
-                        "Squat Weight": "80kg"
+                        "FTP": "285W",
+                        "5K Pace": "4:05 min/km"
                       }
                     }
                     \`\`\`
-
-                    ACTIVITY LOGGING (CRITICAL):
-                    If the athlete mentions they just completed a workout/activity that is NOT on Strava (e.g., "I just hit the gym", "I went for a 30 min run"), you MUST output an additional JSON block at the very end of your response to log it. Estimate the TSS (Training Stress Score) based on duration and intensity (e.g. 1 hour all out = 100 TSS, 1 hour easy = 50 TSS, 30 min weights = 25 TSS). Format it EXACTLY like this inside triple backticks:
+                    
+                    MANUAL ACTIVITY LOGGING:
+                    If the athlete manually tells you they completed a workout that hasn't synced from Strava (e.g. they say "I just ran 5k in 25 mins" or "Did a 45 min gym session"), you MUST log it by outputting an additional JSON block at the very end of your response. Format it exactly like this inside triple backticks:
                     \`\`\`json
                     {
                       "type": "log_activity",
@@ -660,7 +672,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     }
                     \`\`\``;
 
-                        let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data);
+                        let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data, req.user.id);
                         let planUpdated = false;
 
                         const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];

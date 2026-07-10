@@ -2208,6 +2208,20 @@ async function sendMessage() {
         });
         const data = await res.json();
 
+        if (res.status === 429) {
+            document.getElementById(loadId).outerHTML = `
+                <div class="flex items-end gap-2 md:gap-3 animate-msg">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
+                        <img src="${getCoachAvatar('disappointed')}" alt="Coach" class="w-full h-full object-cover">
+                    </div>
+                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative">
+                        <div class="whitespace-pre-wrap leading-relaxed text-theme-accent font-bold">${data.error || "Daily token limit reached. Please try again tomorrow!"}</div>
+                    </div>
+                </div>`;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return;
+        }
+
         let finalAvatar = getCoachAvatar(data.mood || 'default');
         let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-xl my-1 shadow-sm object-cover animate-pop">');
