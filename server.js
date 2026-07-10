@@ -1877,11 +1877,8 @@ async function getStravaActivity(stravaAthleteId, activityId) {
             accessToken = result.accessToken;
             internalUserId = result.internalUserId;
         } catch (lookupError) {
-            console.warn(`⚠️ Token mapping failed (${lookupError.message}). Using master fallback account...`);
-
-            internalUserId = 1;
-            const fallbackResult = await getStravaTokenForUser(internalUserId);
-            accessToken = fallbackResult.accessToken;
+            console.warn(`⚠️ Token mapping failed (${lookupError.message}). Aborting webhook processing.`);
+            return;
         }
 
         const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
