@@ -560,7 +560,7 @@ function updateUnreadBadge(latestMsgTime) {
 
 function switchTab(t) {
     // Safely toggle visibility to prevent missing ID crashes
-    const views = ['dashboard', 'coach', 'settings', 'history', 'admin', 'physique'];
+    const views = ['dashboard', 'coach', 'settings', 'history', 'admin', 'physique', 'social'];
     views.forEach(view => {
         const el = document.getElementById(`view-${view}`);
         if (el) el.classList.toggle('hidden', t !== view);
@@ -572,7 +572,7 @@ function switchTab(t) {
         if (badge) badge.classList.add('hidden');
     }
 
-    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'physique': 'Physique & Recovery' }[t];
+    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'physique': 'Physique & Recovery', 'social': 'Social' }[t];
 
     views.forEach(tab => {
         const btn = document.getElementById(`nav-${tab}`);
