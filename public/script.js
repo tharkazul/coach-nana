@@ -305,6 +305,28 @@ function initSSE() {
         }
     });
 
+    sseConnection.addEventListener('connection_request', (e) => {
+        const data = JSON.parse(e.data);
+        alert(`New connection request from ${data.username}!`);
+        loadPendingRequests();
+    });
+
+    sseConnection.addEventListener('connection_accepted', (e) => {
+        const data = JSON.parse(e.data);
+        alert(`${data.username} accepted your connection request!`);
+        if (!document.getElementById('view-social').classList.contains('hidden')) {
+            loadSocialFeed();
+        }
+    });
+
+    sseConnection.addEventListener('kudos_received', (e) => {
+        const data = JSON.parse(e.data);
+        alert(`You got Kudos from ${data.fromUsername} on ${data.activityName}!`);
+        if (!document.getElementById('view-social').classList.contains('hidden')) {
+            loadSocialFeed();
+        }
+    });
+
     sseConnection.onerror = (err) => {
         console.error("SSE Connection Error:", err);
         sseConnection.close();
@@ -437,6 +459,8 @@ async function loadSettings() {
         document.getElementById('set-coach-tone').value = data.coachTone || '';
         document.getElementById('set-athlete-context').value = data.athleteContext || '';
         document.getElementById('set-garmin-user').value = data.garminUsername || '';
+        const searchPrivacyToggle = document.getElementById('setting-search-privacy');
+        if (searchPrivacyToggle) searchPrivacyToggle.checked = !!data.searchPrivacy;
         // --- ONBOARDING TRIGGER ---
         // In server.js, new users default to 'New athlete.'
         if (data.athleteContext === 'New athlete.') {
@@ -587,6 +611,7 @@ function switchTab(t) {
     });
 
     if (t === 'history') loadHistory();
+    if (t === 'social') loadSocialFeed();
     if (t === 'physique') {
         loadPhysiqueLogs();
         loadNutritionProtocol();
@@ -2933,3 +2958,268 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// --- SOCIAL LOGIC ---
+function toggleSocialTab(tab) {
+    if (document.startViewTransition) {
+        document.startViewTransition(() => updateSocialTabUI(tab));
+    } else {
+        updateSocialTabUI(tab);
+    }
+}
+
+function updateSocialTabUI(tab) {
+    const feedBtn = document.getElementById('social-tab-feed');
+    const leadBtn = document.getElementById('social-tab-leaderboard');
+    const feedCont = document.getElementById('social-feed-container');
+    const leadCont = document.getElementById('social-leaderboard-container');
+    
+    if (tab === 'feed') {
+        feedBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300";
+        leadBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300";
+        feedCont.classList.remove('hidden');
+        leadCont.classList.add('hidden');
+        loadSocialFeed();
+    } else {
+        leadBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300";
+        feedBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300";
+        leadCont.classList.remove('hidden');
+        feedCont.classList.add('hidden');
+        loadLeaderboard();
+    }
+}
+
+async function loadSocialFeed() {
+    try {
+        const res = await fetch('/api/social/feed', { headers: getAuthHeaders() });
+        const data = await res.json();
+        const container = document.getElementById('social-feed-container');
+        if (!data.activities || data.activities.length === 0) {
+            container.innerHTML = '<div class="bg-theme-card border border-theme-border rounded-xl shadow-sm p-8 text-center"><p class="text-theme-muted text-sm">No recent activity from your connections.</p></div>';
+            return;
+        }
+        
+        container.innerHTML = data.activities.map(act => `
+            <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs">
+                            ${act.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-theme-text">${act.username}</p>
+                            <p class="text-[10px] text-theme-muted">${new Date(act.start_date).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div class="text-[10px] bg-theme-bg px-2 py-1 rounded text-theme-muted uppercase tracking-wider font-bold">
+                        ${act.sport_type || 'Activity'}
+                    </div>
+                </div>
+                <h3 class="text-sm font-bold text-theme-text mt-2">${act.name}</h3>
+                <div class="flex gap-4 mt-3">
+                    <div>
+                        <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Dist</p>
+                        <p class="text-xs font-bold text-theme-text">${(act.distance / 1000).toFixed(2)} km</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">TSS</p>
+                        <p class="text-xs font-bold text-theme-text">${Math.round(act.tss || 0)}</p>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-theme-border flex items-center gap-2">
+                    <button onclick="toggleKudos('${act.id}', this)" class="text-xs font-bold flex items-center gap-1.5 transition ${act.has_kudosed ? 'text-red-500' : 'text-theme-muted hover:text-red-500'}">
+                        <svg class="w-4 h-4 ${act.has_kudosed ? 'fill-current' : 'fill-none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                        <span class="kudos-count">${act.kudos_count}</span>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        console.error("Failed to load feed", e);
+    }
+}
+
+async function loadLeaderboard() {
+    try {
+        const res = await fetch('/api/social/leaderboard', { headers: getAuthHeaders() });
+        const data = await res.json();
+        const container = document.getElementById('social-leaderboard-list');
+        if (!data.leaderboard || data.leaderboard.length === 0) {
+            container.innerHTML = '<p class="text-sm text-theme-muted text-center p-4">No data this week.</p>';
+            return;
+        }
+
+        container.innerHTML = data.leaderboard.map((u, i) => `
+            <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded p-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold text-theme-muted w-4 text-center">${i + 1}</span>
+                    <span class="text-sm font-bold text-theme-text">${u.username}</span>
+                </div>
+                <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_tss)} TSS</span>
+            </div>
+        `).join('');
+    } catch(e) {
+        console.error("Failed to load leaderboard", e);
+    }
+}
+
+async function toggleKudos(activityId, btnEl) {
+    try {
+        const res = await fetch('/api/social/kudos', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ activityId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const countEl = btnEl.querySelector('.kudos-count');
+            const svg = btnEl.querySelector('svg');
+            let count = parseInt(countEl.innerText);
+            if (data.added) {
+                countEl.innerText = count + 1;
+                btnEl.classList.add('text-red-500');
+                btnEl.classList.remove('text-theme-muted');
+                svg.classList.add('fill-current');
+                svg.classList.remove('fill-none');
+            } else {
+                countEl.innerText = count - 1;
+                btnEl.classList.remove('text-red-500');
+                btnEl.classList.add('text-theme-muted');
+                svg.classList.remove('fill-current');
+                svg.classList.add('fill-none');
+            }
+        }
+    } catch(e) {
+        console.error("Failed to toggle kudos", e);
+    }
+}
+
+function openAddPersonModal() {
+    const modal = document.getElementById('add-person-modal');
+    modal.classList.remove('hidden');
+    // small delay to allow display:block to apply before animating opacity
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        document.getElementById('add-person-modal-content').classList.remove('scale-95');
+    }, 10);
+    document.getElementById('add-person-input').value = '';
+    document.getElementById('add-person-results').classList.add('hidden');
+    loadPendingRequests();
+}
+
+function closeAddPersonModal() {
+    const modal = document.getElementById('add-person-modal');
+    modal.classList.add('opacity-0');
+    document.getElementById('add-person-modal-content').classList.add('scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+async function searchPerson() {
+    const username = document.getElementById('add-person-input').value.trim();
+    if (!username) return;
+    
+    const resultsDiv = document.getElementById('add-person-results');
+    resultsDiv.classList.remove('hidden');
+    resultsDiv.innerHTML = '<p class="text-xs text-theme-muted">Searching...</p>';
+    
+    try {
+        const res = await fetch('/api/social/search', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ username })
+        });
+        const data = await res.json();
+        
+        if (!data.found) {
+            resultsDiv.innerHTML = '<p class="text-xs text-red-500">User not found or privacy enabled.</p>';
+            return;
+        }
+        
+        const u = data.user;
+        let btnHtml = '';
+        if (u.status === 'accepted') {
+            btnHtml = '<span class="text-xs font-bold text-theme-muted">Connected</span>';
+        } else if (u.status === 'pending') {
+            btnHtml = '<span class="text-xs font-bold text-theme-muted">Requested</span>';
+        } else if (u.status === 'pending_received') {
+            btnHtml = `<button onclick="acceptConnection(${u.id})" class="text-xs bg-theme-text text-theme-card font-bold px-3 py-1 rounded">Accept</button>`;
+        } else {
+            btnHtml = `<button onclick="sendConnectionRequest(${u.id})" class="text-xs bg-theme-accent text-white font-bold px-3 py-1 rounded shadow">Connect</button>`;
+        }
+        
+        resultsDiv.innerHTML = `
+            <div class="flex justify-between items-center bg-theme-bg border border-theme-border p-3 rounded">
+                <span class="text-sm font-bold text-theme-text">${u.username}</span>
+                ${btnHtml}
+            </div>
+        `;
+    } catch(e) {
+        resultsDiv.innerHTML = '<p class="text-xs text-red-500">Search failed.</p>';
+    }
+}
+
+async function sendConnectionRequest(friendId) {
+    try {
+        const res = await fetch('/api/social/connect', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ friendId })
+        });
+        if (res.ok) {
+            searchPerson(); // Refresh the search result to show 'Requested'
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function acceptConnection(friendId) {
+    try {
+        const res = await fetch('/api/social/accept', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ friendId })
+        });
+        if (res.ok) {
+            loadPendingRequests();
+            if(document.getElementById('add-person-input').value) searchPerson();
+            loadSocialFeed();
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function loadPendingRequests() {
+    try {
+        const res = await fetch('/api/social/connections', { headers: getAuthHeaders() });
+        const data = await res.json();
+        const pending = data.connections.filter(c => c.status === 'pending_received');
+        
+        const section = document.getElementById('pending-requests-section');
+        const list = document.getElementById('pending-requests-list');
+        
+        if (pending.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+        
+        section.classList.remove('hidden');
+        list.innerHTML = pending.map(p => `
+            <div class="flex justify-between items-center bg-theme-bg border border-theme-border p-2 rounded">
+                <span class="text-sm font-bold text-theme-text">${p.username}</span>
+                <button onclick="acceptConnection(${p.friend_id})" class="text-xs bg-theme-text text-theme-card font-bold px-3 py-1 rounded">Accept</button>
+            </div>
+        `).join('');
+        
+    } catch(e) { console.error("Failed to load requests", e); }
+}
+
+async function toggleSearchPrivacy() {
+    const isChecked = document.getElementById('setting-search-privacy').checked;
+    try {
+        await fetch('/api/user/settings/privacy', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ searchPrivacy: isChecked })
+        });
+    } catch(e) { console.error("Failed to update privacy setting", e); }
+}

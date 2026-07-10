@@ -1040,14 +1040,37 @@
             </div>
 
             <!-- SOCIAL VIEW -->
-            <div id="view-social" class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-32 max-w-7xl mx-auto w-full space-y-5 md:space-y-6">
-                <div>
-                    <h2 class="text-xl font-bold text-theme-text">Social</h2>
-                    <p class="text-xs text-theme-muted mt-1">Connect with friends and share your progress. (Coming soon)</p>
+            <div id="view-social" class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-32 max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
+                
+                <!-- Social Header & Segmented Control -->
+                <div class="flex flex-col gap-4 sticky top-0 bg-theme-bg z-10 pt-2 pb-4 border-b border-theme-border">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold text-theme-text">Social</h2>
+                        <button onclick="openAddPersonModal()" class="text-theme-muted hover:text-theme-accent transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Segmented Control -->
+                    <div class="flex bg-theme-card border border-theme-border rounded-full p-1 shadow-sm">
+                        <button onclick="toggleSocialTab('feed')" id="social-tab-feed" class="flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300">Feed</button>
+                        <button onclick="toggleSocialTab('leaderboard')" id="social-tab-leaderboard" class="flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300">Leaderboard</button>
+                    </div>
                 </div>
-                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm p-8 text-center">
-                    <p class="text-theme-muted text-sm">Social features are currently under development. Check back soon!</p>
+
+                <!-- Feed Container -->
+                <div id="social-feed-container" class="space-y-4">
+                    <div class="flex justify-center p-8"><div class="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin"></div></div>
                 </div>
+
+                <!-- Leaderboard Container -->
+                <div id="social-leaderboard-container" class="hidden space-y-4">
+                    <p class="text-xs text-theme-muted mb-2">This week &middot; total TSS</p>
+                    <div id="social-leaderboard-list" class="space-y-2"></div>
+                </div>
+
             </div>
 
             <!-- SETTINGS VIEW -->
@@ -1319,6 +1342,40 @@
             </div>
         </div>
     </main>
+
+    <!-- Add Person Modal -->
+    <div id="add-person-modal"
+        class="fixed inset-0 z-[10000] hidden flex items-center justify-center p-4 md:p-8 backdrop-blur-sm transition-opacity duration-300 opacity-0 bg-black/40">
+        <div id="add-person-modal-content"
+            class="bg-theme-card rounded-2xl md:rounded-sm shadow-2xl w-full max-w-sm flex flex-col overflow-hidden relative border border-theme-border scale-95 transition-all duration-300 ease-out p-6 space-y-4">
+            
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold text-theme-text">Find People</h3>
+                <button onclick="closeAddPersonModal()" class="text-theme-muted hover:text-theme-text transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <p class="text-xs text-theme-muted">Search by exact username to connect.</p>
+
+            <div class="flex gap-2">
+                <input type="text" id="add-person-input" placeholder="Username"
+                    class="flex-1 px-3 py-2 text-sm bg-theme-bg border border-theme-border rounded focus:outline-none focus:border-theme-accent text-theme-text">
+                <button onclick="searchPerson()" class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 transition shadow">Search</button>
+            </div>
+
+            <div id="add-person-results" class="mt-4 space-y-2 hidden">
+                <!-- Results go here -->
+            </div>
+            
+            <!-- Pending Requests Section -->
+            <div id="pending-requests-section" class="pt-4 border-t border-theme-border hidden space-y-2">
+                <h4 class="text-[10px] font-bold text-theme-muted uppercase tracking-wider">Pending Requests</h4>
+                <div id="pending-requests-list" class="space-y-2"></div>
+            </div>
+
+        </div>
+    </div>
 
     <!-- Edit Workout Modal -->
     <div id="edit-workout-modal"

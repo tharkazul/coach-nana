@@ -252,12 +252,14 @@ db.serialize(() => {
         athlete_context TEXT DEFAULT 'No context provided yet.',
         long_term_memory TEXT DEFAULT '',
         daily_token_usage INTEGER DEFAULT 0,
-        last_token_reset_date TEXT
+        last_token_reset_date TEXT,
+        search_privacy INTEGER DEFAULT 0
     )`);
     // Add columns if they don't exist (fails silently if they do)
     db.run(`ALTER TABLE users ADD COLUMN long_term_memory TEXT DEFAULT ''`, (err) => {});
     db.run(`ALTER TABLE users ADD COLUMN daily_token_usage INTEGER DEFAULT 0`, (err) => {});
     db.run(`ALTER TABLE users ADD COLUMN last_token_reset_date TEXT`, (err) => {});
+    db.run(`ALTER TABLE users ADD COLUMN search_privacy INTEGER DEFAULT 0`, (err) => {});
     db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -334,6 +336,23 @@ db.serialize(() => {
         date TEXT,
         protocol_json TEXT,
         UNIQUE(user_id, date)
+    )`);
+    db.run(`CREATE TABLE IF NOT EXISTS connections (
+        user_id INTEGER,
+        friend_id INTEGER,
+        status TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, friend_id),
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(friend_id) REFERENCES users(id)
+    )`);
+    db.run(`CREATE TABLE IF NOT EXISTS kudos (
+        activity_id INTEGER,
+        user_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(activity_id, user_id),
+        FOREIGN KEY(activity_id) REFERENCES activities(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
 });
 
@@ -649,7 +668,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
-                    8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time". Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
+                    8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
                     9. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
 
                     WORKOUT PLANNING (CRITICAL):
@@ -878,18 +897,19 @@ CRITICAL RULES:
 
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
-        `SELECT username, strava_refresh_token, garmin_username, coach_tone, athlete_context FROM users WHERE id = ?`,
+        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy FROM users WHERE id = ?`,
         [req.user.id],
-        (err, user) => {
-            if (err || !user) return res.status(500).json({ error: "Failed to load settings." });
-
+        (err, row) => {
+            if (err || !row) return res.status(500).json({ error: "DB Error" });
             res.json({
-                username: user.username,
-                hasStrava: !!user.strava_refresh_token,
-                hasGarmin: !!user.garmin_username,
-                garminUsername: user.garmin_username || '',
-                coachTone: user.coach_tone,
-                athleteContext: user.athlete_context
+                id: row.id,
+                username: row.username,
+                hasStrava: !!row.strava_refresh_token,
+                hasGarmin: !!row.garmin_username,
+                garminUsername: row.garmin_username,
+                coachTone: row.coach_tone,
+                athleteContext: row.athlete_context,
+                searchPrivacy: row.search_privacy
             });
         }
     );
@@ -2013,6 +2033,104 @@ async function syncAllStravaUsersOnStartup() {
         }
     });
 }
+
+// --- SOCIAL ENDPOINTS ---
+
+app.post('/api/settings/privacy', authenticateToken, (req, res) => {
+    const { searchPrivacy } = req.body;
+    db.run(`UPDATE users SET search_privacy = ? WHERE id = ?`, [searchPrivacy ? 1 : 0, req.user.id], function(err) {
+        if (err) return res.status(500).json({ error: 'DB_ERROR' });
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/social/search', authenticateToken, (req, res) => {
+    const { username } = req.body;
+    db.get(`SELECT id, username FROM users WHERE username = ? COLLATE NOCASE AND id != ? AND search_privacy = 0`, [username, req.user.id], (err, user) => {
+        if (err || !user) return res.json({ found: false });
+        db.get(`SELECT status FROM connections WHERE user_id = ? AND friend_id = ?`, [req.user.id, user.id], (err, conn) => {
+            res.json({ found: true, user: { id: user.id, username: user.username, status: conn ? conn.status : null } });
+        });
+    });
+});
+
+app.post('/api/social/connect', authenticateToken, (req, res) => {
+    const { friendId } = req.body;
+    db.run(`INSERT OR IGNORE INTO connections (user_id, friend_id, status) VALUES (?, ?, 'pending')`, [req.user.id, friendId], function(err) {
+        db.run(`INSERT OR IGNORE INTO connections (user_id, friend_id, status) VALUES (?, ?, 'pending_received')`, [friendId, req.user.id], function(err2) {
+            sendSSEEvent(friendId, 'connection_request', { fromUserId: req.user.id, username: req.user.username });
+            res.json({ success: true });
+        });
+    });
+});
+
+app.post('/api/social/accept', authenticateToken, (req, res) => {
+    const { friendId } = req.body;
+    db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [req.user.id, friendId], function(err) {
+        db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [friendId, req.user.id], function(err2) {
+            sendSSEEvent(friendId, 'connection_accepted', { fromUserId: req.user.id, username: req.user.username });
+            res.json({ success: true });
+        });
+    });
+});
+
+app.get('/api/social/connections', authenticateToken, (req, res) => {
+    db.all(`
+        SELECT c.friend_id, c.status, u.username
+        FROM connections c
+        JOIN users u ON c.friend_id = u.id
+        WHERE c.user_id = ?
+    `, [req.user.id], (err, rows) => {
+        res.json({ connections: rows || [] });
+    });
+});
+
+app.get('/api/social/feed', authenticateToken, (req, res) => {
+    db.all(`
+        SELECT a.*, u.username, 
+               (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) as kudos_count,
+               (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id AND k.user_id = ?) as has_kudosed
+        FROM activities a
+        JOIN users u ON a.user_id = u.id
+        WHERE a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted')
+        ORDER BY a.start_date DESC
+        LIMIT 20
+    `, [req.user.id, req.user.id, req.user.id], (err, rows) => {
+        res.json({ activities: rows || [] });
+    });
+});
+
+app.get('/api/social/leaderboard', authenticateToken, (req, res) => {
+    db.all(`
+        SELECT u.id, u.username, SUM(a.tss) as total_tss
+        FROM activities a
+        JOIN users u ON a.user_id = u.id
+        WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
+          AND a.start_date >= datetime('now', '-7 days')
+        GROUP BY u.id
+        ORDER BY total_tss DESC
+    `, [req.user.id, req.user.id], (err, rows) => {
+        res.json({ leaderboard: rows || [] });
+    });
+});
+
+app.post('/api/social/kudos', authenticateToken, (req, res) => {
+    const { activityId } = req.body;
+    db.get(`SELECT user_id FROM kudos WHERE activity_id = ? AND user_id = ?`, [activityId, req.user.id], (err, row) => {
+        if (row) {
+            db.run(`DELETE FROM kudos WHERE activity_id = ? AND user_id = ?`, [activityId, req.user.id], () => res.json({ success: true, added: false }));
+        } else {
+            db.run(`INSERT INTO kudos (activity_id, user_id) VALUES (?, ?)`, [activityId, req.user.id], () => {
+                db.get(`SELECT user_id, name FROM activities WHERE id = ?`, [activityId], (err, act) => {
+                    if (act && act.user_id !== req.user.id) {
+                        sendSSEEvent(act.user_id, 'kudos_received', { activityName: act.name, fromUsername: req.user.username || 'Someone' });
+                    }
+                });
+                res.json({ success: true, added: true });
+            });
+        }
+    });
+});
 
 async function triggerBackgroundSummary(userId) {
     console.log(`🤖 Triggering background rolling summary for user ${userId}...`);
