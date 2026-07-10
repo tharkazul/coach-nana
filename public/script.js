@@ -19,12 +19,12 @@ function showToast(message, type = 'info') {
     toast.className = `${bgColor} text-white px-4 py-2 rounded shadow-lg opacity-0 transition-opacity duration-300 pointer-events-auto`;
     toast.innerText = message;
     toastContainer.appendChild(toast);
-    
+
     requestAnimationFrame(() => {
         toast.classList.remove('opacity-0');
         toast.classList.add('opacity-100');
     });
-    
+
     setTimeout(() => {
         toast.classList.remove('opacity-100');
         toast.classList.add('opacity-0');
@@ -274,12 +274,12 @@ let sseConnection = null;
 function initSSE() {
     const token = localStorage.getItem('nana_token');
     if (!token) return;
-    
+
     if (sseConnection) sseConnection.close();
-    
+
     // Pass token in URL query parameter because EventSource doesn't support custom headers
     sseConnection = new EventSource(`/api/events?token=${token}`);
-    
+
     sseConnection.addEventListener('sync_complete', (e) => {
         console.log("Real-time sync complete received:", e.data);
         // Silently refresh the dashboard data if the user is logged in
@@ -291,7 +291,7 @@ function initSSE() {
     sseConnection.addEventListener('unread_message', (e) => {
         console.log("Real-time unread message received:", e.data);
         const data = JSON.parse(e.data);
-        
+
         // Show notification bubble if not currently on the coach tab
         const coachTabHidden = document.getElementById('view-coach')?.classList.contains('hidden');
         if (coachTabHidden) {
@@ -428,7 +428,7 @@ async function loadSettings() {
             // Unhide the secret Admin-Only coach tone
             const select = document.getElementById('set-coach-tone');
             if (select && !select.querySelector('option[value*="madison"]')) {
-                select.innerHTML += `<option value="Flirty, Horny, lewd, erotic, supportive, as if in a relationship, in the style of Madison Beer.">Coach Madison (Admin Only)</option>`;
+                select.innerHTML += `<option value="Flirty, Horny, lewd, erotic, highly suggestive, a little bi-sexual, supportive, as if in a relationship, in the style of Madison Beer.">Coach Madison</option>`;
             }
         }
 
@@ -552,7 +552,7 @@ function updateUnreadBadge(latestMsgTime) {
     const lastViewed = parseInt(localStorage.getItem('lastChatViewTimestamp') || '0');
     const badge = document.getElementById('unread-badge');
     const coachTabHidden = document.getElementById('view-coach')?.classList.contains('hidden');
-    
+
     if (latestMsgTime > lastViewed && coachTabHidden && badge) {
         badge.classList.remove('hidden');
     }
@@ -783,7 +783,7 @@ async function buildDashboard() {
             const targetDate = new Date();
             targetDate.setDate(targetDate.getDate() - 7);
             const targetDateStr = targetDate.toISOString().split('T')[0];
-            
+
             let pastWeight = null;
             for (let w of sortedData) {
                 if (w.date <= targetDateStr) {
@@ -862,7 +862,7 @@ async function buildDashboard() {
         // Subtitles for CTL and ATL/TSB
         let tsb = ctl - atl;
         document.getElementById('ctl-subtitle').innerText = "Aerobic Base";
-        
+
         const atlSub = document.getElementById('atl-subtitle');
         if (tsb < -30) { atlSub.innerText = "Overreaching"; atlSub.className = "text-[10px] text-red-500 mt-1 uppercase tracking-wider h-3"; }
         else if (tsb < -10) { atlSub.innerText = "Optimal Training"; atlSub.className = "text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"; }
@@ -882,7 +882,7 @@ async function buildDashboard() {
                 const latestPhys = physData[0]; // Already sorted descending by backend
                 const todayStr = new Date().toISOString().split('T')[0];
                 const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-                
+
                 // Apply sleep/fatigue if logged today or yesterday
                 if (latestPhys.date === todayStr || latestPhys.date === yesterdayStr) {
                     if (latestPhys.sleep_quality) readiness += (latestPhys.sleep_quality - 3) * 10;
@@ -890,7 +890,7 @@ async function buildDashboard() {
                 }
             }
         }
-        
+
         readiness = Math.max(0, Math.min(100, Math.round(readiness)));
         const readinessEl = document.getElementById('readiness-metric');
         const readinessSub = document.getElementById('readiness-subtitle');
@@ -906,7 +906,7 @@ async function buildDashboard() {
                 readinessEl.className = "text-2xl md:text-4xl font-semibold text-green-500 tracking-tight";
                 if (readinessSub) { readinessSub.innerText = "Prime Condition"; readinessSub.className = "text-[10px] text-green-500/70 mt-1 uppercase tracking-wider h-3"; }
             }
-            
+
             const rSlider = document.getElementById('readiness-slider-container');
             const rMarker = document.getElementById('readiness-slider-marker');
             if (rSlider && rMarker) {
@@ -967,7 +967,7 @@ async function buildDashboard() {
         };
 
         const sparkDates = dates.slice(-30);
-        
+
         ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
             const canvas = document.getElementById(`sparkline-${metric}`);
             if (canvas) {
@@ -976,16 +976,16 @@ async function buildDashboard() {
                 let color = '#0ea5e9';
                 if (metric === 'fitness') { sparkData = ctlData.slice(-30); color = '#0ea5e9'; }
                 if (metric === 'fatigue') { sparkData = atlData.slice(-30); color = '#f43f5e'; }
-                if (metric === 'readiness') { 
-                    sparkData = tsbData.slice(-30).map(t => 50 + Math.max(-20, Math.min(20, t * 0.5))); 
-                    color = '#10b981'; 
+                if (metric === 'readiness') {
+                    sparkData = tsbData.slice(-30).map(t => 50 + Math.max(-20, Math.min(20, t * 0.5)));
+                    color = '#10b981';
                 }
-                if (metric === 'weight') { 
+                if (metric === 'weight') {
                     // Need to filter out nulls for a clean sparkline or rely on spanGaps
-                    sparkData = weightPlot.slice(-30); 
-                    color = '#8b5cf6'; 
+                    sparkData = weightPlot.slice(-30);
+                    color = '#8b5cf6';
                 }
-                
+
                 window[`sparkline_${metric}`] = new Chart(canvas.getContext('2d'), {
                     type: 'line',
                     data: { labels: sparkDates, datasets: [{ data: sparkData, borderColor: color, fill: false, spanGaps: true }] },
@@ -1045,7 +1045,7 @@ async function buildDashboard() {
             document.getElementById('goal-days-out').innerText = `${daysOut} days out`;
             document.getElementById('goal-now-text').innerHTML = `Now &middot; ${Math.round(ctl)} CTL`;
             document.getElementById('goal-target-text').innerHTML = `Target &middot; ${targetCtl} CTL`;
-            
+
             let percent = Math.min(100, Math.max(0, (ctl / targetCtl) * 100));
             document.getElementById('goal-progress-bar').style.width = `${percent}%`;
 
@@ -1054,7 +1054,7 @@ async function buildDashboard() {
             let ctl14 = pastDateIndex !== -1 ? ctlData[pastDateIndex] : (ctlData[0] || ctl);
             let rampRateWeekly = ((ctl - ctl14) / 14) * 7;
             let projectedCtl = ctl + (rampRateWeekly * (daysOut / 7));
-            
+
             let projTextEl = document.getElementById('goal-projection-text');
             if (daysOut === 0) {
                 projTextEl.innerHTML = `Race day is here! Good luck!`;
@@ -1095,8 +1095,8 @@ async function buildDashboard() {
                     responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                     scales: {
                         y: { type: 'linear', position: 'left', grid: { color: 'rgba(156, 163, 175, 0.2)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
-                        x: { 
-                            grid: { display: false }, 
+                        x: {
+                            grid: { display: false },
                             ticks: { maxTicksLimit: 6, color: '#9ca3af', font: { size: 10 } },
                             min: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                             max: new Date().toISOString().split('T')[0]
@@ -1196,11 +1196,11 @@ async function loadMicroPlan() {
 
             // Open Day Container
             html += `<div id="row-${dateStr}" class="flex flex-col bg-theme-card border ${isToday ? 'border-theme-accent ring-1 ring-theme-accent/50' : 'border-theme-border'} rounded-lg overflow-hidden h-full min-h-[150px]">`;
-            
+
             // Header for the day
             html += `<div class="bg-theme-bg/50 px-3 py-2 border-b border-theme-border flex justify-between items-center">`;
             html += `<div class="flex flex-col"><span class="text-[10px] uppercase font-bold text-theme-muted tracking-wider">${dayName}</span><span class="text-xs font-medium text-theme-text">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>`;
-            
+
             // Weather
             if (weatherMap[dateStr]) {
                 const w = weatherMap[dateStr];
@@ -1210,10 +1210,10 @@ async function loadMicroPlan() {
 
             // Body for workouts
             html += `<div class="p-2 flex flex-col gap-2 flex-grow">`;
-            
+
             workoutsForDay.forEach((p, wIdx) => {
                 let actualTss = actualTssMap[`${dateStr}_${p.sport}`] || 0;
-                
+
                 // Color coding
                 let sportColor = "bg-gray-500/10 border-gray-500/20 text-gray-500";
                 if (p.sport === 'Run') sportColor = "bg-red-500/10 border-red-500/20 text-red-500";
@@ -1263,7 +1263,7 @@ let wbSteps = [];
 function openEditWorkoutModal(workoutData, dateStr) {
     wbCurrentDateStr = dateStr;
     const isNew = !workoutData;
-    
+
     if (isNew) {
         wbCurrentWorkoutId = null;
         document.getElementById('edit-workout-date').value = dateStr;
@@ -1279,10 +1279,10 @@ function openEditWorkoutModal(workoutData, dateStr) {
         document.getElementById('edit-workout-sport').value = p.sport;
         document.getElementById('edit-workout-desc').value = p.description || '';
         document.getElementById('edit-workout-tss').value = p.target_tss || 0;
-        
+
         try {
             wbSteps = (p.steps_json && p.steps_json !== 'null') ? JSON.parse(p.steps_json) : [];
-        } catch(e) {
+        } catch (e) {
             wbSteps = [];
         }
         if (p.id) {
@@ -1293,12 +1293,12 @@ function openEditWorkoutModal(workoutData, dateStr) {
             document.getElementById('btn-edit-workout-garmin').style.display = 'none';
         }
     }
-    
+
     // Add event listener to sport to re-render steps (for strength)
     document.getElementById('edit-workout-sport').onchange = () => { renderWbSteps(); };
-    
+
     renderWbSteps();
-    
+
     const modal = document.getElementById('edit-workout-modal');
     const content = document.getElementById('edit-workout-modal-content');
     modal.classList.remove('hidden');
@@ -1312,11 +1312,11 @@ function openEditWorkoutModal(workoutData, dateStr) {
 function closeEditWorkoutModal() {
     const modal = document.getElementById('edit-workout-modal');
     const content = document.getElementById('edit-workout-modal-content');
-    
+
     modal.classList.add('opacity-0');
     content.classList.remove('translate-y-0', 'md:scale-100');
     content.classList.add('translate-y-full', 'md:scale-95');
-    
+
     // Wait for transition to finish
     setTimeout(() => {
         modal.classList.add('hidden');
@@ -1350,7 +1350,7 @@ function calculateWbTss() {
 // Workout Builder Logic
 function wbAddStep(type) {
     const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
-    const step = isStrength ? 
+    const step = isStrength ?
         { type: type, condition_type: 'reps', condition_value: 10, target_type: 'no.target', weight: 0, exerciseName: '' } :
         { type: type, condition_type: 'time', condition_value: 5, target_type: 'no.target' };
     wbSteps.push(step);
@@ -1359,12 +1359,14 @@ function wbAddStep(type) {
 
 function wbAddRepeat() {
     const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
-    const step = { type: 'repeat', iterations: 3, steps: [
-        isStrength ? 
-            { type: 'interval', condition_type: 'reps', condition_value: 10, target_type: 'no.target', weight: 0, exerciseName: '' } :
-            { type: 'interval', condition_type: 'time', condition_value: 5, target_type: 'no.target' },
-        { type: 'recovery', condition_type: 'time', condition_value: 2, target_type: 'no.target' }
-    ] };
+    const step = {
+        type: 'repeat', iterations: 3, steps: [
+            isStrength ?
+                { type: 'interval', condition_type: 'reps', condition_value: 10, target_type: 'no.target', weight: 0, exerciseName: '' } :
+                { type: 'interval', condition_type: 'time', condition_value: 5, target_type: 'no.target' },
+            { type: 'recovery', condition_type: 'time', condition_value: 2, target_type: 'no.target' }
+        ]
+    };
     wbSteps.push(step);
     renderWbSteps();
 }
@@ -1382,7 +1384,7 @@ function wbMoveStep(idx, dir, subIdx = null) {
     const arr = subIdx === null ? wbSteps : wbSteps[idx].steps;
     const targetIdx = subIdx === null ? idx : subIdx;
     if (targetIdx + dir < 0 || targetIdx + dir >= arr.length) return;
-    
+
     const temp = arr[targetIdx];
     arr[targetIdx] = arr[targetIdx + dir];
     arr[targetIdx + dir] = temp;
@@ -1407,17 +1409,17 @@ function wbUpdateStep(idx, subIdx, field, val) {
 function renderWbSteps() {
     const container = document.getElementById('wb-steps-container');
     if (!container) return;
-    
+
     calculateWbTss();
-    
+
     if (wbSteps.length === 0) {
         container.innerHTML = `<div class="text-xs text-theme-muted italic py-4 text-center border border-dashed border-theme-border rounded-lg">No structured steps. Click above to add blocks.</div>`;
         return;
     }
-    
+
     let html = '';
     const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
-    
+
     wbSteps.forEach((s, idx) => {
         html += renderWbBlock(s, idx, null, isStrength);
     });
@@ -1427,7 +1429,7 @@ function renderWbSteps() {
 function renderWbBlock(s, idx, parentIdx, isStrength) {
     const isSub = parentIdx !== null;
     const isRepeat = s.type === 'repeat';
-    
+
     // Color coding for blocks
     let bgClass = "bg-theme-bg border-theme-border";
     if (s.type === 'warmup') bgClass = "bg-green-500/10 border-green-500/30";
@@ -1435,46 +1437,46 @@ function renderWbBlock(s, idx, parentIdx, isStrength) {
     if (s.type === 'recovery') bgClass = "bg-amber-500/10 border-amber-500/30";
     if (s.type === 'cooldown') bgClass = "bg-purple-500/10 border-purple-500/30";
     if (s.type === 'repeat') bgClass = "bg-theme-accent/5 border-theme-accent/30";
-    
+
     let html = `<div class="flex flex-col border rounded-md ${bgClass} p-2 relative ${isSub ? 'mt-2' : ''}">`;
-    
+
     // Top Row
     html += `<div class="flex flex-wrap items-center gap-2">`;
-    
+
     // Drag/Reorder handles
     html += `<div class="flex flex-col gap-0.5 opacity-50 hover:opacity-100">
         <button onclick="wbMoveStep(${isSub ? parentIdx : idx}, -1, ${isSub ? idx : 'null'})" class="hover:text-theme-accent"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg></button>
         <button onclick="wbMoveStep(${isSub ? parentIdx : idx}, 1, ${isSub ? idx : 'null'})" class="hover:text-theme-accent"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
     </div>`;
-    
+
     html += `<div class="text-[10px] uppercase font-bold text-theme-text w-16 truncate">${s.type}</div>`;
-    
+
     if (isRepeat) {
         html += `<input type="number" onchange="wbUpdateStep(${idx}, null, 'iterations', this.value)" value="${s.iterations || 1}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
         html += `<span class="text-[10px] text-theme-muted">times</span>`;
     } else {
         html += `<input type="number" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'condition_value', this.value)" value="${s.condition_value || 0}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
         html += `<select onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'condition_type', this.value)" class="bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">
-            <option value="time" ${s.condition_type === 'time'?'selected':''}>min</option>
-            <option value="distance" ${s.condition_type === 'distance'?'selected':''}>m</option>
-            <option value="reps" ${s.condition_type === 'reps'?'selected':''}>reps</option>
+            <option value="time" ${s.condition_type === 'time' ? 'selected' : ''}>min</option>
+            <option value="distance" ${s.condition_type === 'distance' ? 'selected' : ''}>m</option>
+            <option value="reps" ${s.condition_type === 'reps' ? 'selected' : ''}>reps</option>
         </select>`;
-        
+
         if (isStrength) {
             html += `<input type="text" placeholder="Exercise name..." onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'exerciseName', this.value)" value="${s.exerciseName || ''}" class="flex-1 min-w-[80px] bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">`;
             html += `<input type="number" placeholder="kg" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'weight', this.value)" value="${s.weight || ''}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent"><span class="text-[10px] text-theme-muted">kg</span>`;
         } else {
             html += `<span class="text-[10px] text-theme-muted px-1">@</span>`;
-            
+
             html += `<select onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'target_type', this.value); renderWbSteps();" class="bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">
-                <option value="no.target" ${s.target_type === 'no.target'?'selected':''}>Open</option>
-                <option value="heart.rate.zone" ${s.target_type === 'heart.rate.zone'?'selected':''}>HR Zone</option>
-                <option value="power.zone" ${s.target_type === 'power.zone'?'selected':''}>Power Zone</option>
-                <option value="pace.zone" ${s.target_type === 'pace.zone'?'selected':''}>Pace Zone</option>
-                <option value="pace.exact" ${s.target_type === 'pace.exact'?'selected':''}>Pace (Exact)</option>
-                <option value="speed.zone" ${s.target_type === 'speed.zone'?'selected':''}>Speed Zone</option>
+                <option value="no.target" ${s.target_type === 'no.target' ? 'selected' : ''}>Open</option>
+                <option value="heart.rate.zone" ${s.target_type === 'heart.rate.zone' ? 'selected' : ''}>HR Zone</option>
+                <option value="power.zone" ${s.target_type === 'power.zone' ? 'selected' : ''}>Power Zone</option>
+                <option value="pace.zone" ${s.target_type === 'pace.zone' ? 'selected' : ''}>Pace Zone</option>
+                <option value="pace.exact" ${s.target_type === 'pace.exact' ? 'selected' : ''}>Pace (Exact)</option>
+                <option value="speed.zone" ${s.target_type === 'speed.zone' ? 'selected' : ''}>Speed Zone</option>
             </select>`;
-            
+
             if (s.target_type && s.target_type.endsWith('.zone')) {
                 html += `<input type="number" placeholder="Zone (1-5)" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'zone', this.value)" value="${s.zone || ''}" class="w-16 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
             } else if (s.target_type === 'pace.exact') {
@@ -1485,13 +1487,13 @@ function renderWbBlock(s, idx, parentIdx, isStrength) {
             }
         }
     }
-    
+
     html += `<div class="ml-auto flex items-center">
         <button onclick="wbRemoveStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'})" class="text-red-500 hover:text-red-400 p-1 rounded hover:bg-red-500/10 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
     </div>`;
-    
+
     html += `</div>`; // End Top Row
-    
+
     // Sub-steps for Repeat
     if (isRepeat) {
         html += `<div class="pl-6 ml-2 mt-2 border-l-2 border-theme-accent/30 space-y-2">`;
@@ -1503,7 +1505,7 @@ function renderWbBlock(s, idx, parentIdx, isStrength) {
         </div>`;
         html += `</div>`;
     }
-    
+
     html += `</div>`;
     return html;
 }
@@ -1515,7 +1517,7 @@ if (document.getElementById('btn-edit-workout-save')) {
         const desc = document.getElementById('edit-workout-desc').value;
         const tss = parseFloat(document.getElementById('edit-workout-tss').value) || 0;
         const stepsJson = JSON.stringify(wbSteps);
-        
+
         if (wbCurrentWorkoutId) {
             // UPDATE
             await fetch(`/api/micro-plan/${wbCurrentWorkoutId}`, {
@@ -1531,7 +1533,7 @@ if (document.getElementById('btn-edit-workout-save')) {
                 body: JSON.stringify({ date: date, sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson })
             });
         }
-        
+
         if (navigator.vibrate) navigator.vibrate(50);
         closeEditWorkoutModal();
         loadMicroPlan();
@@ -1563,7 +1565,7 @@ if (document.getElementById('btn-edit-workout-garmin')) {
 async function syncSingleToGarmin(id, dateStr, sport) {
     if (sport === 'Rest') return;
     showToast(`Syncing ${sport} to Garmin...`);
-    
+
     try {
         const res = await fetch('/api/sync-garmin', {
             method: 'POST',
@@ -1571,7 +1573,7 @@ async function syncSingleToGarmin(id, dateStr, sport) {
             body: JSON.stringify({ workouts: [{ date: dateStr, sport: sport }] })
         });
         const result = await res.json();
-        
+
         if (result.success) {
             showToast(`✅ Synced successfully!`, 'success');
         } else {
@@ -1650,14 +1652,14 @@ async function openActivityModal(id) {
     modal.classList.remove('opacity-0');
     content.classList.remove('translate-y-full', 'md:scale-95');
     content.classList.add('translate-y-0', 'md:scale-100');
-    
-    document.getElementById('modal-loader').classList.remove('hidden'); 
-    document.getElementById('modal-content').classList.add('hidden'); 
+
+    document.getElementById('modal-loader').classList.remove('hidden');
+    document.getElementById('modal-content').classList.add('hidden');
     document.getElementById('modal-title').innerText = "Connecting to Strava...";
     try {
         const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
         document.getElementById('modal-title').innerText = data.name || "Activity Details";
-        let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--'; 
+        let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--';
         let distStr = '--';
         if (data.distance) {
             distStr = data.type === 'Swim' ? `${Math.round(data.distance)} m` : `${(data.distance / 1000).toFixed(2)} km`;
@@ -1672,7 +1674,7 @@ async function openActivityModal(id) {
                 cadenceStr = `${Math.round(data.average_cadence)} rpm`;
             }
         }
-        
+
         let paceSpeedLabel = 'Avg Pace';
         let paceSpeedStr = '--';
         if (data.distance && data.moving_time) {
@@ -1696,7 +1698,7 @@ async function openActivityModal(id) {
                 paceSpeedStr = `${paceMins}:${paceSecs} /km`;
             }
         }
-        
+
         let movingTimeStr = '--';
         if (data.moving_time) {
             let h = Math.floor(data.moving_time / 3600);
@@ -1739,7 +1741,7 @@ async function openActivityModal(id) {
                     <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div>
                     <div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div>
                 </div>`;
-                
+
         if (data.laps && data.laps.length > 0) {
             document.getElementById('modal-laps-container').classList.remove('hidden');
             document.getElementById('modal-laps-table').innerHTML = data.laps.map(lap => {
@@ -1747,7 +1749,7 @@ async function openActivityModal(id) {
                 if (lap.distance) {
                     dist = data.type === 'Swim' ? `${Math.round(lap.distance)} m` : `${(lap.distance / 1000).toFixed(2)} km`;
                 }
-                
+
                 let time = '--';
                 if (lap.moving_time) {
                     let mins = Math.floor(lap.moving_time / 60);
@@ -1755,7 +1757,7 @@ async function openActivityModal(id) {
                     if (secs === '60') { mins += 1; secs = '00'; }
                     time = `${mins}:${secs}`;
                 }
-                
+
                 let paceSpd = '--';
                 if (lap.distance && lap.moving_time) {
                     if (data.type === 'Ride' || data.type === 'EBikeRide' || data.type === 'VirtualRide') {
@@ -1775,11 +1777,11 @@ async function openActivityModal(id) {
                         paceSpd = `${pMins}:${pSecs}`;
                     }
                 }
-                
+
                 let hr = lap.average_heartrate ? `${Math.round(lap.average_heartrate)}` : '--';
                 let pwr = lap.average_watts ? `${Math.round(lap.average_watts)}` : '--';
                 let lapName = lap.name ? `<span class="text-theme-muted font-normal block text-[9px] truncate max-w-[120px]">${lap.name}</span>` : '';
-                
+
                 return `
                     <tr class="hover:bg-theme-bg transition">
                         <td class="px-3 py-2 font-medium">${lap.lap_index || ''} ${lapName}</td>
@@ -1796,19 +1798,19 @@ async function openActivityModal(id) {
         }
         if (activityMap) activityMap.remove(); document.getElementById('actual-map').innerHTML = '';
         activityMap = L.map('actual-map', { zoomControl: false }); L.control.zoom({ position: 'bottomright' }).addTo(activityMap); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(activityMap);
-        
+
         let boundsToFit = null;
-        if (data.map && data.map.summary_polyline) { 
-            const coords = decodePolyline(data.map.summary_polyline); 
-            if (coords.length > 0) { 
-                const polyline = L.polyline(coords, { color: '#0f766e', weight: 5, opacity: 0.9, lineJoin: 'round' }).addTo(activityMap); 
-                boundsToFit = polyline.getBounds(); 
-            } 
-        } 
-        
+        if (data.map && data.map.summary_polyline) {
+            const coords = decodePolyline(data.map.summary_polyline);
+            if (coords.length > 0) {
+                const polyline = L.polyline(coords, { color: '#0f766e', weight: 5, opacity: 0.9, lineJoin: 'round' }).addTo(activityMap);
+                boundsToFit = polyline.getBounds();
+            }
+        }
+
         document.getElementById('modal-loader').classList.add('hidden'); document.getElementById('modal-content').classList.remove('hidden'); document.getElementById('modal-content').classList.add('flex');
-        setTimeout(() => { 
-            activityMap.invalidateSize(); 
+        setTimeout(() => {
+            activityMap.invalidateSize();
             if (boundsToFit) {
                 let dynamicMaxZoom = 15;
                 if (data.distance) {
@@ -1824,14 +1826,14 @@ async function openActivityModal(id) {
     } catch (e) { document.getElementById('modal-title').innerText = "Error Fetching Data"; document.getElementById('modal-loader').innerHTML = `<span class="text-red-500 font-bold uppercase tracking-widest text-xs">Connection Failed</span>`; }
 }
 
-function closeModal() { 
+function closeModal() {
     const modal = document.getElementById('activity-modal');
     const content = document.getElementById('activity-modal-content');
-    
+
     modal.classList.add('opacity-0');
     content.classList.remove('translate-y-0', 'md:scale-100');
     content.classList.add('translate-y-full', 'md:scale-95');
-    
+
     // Wait for transition to finish
     setTimeout(() => {
         modal.classList.add('hidden');
@@ -2044,20 +2046,20 @@ async function loadChatHistory() {
         }
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
-        
+
         // Proactive Check-in Logic & Unread Badge
         if (history && history.length > 0) {
             const lastMsg = history[history.length - 1];
             // SQLite DATETIME 'CURRENT_TIMESTAMP' is in UTC
-            const lastTime = new Date(lastMsg.timestamp + 'Z').getTime(); 
+            const lastTime = new Date(lastMsg.timestamp + 'Z').getTime();
             const now = Date.now();
-            
+
             // Check for unread messages from coach
             const lastCoachMsg = [...history].reverse().find(m => m.role === 'coach');
             if (lastCoachMsg) {
                 updateUnreadBadge(new Date(lastCoachMsg.timestamp + 'Z').getTime());
             }
-            
+
             // Check if older than 24 hours (24 * 60 * 60 * 1000)
             if (now - lastTime > 86400000) {
                 triggerProactiveCheckin();
@@ -2108,7 +2110,7 @@ async function triggerProactiveCheckin() {
         `;
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
-        
+
         // Update Dashboard Coach's Desk
         const deskAvatar = document.getElementById('desk-coach-avatar');
         if (deskAvatar) deskAvatar.src = finalAvatar;
@@ -2178,9 +2180,9 @@ function handleImageSelection(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         const img = new Image();
-        img.onload = function() {
+        img.onload = function () {
             const canvas = document.createElement('canvas');
             const MAX_WIDTH = 1024;
             const MAX_HEIGHT = 1024;
@@ -2203,7 +2205,7 @@ function handleImageSelection(event) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             currentImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
-            
+
             document.getElementById('image-preview').src = currentImageBase64;
             document.getElementById('image-preview-container').classList.remove('hidden');
         }
@@ -2225,7 +2227,7 @@ function renderQuickActions(planMap, tssMap) {
 
     let todayStr = new Date().toISOString().split('T')[0];
     let actualTss = tssMap[todayStr] || 0;
-    
+
     // Check if there is a scheduled workout today that isn't just rest
     let workoutsToday = planMap[todayStr] || [];
     let isRestDay = workoutsToday.length === 0 || (workoutsToday.length === 1 && workoutsToday[0].sport.toLowerCase() === 'rest');
@@ -2267,7 +2269,7 @@ async function sendMessage() {
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
     if (!message && !currentImageBase64) return;
-    
+
     if (navigator.vibrate) navigator.vibrate(50);
 
     const chatWindow = document.getElementById('chat-window');
@@ -2289,7 +2291,7 @@ async function sendMessage() {
                 </div>`);
 
     const payload = { message, imageBase64: currentImageBase64 };
-    
+
     input.value = '';
     input.style.height = '44px';
     clearImageSelection();
@@ -2352,20 +2354,20 @@ async function sendMessage() {
                     </div>`;
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
-        if (data.planUpdated) { 
-            loadMicroPlan(); 
+        if (data.planUpdated) {
+            loadMicroPlan();
             buildDashboard(); // Refresh graphs if a manual activity was logged
         }
-        
+
         speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
-        
+
         // Typewriter effect (token streaming simulation)
         const targetEl = document.getElementById(msgId);
         let i = 0;
         let currentHTML = '';
         function typeStep() {
             if (!document.getElementById(msgId)) return; // Stop if user switched tabs and chat reloaded
-            
+
             if (i < formattedContent.length) {
                 if (formattedContent.charAt(i) === '<') {
                     let tag = '';
@@ -2420,7 +2422,7 @@ async function submitManualWeight() {
         return;
     }
 
-        const dateStr = new Date().toLocaleDateString('en-CA');
+    const dateStr = new Date().toLocaleDateString('en-CA');
 
     const payload = {
         date: dateStr,
@@ -2529,7 +2531,7 @@ async function completeOnboarding(redirectUrl = null) {
     if (btn) btn.innerText = "Saving profile...";
 
     let context = document.getElementById('onboard-context').value;
-    
+
     const metricRows = document.querySelectorAll('.onboard-metric-row');
     let extraContext = [];
     if (metricRows.length > 0) {
@@ -2628,7 +2630,7 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     speechRecognition.continuous = false;
     speechRecognition.interimResults = true;
 
-    speechRecognition.onstart = function() {
+    speechRecognition.onstart = function () {
         isRecording = true;
         const btn = document.getElementById('voice-btn');
         btn.classList.add('text-red-500', 'animate-pulse');
@@ -2636,7 +2638,7 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
         document.getElementById('chat-input').placeholder = "Listening...";
     };
 
-    speechRecognition.onresult = function(event) {
+    speechRecognition.onresult = function (event) {
         let interimTranscript = '';
         let finalTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -2655,12 +2657,12 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
         }
     };
 
-    speechRecognition.onerror = function(event) {
+    speechRecognition.onerror = function (event) {
         console.error("Speech Recognition Error:", event.error);
         stopRecording();
     };
 
-    speechRecognition.onend = function() {
+    speechRecognition.onend = function () {
         stopRecording();
     };
 }
@@ -2681,12 +2683,12 @@ function toggleRecording() {
 function stopRecording() {
     isRecording = false;
     const btn = document.getElementById('voice-btn');
-    if(btn) {
+    if (btn) {
         btn.classList.remove('text-red-500', 'animate-pulse');
         btn.classList.add('text-theme-muted');
     }
     const input = document.getElementById('chat-input');
-    if(input) input.placeholder = "Ask about your training...";
+    if (input) input.placeholder = "Ask about your training...";
 }
 
 if ('speechSynthesis' in window) {
@@ -2703,16 +2705,16 @@ function speakResponse(text, mood, coachTone) {
     const cleanText = text.replace(/[*#_`\[\]]/g, '');
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    
+
     // Map voice based on coachTone
     let selectedVoice = null;
     const tone = (coachTone || '').toLowerCase();
-    
+
     // Ensure availableVoices is populated (fallback if onvoiceschanged hasn't fired or was missed)
     if (availableVoices.length === 0) {
         availableVoices = Array.from(window.speechSynthesis.getVoices());
     }
-    
+
     if (tone.includes('goggins') || tone.includes('intense')) {
         selectedVoice = availableVoices.find(v => v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('uk english male'));
         utterance.pitch = 0.8;
@@ -2750,7 +2752,7 @@ async function submitPhysiqueLog(e) {
     formData.append('sleep_quality', document.getElementById('physique-sleep').value);
     formData.append('fatigue_level', document.getElementById('physique-fatigue').value);
     formData.append('notes', document.getElementById('physique-notes').value);
-    
+
     const fileInput = document.getElementById('physique-photo');
     if (fileInput.files.length > 0) {
         formData.append('photo', fileInput.files[0]);
@@ -2766,7 +2768,7 @@ async function submitPhysiqueLog(e) {
         if (res.ok) {
             document.getElementById('physique-form').reset();
             loadPhysiqueLogs();
-            
+
             const statusEl = document.getElementById('physique-status');
             if (statusEl) {
                 statusEl.innerText = "✅ Saved!";
@@ -2792,7 +2794,7 @@ async function loadPhysiqueLogs() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const logs = await res.json();
-        
+
         const container = document.getElementById('physique-history');
         if (!logs || logs.length === 0) {
             container.innerHTML = '<div class="text-xs text-theme-muted text-center py-4">No logs yet.</div>';
@@ -2850,19 +2852,19 @@ async function loadNutritionProtocol() {
     try {
         document.getElementById('nutrition-loading').classList.remove('hidden');
         document.getElementById('nutrition-content').classList.add('hidden');
-        
+
         const token = localStorage.getItem('nana_token');
         const res = await fetch('/api/physique/nutrition', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const protocol = await res.json();
-        
+
         document.getElementById('nutrition-focus-title').innerText = protocol.title || 'Balanced Protocol';
         document.getElementById('nutrition-rationale').innerText = protocol.rationale || '';
         document.getElementById('macro-carbs').innerText = `${protocol.carbs || '--'}g`;
         document.getElementById('macro-protein').innerText = `${protocol.protein || '--'}g`;
         document.getElementById('macro-fat').innerText = `${protocol.fat || '--'}g`;
-        
+
         document.getElementById('nutrition-loading').classList.add('hidden');
         document.getElementById('nutrition-content').classList.remove('hidden');
     } catch (e) {
@@ -2882,7 +2884,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const localDate = new Date(today.getTime() - offset).toISOString().split('T')[0];
         physDate.value = localDate;
     }
-    
+
     // Initialize Swipe-to-dismiss for Activity Modal Bottom Sheet
     const modalContent = document.getElementById('activity-modal-content');
     if (modalContent && typeof Hammer !== 'undefined') {
@@ -2895,7 +2897,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Initialize Swipe-to-dismiss for Edit Workout Modal Bottom Sheet
     const editModalContent = document.getElementById('edit-workout-modal-content');
     if (editModalContent && typeof Hammer !== 'undefined') {
@@ -2911,7 +2913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide mobile navigation when keyboard is open using focus events (more reliable across iOS/Android)
     const mainNav = document.getElementById('main-navigation');
     const mainContent = document.getElementById('main-content');
-    
+
     document.addEventListener('focusin', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
             if (window.innerWidth < 768) {
