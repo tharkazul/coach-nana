@@ -1051,12 +1051,13 @@
                     <div class="flex justify-between items-center">
                         <h2 class="text-xl font-bold text-theme-text">Social</h2>
                         <button onclick="openAddPersonModal()"
-                            class="text-theme-muted hover:text-theme-accent transition">
+                            class="relative text-theme-muted hover:text-theme-accent transition">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
                                 </path>
                             </svg>
+                            <span id="social-request-badge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-theme-bg"></span>
                         </button>
                     </div>
 

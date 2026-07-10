@@ -342,6 +342,7 @@ function checkLogin() {
         buildDashboard();
         loadChatHistory();
         initSSE();
+        loadPendingRequests();
     } else {
         document.getElementById('login-overlay').style.display = 'flex';
     }
@@ -3196,19 +3197,25 @@ async function loadPendingRequests() {
         
         const section = document.getElementById('pending-requests-section');
         const list = document.getElementById('pending-requests-list');
+        const badge = document.getElementById('social-request-badge');
         
         if (pending.length === 0) {
-            section.classList.add('hidden');
+            if(section) section.classList.add('hidden');
+            if(badge) badge.classList.add('hidden');
             return;
         }
         
-        section.classList.remove('hidden');
-        list.innerHTML = pending.map(p => `
-            <div class="flex justify-between items-center bg-theme-bg border border-theme-border p-2 rounded">
-                <span class="text-sm font-bold text-theme-text">${p.username}</span>
-                <button onclick="acceptConnection(${p.friend_id})" class="text-xs bg-theme-text text-theme-card font-bold px-3 py-1 rounded">Accept</button>
-            </div>
-        `).join('');
+        if(section) section.classList.remove('hidden');
+        if(badge) badge.classList.remove('hidden');
+        
+        if(list) {
+            list.innerHTML = pending.map(p => `
+                <div class="flex justify-between items-center bg-theme-bg border border-theme-border p-2 rounded">
+                    <span class="text-sm font-bold text-theme-text">${p.username}</span>
+                    <button onclick="acceptConnection(${p.friend_id})" class="text-xs bg-theme-text text-theme-card font-bold px-3 py-1 rounded">Accept</button>
+                </div>
+            `).join('');
+        }
         
     } catch(e) { console.error("Failed to load requests", e); }
 }
