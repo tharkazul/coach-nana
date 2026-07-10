@@ -5,6 +5,33 @@ let activityMap = null;
 let globalHistoryData = [];
 let currentCoachTone = "Empathetic but demanding elite endurance coach."; // NEW Tracker
 
+// Simple toast notification function
+function showToast(message, type = 'info') {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none';
+        document.body.appendChild(toastContainer);
+    }
+    const toast = document.createElement('div');
+    const bgColor = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-theme-accent';
+    toast.className = `${bgColor} text-white px-4 py-2 rounded shadow-lg opacity-0 transition-opacity duration-300 pointer-events-auto`;
+    toast.innerText = message;
+    toastContainer.appendChild(toast);
+    
+    requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0');
+        toast.classList.add('opacity-100');
+    });
+    
+    setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 function getMonday(d) {
     d = new Date(d);
     var day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
@@ -2393,7 +2420,7 @@ async function submitManualWeight() {
         return;
     }
 
-    const dateStr = new Date().toLocaleDateString('en-CA');
+        const dateStr = new Date().toLocaleDateString('en-CA');
 
     const payload = {
         date: dateStr,

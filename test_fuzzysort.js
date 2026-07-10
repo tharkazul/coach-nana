@@ -16,3 +16,4 @@ console.log("Back Squat:", matchGarminExercise("Back Squat"));
 console.log("Dumbbell Crossover Lunge:", matchGarminExercise("Dumbbell Crossover Lunge"));
 console.log("Bench Press:", matchGarminExercise("Bench Press"));
 console.log("DB Curl:", matchGarminExercise("DB Curl"));
+console.log("Bent-Over Barbell Row:", matchGarminExercise("Bent-Over Barbell Row"));
