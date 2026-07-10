@@ -342,7 +342,8 @@ const STEP_TYPE_MAP = {
     'warmup': { id: 1, key: "warmup" },
     'cooldown': { id: 2, key: "cooldown" },
     'interval': { id: 3, key: "interval" },
-    'recovery': { id: 4, key: "recovery" }
+    'recovery': { id: 4, key: "recovery" },
+    'rest': { id: 5, key: "rest" }
 };
 
 const TARGET_TYPE_MAP = {
@@ -357,7 +358,7 @@ const CONDITION_TYPE_MAP = {
     'time': { id: 2, key: "time" },
     'distance': { id: 3, key: "distance" },
     'lap.button': { id: 1, key: "lap.button" },
-    'reps': { id: 4, key: "reps" }
+    'reps': { id: 10, key: "reps" }
 };
 
 // --- SERVER-SENT EVENTS (SSE) FOR REAL-TIME UPDATES ---
