@@ -604,6 +604,7 @@
                             </div>
                             <p id="ctl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3">
                             </p>
+                            <div class="h-6 mt-2 w-full relative"><canvas id="sparkline-fitness"></canvas></div>
                         </div>
                         <div
                             class="flex-1 p-4 md:p-6 flex flex-col items-center justify-start text-center hover:bg-theme-bg transition">
@@ -618,12 +619,7 @@
                             </div>
                             <p id="atl-subtitle" class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3">
                             </p>
-                            <div class="w-full max-w-[80px] mt-2 h-1.5 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 rounded-full relative mx-auto hidden"
-                                id="fatigue-slider-container">
-                                <div id="fatigue-slider-marker"
-                                    class="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-white border border-gray-400 rounded-full shadow transition-all duration-500"
-                                    style="left: 50%;"></div>
-                            </div>
+                            <div class="h-6 mt-2 w-full relative"><canvas id="sparkline-fatigue"></canvas></div>
                         </div>
                         <div
                             class="flex-1 p-4 md:p-6 flex flex-col items-center justify-start text-center hover:bg-theme-bg transition">
@@ -638,12 +634,7 @@
                             </div>
                             <p id="readiness-subtitle"
                                 class="text-[10px] text-theme-muted mt-1 uppercase tracking-wider h-3"></p>
-                            <div class="w-full max-w-[80px] mt-2 h-1.5 bg-gradient-to-r from-red-500 via-amber-500 to-green-500 rounded-full relative mx-auto hidden"
-                                id="readiness-slider-container">
-                                <div id="readiness-slider-marker"
-                                    class="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-white border border-gray-400 rounded-full shadow transition-all duration-500"
-                                    style="left: 50%;"></div>
-                            </div>
+                            <div class="h-6 mt-2 w-full relative"><canvas id="sparkline-readiness"></canvas></div>
                         </div>
                         <div
                             class="flex-1 p-4 md:p-6 flex flex-col items-center justify-start text-center hover:bg-theme-bg transition bg-theme-accent-soft/30">
@@ -657,21 +648,25 @@
                                 <span id="weight-trend" class="text-sm font-medium"></span>
                             </div>
                             <p class="text-[10px] text-theme-accent/70 mt-1 uppercase tracking-wider h-3"></p>
+                            <div class="h-6 mt-2 w-full relative"><canvas id="sparkline-weight"></canvas></div>
                         </div>
                     </div>
 
-                    <div
-                        class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-                        <div
-                            class="px-4 md:px-6 py-3 border-b border-theme-border bg-theme-bg flex justify-between items-center shrink-0">
-                            <h2 class="text-xs md:text-sm font-bold text-theme-text">Performance Management</h2>
-                            <button onclick="resetChartZoom()"
-                                class="text-[10px] md:text-xs text-theme-accent hover:bg-theme-accent-soft px-2 py-1 rounded border border-theme-accent-border transition">Reset
-                                Zoom</button>
+                    <div id="goal-progress-widget" class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col p-4 md:p-6 hidden">
+                        <div class="flex justify-between items-end mb-3">
+                            <h2 class="text-sm md:text-base font-bold text-theme-text">Fitness toward race day</h2>
+                            <span id="goal-days-out" class="text-[10px] md:text-xs text-theme-muted font-medium">-- days out</span>
                         </div>
-                        <div class="p-3 md:p-5 relative w-full flex-1">
-                            <div class="h-[250px] md:h-80 w-full relative"><canvas id="pmcChart"></canvas></div>
+                        <div class="w-full h-3 md:h-4 bg-theme-bg rounded-full overflow-hidden mb-2">
+                            <div id="goal-progress-bar" class="h-full bg-theme-accent transition-all duration-1000" style="width: 0%"></div>
                         </div>
+                        <div class="flex justify-between items-center text-[10px] md:text-xs text-theme-muted mb-3 font-mono">
+                            <span id="goal-now-text">Now &middot; -- CTL</span>
+                            <span id="goal-target-text">Target &middot; -- CTL</span>
+                        </div>
+                        <p id="goal-projection-text" class="text-[10px] md:text-xs text-theme-accent font-medium leading-relaxed">
+                            --
+                        </p>
                     </div>
 
 
@@ -774,6 +769,16 @@
                         Export CSV
                     </button>
                 </div>
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="px-4 md:px-6 py-3 border-b border-theme-border bg-theme-bg flex justify-between items-center shrink-0">
+                        <h2 class="text-xs md:text-sm font-bold text-theme-text">Training Load History</h2>
+                        <button onclick="resetChartZoom()" class="text-[10px] md:text-xs text-theme-accent hover:bg-theme-accent-soft px-2 py-1 rounded border border-theme-accent-border transition">Reset Zoom</button>
+                    </div>
+                    <div class="p-3 md:p-5 relative w-full flex-1">
+                        <div class="h-[200px] md:h-64 w-full relative"><canvas id="pmcChart"></canvas></div>
+                    </div>
+                </div>
+
                 <div
                     class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
                     <div

@@ -930,6 +930,43 @@ async function buildDashboard() {
             }
         }
 
+        // --- SPARKLINES ---
+        const sparkOptions = {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { display: false } },
+            layout: { padding: 0 },
+            elements: { point: { radius: 0 }, line: { tension: 0.4, borderWidth: 2 } }
+        };
+
+        const sparkDates = dates.slice(-30);
+        
+        ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
+            const canvas = document.getElementById(`sparkline-${metric}`);
+            if (canvas) {
+                if (window[`sparkline_${metric}`]) window[`sparkline_${metric}`].destroy();
+                let sparkData = [];
+                let color = '#0ea5e9';
+                if (metric === 'fitness') { sparkData = ctlData.slice(-30); color = '#0ea5e9'; }
+                if (metric === 'fatigue') { sparkData = atlData.slice(-30); color = '#f43f5e'; }
+                if (metric === 'readiness') { 
+                    sparkData = tsbData.slice(-30).map(t => 50 + Math.max(-20, Math.min(20, t * 0.5))); 
+                    color = '#10b981'; 
+                }
+                if (metric === 'weight') { 
+                    // Need to filter out nulls for a clean sparkline or rely on spanGaps
+                    sparkData = weightPlot.slice(-30); 
+                    color = '#8b5cf6'; 
+                }
+                
+                window[`sparkline_${metric}`] = new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: sparkDates, datasets: [{ data: sparkData, borderColor: color, fill: false, spanGaps: true }] },
+                    options: sparkOptions
+                });
+            }
+        });
+
         updateDailyReflection(ctl, atl);
 
         // 6. Loop 2: Dynamic Target Line & Future Projection
@@ -971,6 +1008,45 @@ async function buildDashboard() {
             }
         }
 
+        // --- GOAL PROGRESS WIDGET ---
+        const goalWidget = document.getElementById('goal-progress-widget');
+        if (globalMilestones.length > 0 && goalWidget) {
+            goalWidget.classList.remove('hidden');
+            let mainRace = globalMilestones[globalMilestones.length - 1];
+            let targetCtl = mainRace.target_ctl;
+            let daysOut = Math.max(0, Math.round((new Date(mainRace.date) - today) / (1000 * 60 * 60 * 24)));
+            document.getElementById('goal-days-out').innerText = `${daysOut} days out`;
+            document.getElementById('goal-now-text').innerHTML = `Now &middot; ${Math.round(ctl)} CTL`;
+            document.getElementById('goal-target-text').innerHTML = `Target &middot; ${targetCtl} CTL`;
+            
+            let percent = Math.min(100, Math.max(0, (ctl / targetCtl) * 100));
+            document.getElementById('goal-progress-bar').style.width = `${percent}%`;
+
+            let fourteenDaysAgoStr = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
+            let pastDateIndex = dates.findIndex(dStr => dStr === fourteenDaysAgoStr);
+            let ctl14 = pastDateIndex !== -1 ? ctlData[pastDateIndex] : (ctlData[0] || ctl);
+            let rampRateWeekly = ((ctl - ctl14) / 14) * 7;
+            let projectedCtl = ctl + (rampRateWeekly * (daysOut / 7));
+            
+            let projTextEl = document.getElementById('goal-projection-text');
+            if (daysOut === 0) {
+                projTextEl.innerHTML = `Race day is here! Good luck!`;
+                projTextEl.className = "text-[10px] md:text-xs text-theme-accent font-medium leading-relaxed";
+            } else if (rampRateWeekly <= 0.1) {
+                projTextEl.innerHTML = `You are not currently building fitness. Start training consistently to project your race day CTL.`;
+                projTextEl.className = "text-[10px] md:text-xs text-amber-500 font-medium leading-relaxed";
+            } else {
+                projTextEl.innerHTML = `Building at +${rampRateWeekly.toFixed(1)} CTL/wk. Projected race day fitness: <strong class="text-theme-text">${Math.round(projectedCtl)} CTL</strong>.`;
+                if (projectedCtl >= targetCtl) {
+                    projTextEl.className = "text-[10px] md:text-xs text-green-500 font-medium leading-relaxed";
+                } else {
+                    projTextEl.className = "text-[10px] md:text-xs text-theme-accent font-medium leading-relaxed";
+                }
+            }
+        } else if (goalWidget) {
+            goalWidget.classList.add('hidden');
+        }
+
         // 7. Render Chart.js
         if (pmcChartInstance) pmcChartInstance.destroy();
         const canvas = document.getElementById('pmcChart');
@@ -985,15 +1061,13 @@ async function buildDashboard() {
                         { label: 'Fitness', data: ctlData, borderColor: '#0ea5e9', borderWidth: 2, tension: 0.4, pointRadius: 0, yAxisID: 'y' },
                         { label: 'Fatigue', data: atlData, borderColor: '#f43f5e', borderDash: [5, 5], borderWidth: 1.5, tension: 0.4, pointRadius: 0, yAxisID: 'y' },
                         { label: 'Target', data: targetData, borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, tension: 0, pointRadius: 0, yAxisID: 'y' },
-                        { label: 'Milestone', data: eventMarkerData, type: 'line', showLine: false, pointStyle: 'star', pointBackgroundColor: '#f59e0b', pointBorderColor: '#d97706', pointRadius: 10, pointHoverRadius: 12, yAxisID: 'y' },
-                        { label: 'Weight', data: weightPlot, borderColor: '#10b981', borderDash: [2, 2], borderWidth: 2, tension: 0.2, pointRadius: 2, yAxisID: 'yWeight', spanGaps: true }
+                        { label: 'Milestone', data: eventMarkerData, type: 'line', showLine: false, pointStyle: 'star', pointBackgroundColor: '#f59e0b', pointBorderColor: '#d97706', pointRadius: 10, pointHoverRadius: 12, yAxisID: 'y' }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                     scales: {
                         y: { type: 'linear', position: 'left', grid: { color: 'rgba(156, 163, 175, 0.2)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
-                        yWeight: { type: 'linear', position: 'right', min: 85, max: 110, grid: { drawOnChartArea: false }, ticks: { color: '#10b981', font: { size: 10 } } },
                         x: { 
                             grid: { display: false }, 
                             ticks: { maxTicksLimit: 6, color: '#9ca3af', font: { size: 10 } },
