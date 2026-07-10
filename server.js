@@ -1422,7 +1422,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                             if (subStep.exerciseName) {
                                 const match = matchGarminExercise(subStep.exerciseName);
                                 if (match) {
-                                    sDTO.category = { categoryKey: match.category_key };
+                                    sDTO.category = match.category_key;
                                     sDTO.exerciseName = match.exercise_key;
                                 } else {
                                     sDTO.description = subStep.exerciseName; // Fallback to notes if no match
@@ -1480,7 +1480,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
                 if (step.exerciseName) {
                     const match = matchGarminExercise(step.exerciseName);
                     if (match) {
-                        stepDTO.category = { categoryKey: match.category_key };
+                        stepDTO.category = match.category_key;
                         stepDTO.exerciseName = match.exercise_key;
                     } else {
                         stepDTO.description = step.exerciseName; // Fallback to notes if no match
