@@ -277,6 +277,12 @@ function initSSE() {
             loadChatHistory();
         }
     });
+
+    sseConnection.onerror = (err) => {
+        console.error("SSE Connection Error:", err);
+        sseConnection.close();
+        setTimeout(initSSE, 5000); // Reconnect after 5 seconds
+    };
 }
 
 function checkLogin() {
@@ -2247,7 +2253,7 @@ async function sendMessage() {
         chatWindow.scrollTop = chatWindow.scrollHeight;
         if (data.planUpdated) { 
             loadMicroPlan(); 
-            loadDashboard(); // Refresh graphs if a manual activity was logged
+            buildDashboard(); // Refresh graphs if a manual activity was logged
         }
         
         speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
