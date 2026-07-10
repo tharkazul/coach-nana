@@ -1058,11 +1058,6 @@ app.post('/api/user/settings/strava-exchange', authenticateToken, async (req, re
     }
 });
 
-app.get('/api/debug/schema', (req, res) => {
-    db.all(`PRAGMA table_info(micro_plan);`, (err, rows) => {
-        res.json({ error: err ? err.message : null, schema: rows });
-    });
-});
 
 app.get('/api/dashboard-data', authenticateToken, (req, res) => {
     db.all(`SELECT substr(start_date, 1, 10) as date, sport_type, SUM(tss) as daily_tss FROM activities WHERE user_id = ? GROUP BY date, sport_type ORDER BY date ASC`, [req.user.id], (err, rows) => {
