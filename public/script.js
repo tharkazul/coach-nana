@@ -2363,16 +2363,32 @@ async function loadAdminUsage() {
                 if (usageData.length === 0) {
                     usageTbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-theme-muted">No usage data.</td></tr>`;
                 } else {
-                    usageTbody.innerHTML = usageData.map(u => `
+                    usageTbody.innerHTML = usageData.map(u => {
+                        const tokenUsage = u.daily_token_usage || 0;
+                        const tokenPercent = Math.min(100, Math.round((tokenUsage / 50000) * 100));
+                        let tokenColor = 'bg-green-500';
+                        if (tokenPercent > 75) tokenColor = 'bg-yellow-500';
+                        if (tokenPercent > 90) tokenColor = 'bg-red-500';
+
+                        return `
                         <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
                             <td class="px-4 py-3 font-medium text-xs">${u.username || 'Unknown'}</td>
                             <td class="px-4 py-3 text-xs text-theme-muted">${u.login_count || 0}</td>
                             <td class="px-4 py-3 text-xs text-theme-muted">${u.chat_count || 0}</td>
+                            <td class="px-4 py-3 text-xs text-theme-muted">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-full h-1.5 bg-theme-border rounded-full overflow-hidden shrink-0">
+                                        <div class="h-full ${tokenColor} rounded-full" style="width: ${tokenPercent}%"></div>
+                                    </div>
+                                    <span class="text-[10px] w-8 text-right">${tokenPercent}%</span>
+                                </div>
+                            </td>
                             <td class="px-4 py-3 text-xs text-theme-muted">${u.strava_connected ? '✅' : '❌'}</td>
                             <td class="px-4 py-3 text-xs text-theme-muted">${u.garmin_connected ? '✅' : '❌'}</td>
                             <td class="px-4 py-3 text-xs text-theme-muted">${u.activities_count || 0}</td>
                         </tr>
-                    `).join('');
+                        `;
+                    }).join('');
                 }
             }
         }

@@ -1274,6 +1274,7 @@ app.get('/api/admin/usage', authenticateToken, (req, res) => {
             u.username, 
             u.login_count, 
             u.chat_count,
+            u.daily_token_usage,
             CASE WHEN u.strava_refresh_token IS NOT NULL AND u.strava_refresh_token != '' THEN 1 ELSE 0 END as strava_connected,
             CASE WHEN u.garmin_username IS NOT NULL AND u.garmin_username != '' THEN 1 ELSE 0 END as garmin_connected,
             (SELECT COUNT(*) FROM activities WHERE user_id = u.id) as activities_count
