@@ -1253,7 +1253,8 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/admin/usage', authenticateToken, (req, res) => {
-    if (!req.user.username.toLowerCase().includes('rutger') && req.user.id !== 1) {
+    const isRutger = req.user.username && req.user.username.toLowerCase().includes('rutger');
+    if (!isRutger && req.user.id !== 1) {
         return res.status(403).json({ error: "Unauthorized" });
     }
     db.all(`SELECT username, login_count, chat_count FROM users ORDER BY login_count DESC`, [], (err, rows) => {
