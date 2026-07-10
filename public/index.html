@@ -508,15 +508,18 @@
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-[10px] md:text-xs text-theme-muted font-mono" id="header-date"></div>
-                <button onclick="switchTab('settings')" class="text-theme-muted hover:text-theme-accent transition flex items-center gap-1.5 group">
-                    <svg class="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('settings')"
+                    class="text-theme-muted hover:text-theme-accent transition flex items-center gap-1.5 group">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform duration-300"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
                         </path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                    <span class="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">Settings</span>
+                    <span
+                        class="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">Settings</span>
                 </button>
             </div>
         </header>
@@ -1040,29 +1043,39 @@
             </div>
 
             <!-- SOCIAL VIEW -->
-            <div id="view-social" class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-32 max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
-                
+            <div id="view-social"
+                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-32 max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
+
                 <!-- Social Header & Segmented Control -->
                 <div class="flex flex-col gap-4 sticky top-0 bg-theme-bg z-10 pt-2 pb-4 border-b border-theme-border">
                     <div class="flex justify-between items-center">
                         <h2 class="text-xl font-bold text-theme-text">Social</h2>
-                        <button onclick="openAddPersonModal()" class="text-theme-muted hover:text-theme-accent transition">
+                        <button onclick="openAddPersonModal()"
+                            class="text-theme-muted hover:text-theme-accent transition">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
+                                </path>
                             </svg>
                         </button>
                     </div>
 
                     <!-- Segmented Control -->
                     <div class="flex bg-theme-card border border-theme-border rounded-full p-1 shadow-sm">
-                        <button onclick="toggleSocialTab('feed')" id="social-tab-feed" class="flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300">Feed</button>
-                        <button onclick="toggleSocialTab('leaderboard')" id="social-tab-leaderboard" class="flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300">Leaderboard</button>
+                        <button onclick="toggleSocialTab('feed')" id="social-tab-feed"
+                            class="flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300">Feed</button>
+                        <button onclick="toggleSocialTab('leaderboard')" id="social-tab-leaderboard"
+                            class="flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300">Leaderboard</button>
                     </div>
                 </div>
 
                 <!-- Feed Container -->
                 <div id="social-feed-container" class="space-y-4">
-                    <div class="flex justify-center p-8"><div class="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin"></div></div>
+                    <div class="flex justify-center p-8">
+                        <div
+                            class="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Leaderboard Container -->
@@ -1348,26 +1361,30 @@
         class="fixed inset-0 z-[10000] hidden flex items-center justify-center p-4 md:p-8 backdrop-blur-sm transition-opacity duration-300 opacity-0 bg-black/40">
         <div id="add-person-modal-content"
             class="bg-theme-card rounded-2xl md:rounded-sm shadow-2xl w-full max-w-sm flex flex-col overflow-hidden relative border border-theme-border scale-95 transition-all duration-300 ease-out p-6 space-y-4">
-            
+
             <div class="flex justify-between items-center">
                 <h3 class="text-sm font-bold text-theme-text">Find People</h3>
                 <button onclick="closeAddPersonModal()" class="text-theme-muted hover:text-theme-text transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
                 </button>
             </div>
-            
+
             <p class="text-xs text-theme-muted">Search by exact username to connect.</p>
 
             <div class="flex gap-2">
                 <input type="text" id="add-person-input" placeholder="Username"
                     class="flex-1 px-3 py-2 text-sm bg-theme-bg border border-theme-border rounded focus:outline-none focus:border-theme-accent text-theme-text">
-                <button onclick="searchPerson()" class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 transition shadow">Search</button>
+                <button onclick="searchPerson()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 transition shadow">Search</button>
             </div>
 
             <div id="add-person-results" class="mt-4 space-y-2 hidden">
                 <!-- Results go here -->
             </div>
-            
+
             <!-- Pending Requests Section -->
             <div id="pending-requests-section" class="pt-4 border-t border-theme-border hidden space-y-2">
                 <h4 class="text-[10px] font-bold text-theme-muted uppercase tracking-wider">Pending Requests</h4>
@@ -1495,7 +1512,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=18"></script>
+    <script src="/script.js?v=19"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
