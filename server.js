@@ -378,6 +378,7 @@ const TARGET_TYPE_MAP = {
 
 const CONDITION_TYPE_MAP = {
     'time': { id: 2, key: "time" },
+    'time_sec': { id: 2, key: "time" },
     'distance': { id: 3, key: "distance" },
     'lap.button': { id: 1, key: "lap.button" },
     'reps': { id: 10, key: "reps" }
@@ -1195,7 +1196,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         2. You must append a JSON code block at the very end of your response containing the schedule.
         3. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
-        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time". Use "condition_value" in MINUTES as a decimal (e.g., 1.5 for 90 seconds). Reference the Athlete Context for their past weights, and push for progressive overload.
+        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and push for progressive overload.
         6. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
 
         WORKOUT PLANNING (CRITICAL):

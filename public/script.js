@@ -1458,6 +1458,7 @@ function renderWbBlock(s, idx, parentIdx, isStrength) {
         html += `<input type="number" onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'condition_value', this.value)" value="${s.condition_value || 0}" class="w-12 bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] text-right focus:border-theme-accent">`;
         html += `<select onchange="wbUpdateStep(${isSub ? parentIdx : idx}, ${isSub ? idx : 'null'}, 'condition_type', this.value)" class="bg-theme-card text-theme-text border border-theme-border rounded-sm p-1 text-[10px] focus:border-theme-accent">
             <option value="time" ${s.condition_type === 'time' ? 'selected' : ''}>min</option>
+            <option value="time_sec" ${s.condition_type === 'time_sec' ? 'selected' : ''}>sec</option>
             <option value="distance" ${s.condition_type === 'distance' ? 'selected' : ''}>m</option>
             <option value="reps" ${s.condition_type === 'reps' ? 'selected' : ''}>reps</option>
         </select>`;
