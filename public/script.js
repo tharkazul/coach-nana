@@ -1424,6 +1424,8 @@ if (document.getElementById('btn-edit-workout-save')) {
                 body: JSON.stringify({ date: date, sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson })
             });
         }
+        
+        if (navigator.vibrate) navigator.vibrate(50);
         closeEditWorkoutModal();
         loadMicroPlan();
     });
@@ -2158,6 +2160,8 @@ async function sendMessage() {
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
     if (!message && !currentImageBase64) return;
+    
+    if (navigator.vibrate) navigator.vibrate(50);
 
     const chatWindow = document.getElementById('chat-window');
 
@@ -2325,6 +2329,7 @@ async function submitManualWeight() {
         });
 
         if (res.ok) {
+            if (navigator.vibrate) navigator.vibrate(50);
             document.getElementById('log-weight').value = '';
             document.getElementById('log-bf').value = '';
             buildDashboard();
