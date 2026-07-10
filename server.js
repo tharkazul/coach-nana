@@ -1257,7 +1257,18 @@ app.get('/api/admin/usage', authenticateToken, (req, res) => {
     if (!isRutger && req.user.id !== 1) {
         return res.status(403).json({ error: "Unauthorized" });
     }
-    db.all(`SELECT username, login_count, chat_count FROM users ORDER BY login_count DESC`, [], (err, rows) => {
+    const query = `
+        SELECT 
+            u.username, 
+            u.login_count, 
+            u.chat_count,
+            CASE WHEN u.strava_refresh_token IS NOT NULL AND u.strava_refresh_token != '' THEN 1 ELSE 0 END as strava_connected,
+            CASE WHEN u.garmin_username IS NOT NULL AND u.garmin_username != '' THEN 1 ELSE 0 END as garmin_connected,
+            (SELECT COUNT(*) FROM activities WHERE user_id = u.id) as activities_count
+        FROM users u
+        ORDER BY u.login_count DESC
+    `;
+    db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: "Database error" });
         res.json(rows || []);
     });

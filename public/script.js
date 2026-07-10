@@ -2347,13 +2347,16 @@ async function loadAdminUsage() {
             const usageTbody = document.getElementById('admin-usage-table');
             if (usageTbody) {
                 if (usageData.length === 0) {
-                    usageTbody.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-theme-muted">No usage data.</td></tr>`;
+                    usageTbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-theme-muted">No usage data.</td></tr>`;
                 } else {
                     usageTbody.innerHTML = usageData.map(u => `
                         <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
                             <td class="px-4 py-3 font-medium text-xs">${u.username || 'Unknown'}</td>
                             <td class="px-4 py-3 text-xs text-theme-muted">${u.login_count || 0}</td>
                             <td class="px-4 py-3 text-xs text-theme-muted">${u.chat_count || 0}</td>
+                            <td class="px-4 py-3 text-xs text-theme-muted">${u.strava_connected ? '✅' : '❌'}</td>
+                            <td class="px-4 py-3 text-xs text-theme-muted">${u.garmin_connected ? '✅' : '❌'}</td>
+                            <td class="px-4 py-3 text-xs text-theme-muted">${u.activities_count || 0}</td>
                         </tr>
                     `).join('');
                 }
