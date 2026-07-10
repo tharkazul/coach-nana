@@ -474,6 +474,15 @@
                 <div class="h-5 w-full md:hidden"></div>
                 <span class="hidden md:inline font-bold">Coach</span>
             </button>
+            <button onclick="switchTab('physique')" id="nav-physique"
+                class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
+                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                    </path>
+                </svg>
+                <span class="hidden md:inline">Physique</span>
+            </button>
             <button onclick="switchTab('settings')" id="nav-settings"
                 class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
                 <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -484,16 +493,6 @@
                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
                 <span class="hidden md:inline">Settings</span>
-            </button>
-
-            <button onclick="switchTab('physique')" id="nav-physique"
-                class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
-                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
-                    </path>
-                </svg>
-                <span class="hidden md:inline">Physique</span>
             </button>
 
             <div class="hidden md:block absolute bottom-4 w-full">
@@ -1023,7 +1022,8 @@
                         </h3>
                     </div>
                     <div class="p-0 md:p-6">
-                        <div id="physique-history" class="space-y-0 md:space-y-6 divide-y divide-theme-border md:divide-none">
+                        <div id="physique-history"
+                            class="space-y-0 md:space-y-6 divide-y divide-theme-border md:divide-none">
                             <div class="text-xs text-theme-muted text-center py-4">No logs yet.</div>
                         </div>
                     </div>
@@ -1407,13 +1407,13 @@
 
     <script src="/script.js?v=16"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('ServiceWorker registration successful');
-          });
-        });
-      }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                });
+            });
+        }
     </script>
 </body>
 
