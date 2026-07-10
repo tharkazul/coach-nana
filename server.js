@@ -39,12 +39,9 @@ function getAMSWeekday(date = new Date()) {
 }
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
 const IV_LENGTH = 16; // For AES, this is always 16 bytes
 
-// Optional but recommended: Serve the uploads folder so you (the admin) can view the images later
-app.use('/uploads', express.static('uploads'));
 app.use(bodyParser.json({ limit: '15mb' }));
 app.use(express.static('public'));
 
@@ -1255,28 +1252,6 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     });
 });
 
-app.post('/api/feedback', authenticateToken, upload.single('feedbackImage'), (req, res) => {
-    const feedbackText = req.body.text;
-    const imagePath = req.file ? req.file.path : null;
-    const createdAt = new Date().toISOString();
-
-    if (!feedbackText) {
-        return res.status(400).json({ error: "Feedback text is required." });
-    }
-
-    db.run(
-        `INSERT INTO feedback (user_id, text, image_path, created_at) VALUES (?, ?, ?, ?)`,
-        [req.user.id, feedbackText, imagePath, createdAt],
-        function (err) {
-            if (err) {
-                console.error("Failed to save feedback:", err);
-                return res.status(500).json({ error: "Failed to save feedback." });
-            }
-            res.json({ message: "Feedback received loud and clear! Thank you." });
-        }
-    );
-});
-
 app.get('/api/admin/usage', authenticateToken, (req, res) => {
     if (!req.user.username.toLowerCase().includes('rutger') && req.user.id !== 1) {
         return res.status(403).json({ error: "Unauthorized" });
@@ -1284,24 +1259,6 @@ app.get('/api/admin/usage', authenticateToken, (req, res) => {
     db.all(`SELECT username, login_count, chat_count FROM users ORDER BY login_count DESC`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: "Database error" });
         res.json(rows || []);
-    });
-});
-
-app.get('/api/admin/feedback', authenticateToken, (req, res) => {
-    db.get(`SELECT username FROM users WHERE id = ?`, [req.user.id], (err, user) => {
-        if (err || !user || user.username.toLowerCase() !== 'rutger') {
-            return res.status(403).json({ error: "Access denied. Admins only." });
-        }
-
-        db.all(`
-            SELECT f.id, f.text, f.image_path, f.created_at, u.username
-            FROM feedback f
-            LEFT JOIN users u ON f.user_id = u.id
-            ORDER BY f.created_at DESC
-        `, [], (err, rows) => {
-            if (err) return res.status(500).json({ error: "Database error." });
-            res.json(rows);
-        });
     });
 });
 

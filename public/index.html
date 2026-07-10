@@ -1253,34 +1253,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="bg-theme-card border border-theme-border rounded-md p-4 mt-6">
-                        <h3 class="text-sm font-bold text-theme-text mb-2">Beta Feedback</h3>
-                        <p class="text-xs text-theme-muted mb-4">Find a bug? Have an idea? Let us know!</p>
-
-                        <form id="feedback-form" onsubmit="submitFeedback(event)" class="space-y-3">
-                            <textarea name="text" id="feedback-text" rows="3" required
-                                placeholder="Describe the issue or feature request..."
-                                class="w-full bg-theme-bg border border-theme-border rounded-md p-2 text-xs text-theme-text focus:outline-none focus:border-theme-accent resize-none"></textarea>
-
-                            <div class="flex items-center space-x-3">
-                                <label for="feedback-image"
-                                    class="cursor-pointer text-xs bg-theme-bg border border-theme-border text-theme-text py-1.5 px-3 rounded hover:border-theme-accent transition">
-                                    📎 Attach Screenshot
-                                </label>
-                                <input type="file" id="feedback-image" name="feedbackImage"
-                                    accept="image/png, image/jpeg" class="hidden"
-                                    onchange="document.getElementById('file-name').innerText = this.files[0] ? this.files[0].name : ''">
-                                <span id="file-name" class="text-[10px] text-theme-muted truncate max-w-[150px]"></span>
-                            </div>
-
-                            <div class="flex items-center justify-between pt-2">
-                                <span id="feedback-status" class="text-xs font-medium"></span>
-                                <button type="submit"
-                                    class="bg-theme-accent text-white text-xs font-bold py-1.5 px-4 rounded hover:opacity-90 transition">Send
-                                    Feedback</button>
-                            </div>
-                        </form>
-                    </div>
 
                     <!-- ADMIN SECTION IN SETTINGS -->
                     <div id="admin-settings-section"
@@ -1304,25 +1276,6 @@
                             </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-sm font-bold text-theme-text mb-2">Admin Feedback Dashboard</h3>
-                            <p class="text-xs text-theme-muted mb-4">User feedback submissions.</p>
-                            <div class="overflow-x-auto border border-theme-border rounded-lg">
-                                <table class="w-full text-left text-sm text-theme-text min-w-[600px]">
-                                    <thead
-                                        class="bg-theme-bg text-theme-muted uppercase text-[10px] tracking-wider border-b border-theme-border">
-                                        <tr>
-                                            <th class="px-4 py-3">Date</th>
-                                            <th class="px-4 py-3">User</th>
-                                            <th class="px-4 py-3 w-1/2">Feedback</th>
-                                            <th class="px-4 py-3 text-center">Attachment</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="admin-feedback-table" class="divide-y divide-theme-border">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
                     </div>
                 </div>
 

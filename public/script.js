@@ -387,7 +387,7 @@ async function loadSettings() {
             const adminSection = document.getElementById('admin-settings-section');
             if (adminSection) {
                 adminSection.classList.remove('hidden');
-                loadAdminFeedback();
+                loadAdminUsage();
             } else {
                 console.error("❌ Could not find 'admin-settings-section' in the HTML!");
             }
@@ -2052,53 +2052,6 @@ async function triggerProactiveCheckin() {
     }
 }
 
-async function submitFeedback(event) {
-    event.preventDefault(); // Stop page reload
-
-    const form = document.getElementById('feedback-form');
-    const statusEl = document.getElementById('feedback-status');
-    const submitBtn = form.querySelector('button[type="submit"]');
-
-    // Package the text and file into a FormData object
-    const formData = new FormData(form);
-
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Sending...";
-    statusEl.innerText = "";
-
-    try {
-        // Grab your existing auth headers (which contain the correct token)
-        const myHeaders = getAuthHeaders();
-        // REMOVE the JSON content-type so the browser can auto-set the multipart/form-data boundary for the image
-        delete myHeaders['Content-Type'];
-
-        const response = await fetch('/api/feedback', {
-            method: 'POST',
-            headers: myHeaders,
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            statusEl.innerText = "✅ Sent! Thank you.";
-            statusEl.className = "text-xs font-medium text-green-500";
-            form.reset();
-            document.getElementById('file-name').innerText = "";
-        } else {
-            statusEl.innerText = `❌ Error: ${data.error}`;
-            statusEl.className = "text-xs font-medium text-red-500";
-        }
-    } catch (error) {
-        statusEl.innerText = "❌ Network error. Try again.";
-        statusEl.className = "text-xs font-medium text-red-500";
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Send Feedback";
-        setTimeout(() => { if (statusEl.innerText.includes('✅')) statusEl.innerText = ''; }, 5000);
-    }
-}
-
 // --- AVATAR MODAL LOGIC ---
 function enlargeAvatar(src) {
     const modal = document.getElementById('image-modal');
@@ -2385,71 +2338,29 @@ function toggleGarminBtn() {
     }
 }
 
-// --- ADMIN FEEDBACK LOGIC ---
-async function loadAdminFeedback() {
+// --- ADMIN USAGE LOGIC ---
+async function loadAdminUsage() {
     try {
-        const response = await fetch('/api/admin/feedback', {
-            headers: getAuthHeaders() // <-- Use your built-in auth function!
-        });
-
-        if (!response.ok) return;
-
-        const data = await response.json();
-        
-        try {
-            const usageRes = await fetch('/api/admin/usage', { headers: getAuthHeaders() });
-            if (usageRes.ok) {
-                const usageData = await usageRes.json();
-                const usageTbody = document.getElementById('admin-usage-table');
-                if (usageTbody) {
-                    if (usageData.length === 0) {
-                        usageTbody.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-theme-muted">No usage data.</td></tr>`;
-                    } else {
-                        usageTbody.innerHTML = usageData.map(u => `
-                            <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
-                                <td class="px-4 py-3 font-medium text-xs">${u.username || 'Unknown'}</td>
-                                <td class="px-4 py-3 text-xs text-theme-muted">${u.login_count || 0}</td>
-                                <td class="px-4 py-3 text-xs text-theme-muted">${u.chat_count || 0}</td>
-                            </tr>
-                        `).join('');
-                    }
+        const usageRes = await fetch('/api/admin/usage', { headers: getAuthHeaders() });
+        if (usageRes.ok) {
+            const usageData = await usageRes.json();
+            const usageTbody = document.getElementById('admin-usage-table');
+            if (usageTbody) {
+                if (usageData.length === 0) {
+                    usageTbody.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-theme-muted">No usage data.</td></tr>`;
+                } else {
+                    usageTbody.innerHTML = usageData.map(u => `
+                        <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
+                            <td class="px-4 py-3 font-medium text-xs">${u.username || 'Unknown'}</td>
+                            <td class="px-4 py-3 text-xs text-theme-muted">${u.login_count || 0}</td>
+                            <td class="px-4 py-3 text-xs text-theme-muted">${u.chat_count || 0}</td>
+                        </tr>
+                    `).join('');
                 }
             }
-        } catch (e) {
-            console.error("Failed to load admin usage", e);
         }
-        const tbody = document.getElementById('admin-feedback-table');
-
-        if (!tbody) {
-            console.error("Admin table body not found in HTML!");
-            return;
-        }
-
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-theme-muted">No feedback yet. You're doing great!</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = data.map(f => {
-            const date = new Date(f.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            let imageHtml = '<span class="text-theme-muted text-[10px]">None</span>';
-
-            if (f.image_path) {
-                const imgUrl = `/${f.image_path.replace(/\\/g, '/')}`;
-                imageHtml = `<button onclick="enlargeAvatar('${imgUrl}')" class="text-theme-accent hover:underline text-xs font-bold transition">🖼️ View</button>`;
-            }
-
-            return `
-                    <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
-                        <td class="px-4 py-3 text-xs whitespace-nowrap text-theme-muted">${date}</td>
-                        <td class="px-4 py-3 font-medium text-xs">${f.username || 'Unknown'}</td>
-                        <td class="px-4 py-3 text-xs leading-relaxed opacity-90">${f.text}</td>
-                        <td class="px-4 py-3 text-center">${imageHtml}</td>
-                    </tr>
-                `;
-        }).join('');
-    } catch (error) {
-        console.error("Failed to load admin feedback", error);
+    } catch (e) {
+        console.error("Failed to load admin usage", e);
     }
 }
 // --- ONBOARDING LOGIC ---
