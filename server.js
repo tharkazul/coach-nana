@@ -175,6 +175,12 @@ async function generateWithFallback(prompt, systemInstruction = null, chatHistor
                 result = await model.generateContent(promptContent);
             }
 
+            // Log Token Usage to terminal for monitoring
+            const usage = result.response.usageMetadata;
+            if (usage) {
+                console.log(`🪙 Tokens Used -> Input: ${usage.promptTokenCount} | Output: ${usage.candidatesTokenCount} | Total: ${usage.totalTokenCount}`);
+            }
+
             console.log(`✅ AI Success using ${config.name}!`);
             return result.response.text();
 
