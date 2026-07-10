@@ -1406,6 +1406,15 @@
     </div>
 
     <script src="/script.js?v=16"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registration successful');
+          });
+        });
+      }
+    </script>
 </body>
 
 </html>
