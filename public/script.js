@@ -450,7 +450,7 @@ async function loadSettings() {
             // Unhide the secret Admin-Only coach tone
             const select = document.getElementById('set-coach-tone');
             if (select && !select.querySelector('option[value*="madison"]')) {
-                select.innerHTML += `<option value="Flirty, Horny, lewd, erotic, highly suggestive, a little bi-sexual, supportive, as if in a relationship, in the style of Madison Beer.">Coach Madison</option>`;
+                select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Madison Beer.">Coach Liana</option>`;
             }
         }
 
@@ -2100,10 +2100,10 @@ async function loadChatHistory() {
                 const names = pending.map(p => p.username).join(', ');
                 const isPlural = pending.length > 1;
                 const localMsg = `Hey! ${names} ${isPlural ? 'want' : 'wants'} to connect with you. <a href="#" onclick="switchTab('social'); setTimeout(()=>openAddPersonModal(), 100); return false;" class="text-theme-accent font-bold underline">Accept?</a>`;
-                
+
                 let avatarImg = getCoachAvatar('curious');
                 let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
+
                 chatWindow.innerHTML += `
                     <div class="flex items-end gap-2 md:gap-3 mt-4">
                         <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
@@ -2116,7 +2116,7 @@ async function loadChatHistory() {
                         </div>
                     </div>`;
                 chatWindow.scrollTop = chatWindow.scrollHeight;
-                
+
                 if (!window.pendingAlertShown) {
                     window.pendingAlertShown = true;
                     if (document.getElementById('view-coach') && document.getElementById('view-coach').classList.contains('hidden')) {
@@ -3007,7 +3007,7 @@ function updateSocialTabUI(tab) {
     const leadBtn = document.getElementById('social-tab-leaderboard');
     const feedCont = document.getElementById('social-feed-container');
     const leadCont = document.getElementById('social-leaderboard-container');
-    
+
     if (tab === 'feed') {
         feedBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300";
         leadBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300";
@@ -3032,7 +3032,7 @@ async function loadSocialFeed() {
             container.innerHTML = '<div class="bg-theme-card border border-theme-border rounded-xl shadow-sm p-8 text-center"><p class="text-theme-muted text-sm">No recent activity from your connections.</p></div>';
             return;
         }
-        
+
         container.innerHTML = data.activities.map(act => `
             <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden p-4">
                 <div class="flex justify-between items-start mb-2">
@@ -3068,7 +3068,7 @@ async function loadSocialFeed() {
                 </div>
             </div>
         `).join('');
-    } catch(e) {
+    } catch (e) {
         console.error("Failed to load feed", e);
     }
 }
@@ -3092,7 +3092,7 @@ async function loadLeaderboard() {
                 <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_tss)} TSS</span>
             </div>
         `).join('');
-    } catch(e) {
+    } catch (e) {
         console.error("Failed to load leaderboard", e);
     }
 }
@@ -3123,7 +3123,7 @@ async function toggleKudos(activityId, btnEl) {
                 svg.classList.add('fill-none');
             }
         }
-    } catch(e) {
+    } catch (e) {
         console.error("Failed to toggle kudos", e);
     }
 }
@@ -3153,11 +3153,11 @@ function closeAddPersonModal() {
 async function searchPerson() {
     const username = document.getElementById('add-person-input').value.trim();
     if (!username) return;
-    
+
     const resultsDiv = document.getElementById('add-person-results');
     resultsDiv.classList.remove('hidden');
     resultsDiv.innerHTML = '<p class="text-xs text-theme-muted">Searching...</p>';
-    
+
     try {
         const res = await fetch('/api/social/search', {
             method: 'POST',
@@ -3165,12 +3165,12 @@ async function searchPerson() {
             body: JSON.stringify({ username })
         });
         const data = await res.json();
-        
+
         if (!data.found) {
             resultsDiv.innerHTML = '<p class="text-xs text-red-500">User not found or privacy enabled.</p>';
             return;
         }
-        
+
         const u = data.user;
         let btnHtml = '';
         if (u.status === 'accepted') {
@@ -3182,14 +3182,14 @@ async function searchPerson() {
         } else {
             btnHtml = `<button onclick="sendConnectionRequest(${u.id})" class="text-xs bg-theme-accent text-white font-bold px-3 py-1 rounded shadow">Connect</button>`;
         }
-        
+
         resultsDiv.innerHTML = `
             <div class="flex justify-between items-center bg-theme-bg border border-theme-border p-3 rounded">
                 <span class="text-sm font-bold text-theme-text">${u.username}</span>
                 ${btnHtml}
             </div>
         `;
-    } catch(e) {
+    } catch (e) {
         resultsDiv.innerHTML = '<p class="text-xs text-red-500">Search failed.</p>';
     }
 }
@@ -3204,7 +3204,7 @@ async function sendConnectionRequest(friendId) {
         if (res.ok) {
             searchPerson(); // Refresh the search result to show 'Requested'
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 async function acceptConnection(friendId) {
@@ -3216,11 +3216,11 @@ async function acceptConnection(friendId) {
         });
         if (res.ok) {
             loadPendingRequests();
-            if(document.getElementById('add-person-input').value) searchPerson();
+            if (document.getElementById('add-person-input').value) searchPerson();
             loadSocialFeed();
             loadLeaderboard();
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 async function loadPendingRequests() {
@@ -3228,21 +3228,21 @@ async function loadPendingRequests() {
         const res = await fetch('/api/social/connections', { headers: getAuthHeaders() });
         const data = await res.json();
         const pending = data.connections.filter(c => c.status === 'pending_received');
-        
+
         const section = document.getElementById('pending-requests-section');
         const list = document.getElementById('pending-requests-list');
         const badge = document.getElementById('social-request-badge');
-        
+
         if (pending.length === 0) {
-            if(section) section.classList.add('hidden');
-            if(badge) badge.classList.add('hidden');
+            if (section) section.classList.add('hidden');
+            if (badge) badge.classList.add('hidden');
             return;
         }
-        
-        if(section) section.classList.remove('hidden');
-        if(badge) badge.classList.remove('hidden');
-        
-        if(list) {
+
+        if (section) section.classList.remove('hidden');
+        if (badge) badge.classList.remove('hidden');
+
+        if (list) {
             list.innerHTML = pending.map(p => `
                 <div class="flex justify-between items-center bg-theme-bg border border-theme-border p-2 rounded">
                     <span class="text-sm font-bold text-theme-text">${p.username}</span>
@@ -3250,8 +3250,8 @@ async function loadPendingRequests() {
                 </div>
             `).join('');
         }
-        
-    } catch(e) { console.error("Failed to load requests", e); }
+
+    } catch (e) { console.error("Failed to load requests", e); }
 }
 
 async function toggleSearchPrivacy() {
@@ -3262,5 +3262,5 @@ async function toggleSearchPrivacy() {
             headers: getAuthHeaders(),
             body: JSON.stringify({ searchPrivacy: isChecked })
         });
-    } catch(e) { console.error("Failed to update privacy setting", e); }
+    } catch (e) { console.error("Failed to update privacy setting", e); }
 }
