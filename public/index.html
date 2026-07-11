@@ -433,69 +433,62 @@
     </div>
 
     <!-- SIDE NAVIGATION -->
-    <aside id="main-navigation" style="bottom: max(1rem, env(safe-area-inset-bottom));"
-        class="fixed left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] md:static md:w-64 md:translate-x-0 md:left-auto bg-theme-card/60 dark:bg-theme-card/50 md:bg-theme-card backdrop-blur-xl md:backdrop-blur-none border border-theme-border/50 md:border-t-0 md:border-l-0 md:border-b-0 md:border-r md:border-theme-border flex flex-row md:flex-col z-50 shadow-lg md:shadow-sm order-last md:order-first shrink-0 transition-colors duration-300 rounded-[2rem] md:rounded-none md:overflow-hidden">
+    <aside id="main-navigation"
+        class="fixed bottom-0 left-0 w-full md:static md:w-64 bg-theme-bg/90 backdrop-blur-md md:bg-theme-card border-t md:border-t-0 md:border-r border-theme-border/50 md:border-theme-border flex flex-row md:flex-col z-50 pb-safe md:pb-0 shrink-0 transition-colors duration-300">
         <div class="hidden md:flex h-16 items-center px-6 border-b border-theme-border shrink-0">
             <div
                 class="w-6 h-6 bg-theme-accent rounded mr-3 flex items-center justify-center text-white text-xs font-bold">
                 N</div>
             <h1 class="text-sm font-bold tracking-tight text-theme-text">Spark</h1>
         </div>
-        <nav class="flex-1 flex flex-row md:flex-col py-0 md:py-4 relative md:h-full">
+        <nav class="flex-1 flex flex-row md:flex-col py-1 md:py-4 relative md:h-full justify-around md:justify-start">
             <button onclick="switchTab('dashboard')" id="nav-dashboard"
-                class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-accent-hover bg-theme-accent-soft md:border-r-2 border-theme-accent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
-                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-accent md:bg-theme-accent-soft md:border-r-2 md:border-theme-accent transition-colors gap-1 md:gap-2">
+                <svg class="w-6 h-6 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
                     </path>
                 </svg>
-                <span class="hidden md:inline">Dashboard</span>
+                <span class="md:inline mt-1 md:mt-0">Dashboard</span>
             </button>
             <button onclick="switchTab('history')" id="nav-history"
-                class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
-                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:text-theme-accent md:hover:bg-theme-bg md:border-r-2 md:border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-6 h-6 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
                     </path>
                 </svg>
-                <span class="hidden md:inline">Log</span>
+                <span class="md:inline mt-1 md:mt-0">Log</span>
             </button>
             <button onclick="switchTab('coach')" id="nav-coach"
-                class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-1 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2 relative z-50">
-                <!-- Floating Action Button for Mobile -->
-                <div
-                    class="absolute md:static top-[-22px] md:top-0 left-1/2 md:left-auto transform -translate-x-1/2 md:translate-x-0 bg-theme-accent text-white md:bg-transparent md:text-inherit rounded-full p-3 md:p-0 shadow-lg shadow-theme-accent/40 md:shadow-none ring-4 ring-theme-card md:ring-0 flex items-center justify-center transition-transform hover:scale-105">
-                    <svg class="w-6 h-6 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
-                        </path>
-                    </svg>
-                    <span id="unread-badge"
-                        class="hidden absolute -top-1 -right-1 md:top-1/2 md:-translate-y-1/2 md:right-4 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse border-2 border-theme-card md:border-none">1</span>
-                </div>
-                <!-- Spacer to maintain layout height on mobile -->
-                <div class="h-5 w-full md:hidden"></div>
-                <span class="hidden md:inline font-bold">Coach</span>
+                class="flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:text-theme-accent md:hover:bg-theme-bg md:border-r-2 md:border-transparent transition-colors gap-1 md:gap-2 relative">
+                <svg class="w-6 h-6 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+                    </path>
+                </svg>
+                <span id="unread-badge"
+                    class="hidden absolute top-1 right-[calc(50%-1.25rem)] md:top-1/2 md:-translate-y-1/2 md:right-4 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">1</span>
+                <span class="md:inline mt-1 md:mt-0 font-bold">Coach</span>
             </button>
             <button onclick="switchTab('physique')" id="nav-physique"
-                class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
-                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:text-theme-accent md:hover:bg-theme-bg md:border-r-2 md:border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-6 h-6 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
                     </path>
                 </svg>
-                <span class="hidden md:inline">Physique</span>
+                <span class="md:inline mt-1 md:mt-0">Physique</span>
             </button>
             <button onclick="switchTab('social')" id="nav-social"
-                class="flex-1 md:w-full md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start px-1 py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:bg-theme-bg hover:text-theme-text md:border-r-2 border-transparent rounded-[1.5rem] md:rounded-none m-1 md:m-0 transition-colors gap-1 md:gap-2">
-                <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start py-2 md:px-6 md:py-2.5 text-[10px] md:text-sm font-medium text-theme-muted hover:text-theme-accent md:hover:bg-theme-bg md:border-r-2 md:border-transparent transition-colors gap-1 md:gap-2">
+                <svg class="w-6 h-6 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
                     </path>
                 </svg>
-                <span class="hidden md:inline">Social</span>
+                <span class="md:inline mt-1 md:mt-0">Social</span>
             </button>
-            <!-- Settings removed from here -->
         </nav>
     </aside>
 

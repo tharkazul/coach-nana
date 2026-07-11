@@ -602,11 +602,11 @@ function switchTab(t) {
         const btn = document.getElementById(`nav-${tab}`);
         if (!btn) return;
         if (tab === t) {
-            btn.classList.add('text-theme-accent-hover', 'bg-theme-accent-soft', 'border-theme-accent');
-            btn.classList.remove('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+            btn.classList.add('text-theme-accent', 'md:bg-theme-accent-soft', 'md:border-theme-accent');
+            btn.classList.remove('text-theme-muted', 'hover:text-theme-accent', 'md:hover:bg-theme-bg', 'md:border-transparent');
         } else {
-            btn.classList.remove('text-theme-accent-hover', 'bg-theme-accent-soft', 'border-theme-accent');
-            btn.classList.add('text-theme-muted', 'hover:bg-theme-bg', 'hover:text-theme-text', 'border-transparent');
+            btn.classList.remove('text-theme-accent', 'md:bg-theme-accent-soft', 'md:border-theme-accent');
+            btn.classList.add('text-theme-muted', 'hover:text-theme-accent', 'md:hover:bg-theme-bg', 'md:border-transparent');
         }
     });
 
@@ -3264,16 +3264,3 @@ async function toggleSearchPrivacy() {
         });
     } catch (e) { console.error("Failed to update privacy setting", e); }
 }
-
-// --- VISUAL VIEWPORT NAVIGATION PINNING ---
-function pinNavToVisualViewport() {
-    const nav = document.getElementById('main-navigation');
-    if (!nav || !window.visualViewport) return;
-    // Calculate the gap between the window's inner height and the visual viewport's layout
-    // This perfectly accounts for software keyboards and Safari's dynamic bottom toolbars
-    const gap = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
-    nav.style.bottom = `max(1rem, ${Math.max(gap, 0)}px)`;
-}
-window.visualViewport?.addEventListener('resize', pinNavToVisualViewport);
-window.visualViewport?.addEventListener('scroll', pinNavToVisualViewport);
-pinNavToVisualViewport();
