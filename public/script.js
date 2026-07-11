@@ -2092,33 +2092,36 @@ async function loadChatHistory() {
             }
         }
         // Check for pending social requests to inject hardcoded coach alert
-        if (!window.pendingAlertShown) {
-            const reqRes = await fetch('/api/social/connections', { headers: getAuthHeaders() });
-            if (reqRes.ok) {
-                const reqData = await reqRes.json();
-                const pending = reqData.connections.filter(c => c.status === 'pending_received');
-                if (pending.length > 0) {
+        const reqRes = await fetch('/api/social/connections', { headers: getAuthHeaders() });
+        if (reqRes.ok) {
+            const reqData = await reqRes.json();
+            const pending = reqData.connections.filter(c => c.status === 'pending_received');
+            if (pending.length > 0) {
+                const names = pending.map(p => p.username).join(', ');
+                const isPlural = pending.length > 1;
+                const localMsg = `Hey! ${names} ${isPlural ? 'want' : 'wants'} to connect with you. <a href="#" onclick="switchTab('social'); setTimeout(()=>openAddPersonModal(), 100); return false;" class="text-theme-accent font-bold underline">Accept?</a>`;
+                
+                let avatarImg = getCoachAvatar('curious');
+                let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                chatWindow.innerHTML += `
+                    <div class="flex items-end gap-2 md:gap-3 mt-4">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
+                            <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
+                        </div>
+                        <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative">
+                            <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
+                            <div class="whitespace-pre-wrap leading-relaxed">${localMsg}</div>
+                            <div class="text-[9px] text-theme-muted text-right mt-1">${timeStr}</div>
+                        </div>
+                    </div>`;
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                
+                if (!window.pendingAlertShown) {
                     window.pendingAlertShown = true;
-                    const names = pending.map(p => p.username).join(', ');
-                    const isPlural = pending.length > 1;
-                    const localMsg = `Hey! ${names} ${isPlural ? 'want' : 'wants'} to connect with you. <a href="#" onclick="switchTab('social'); setTimeout(()=>openAddPersonModal(), 100); return false;" class="text-theme-accent font-bold underline">Accept?</a>`;
-                    
-                    let avatarImg = getCoachAvatar('curious');
-                    let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    
-                    chatWindow.innerHTML += `
-                        <div class="flex items-end gap-2 md:gap-3 mt-4">
-                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
-                                <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
-                            </div>
-                            <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative">
-                                <span class="text-theme-accent font-bold block mb-1 text-[10px] md:text-xs uppercase tracking-wide">Spark</span>
-                                <div class="whitespace-pre-wrap leading-relaxed">${localMsg}</div>
-                                <div class="text-[9px] text-theme-muted text-right mt-1">${timeStr}</div>
-                            </div>
-                        </div>`;
-                    chatWindow.scrollTop = chatWindow.scrollHeight;
-                    updateUnreadBadge(Date.now()); // Show badge so user knows to check coach chat
+                    if (document.getElementById('view-coach') && document.getElementById('view-coach').classList.contains('hidden')) {
+                        updateUnreadBadge(Date.now()); // Show badge so user knows to check coach chat
+                    }
                 }
             }
         }
