@@ -127,6 +127,8 @@
         textarea,
         [role="button"] {
             touch-action: manipulation;
+            -webkit-user-select: text !important;
+            user-select: text !important;
         }
 
         .overflow-y-auto {
@@ -165,6 +167,8 @@
             animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
 </head>
 
 <body
