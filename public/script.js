@@ -307,15 +307,14 @@ function initSSE() {
 
     sseConnection.addEventListener('connection_request', (e) => {
         const data = JSON.parse(e.data);
-        alert(`New connection request from ${data.username}!`);
         loadPendingRequests();
     });
 
     sseConnection.addEventListener('connection_accepted', (e) => {
         const data = JSON.parse(e.data);
-        alert(`${data.username} accepted your connection request!`);
         if (!document.getElementById('view-social').classList.contains('hidden')) {
             loadSocialFeed();
+            loadLeaderboard();
         }
     });
 
@@ -3185,6 +3184,7 @@ async function acceptConnection(friendId) {
             loadPendingRequests();
             if(document.getElementById('add-person-input').value) searchPerson();
             loadSocialFeed();
+            loadLeaderboard();
         }
     } catch(e) { console.error(e); }
 }
