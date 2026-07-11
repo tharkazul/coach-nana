@@ -3264,3 +3264,16 @@ async function toggleSearchPrivacy() {
         });
     } catch (e) { console.error("Failed to update privacy setting", e); }
 }
+
+// --- VISUAL VIEWPORT NAVIGATION PINNING ---
+function pinNavToVisualViewport() {
+    const nav = document.getElementById('main-navigation');
+    if (!nav || !window.visualViewport) return;
+    // Calculate the gap between the window's inner height and the visual viewport's layout
+    // This perfectly accounts for software keyboards and Safari's dynamic bottom toolbars
+    const gap = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+    nav.style.bottom = `max(1rem, ${Math.max(gap, 0)}px)`;
+}
+window.visualViewport?.addEventListener('resize', pinNavToVisualViewport);
+window.visualViewport?.addEventListener('scroll', pinNavToVisualViewport);
+pinNavToVisualViewport();
