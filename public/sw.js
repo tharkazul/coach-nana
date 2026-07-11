@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coach-nana-v1';
+const CACHE_NAME = 'coach-nana-v2';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
