@@ -3020,7 +3020,7 @@ async function loadSocialFeed() {
                 <div class="flex gap-4 mt-3">
                     <div>
                         <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Dist</p>
-                        <p class="text-xs font-bold text-theme-text">${(act.distance / 1000).toFixed(2)} km</p>
+                        <p class="text-xs font-bold text-theme-text">${act.distance ? (act.distance / 1000).toFixed(2) + ' km' : '-'}</p>
                     </div>
                     <div>
                         <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">TSS</p>

@@ -104,6 +104,24 @@ setInterval(() => {
     }
 }, 3600000);
 
+function getUserLeaderboardString(userId) {
+    return new Promise((resolve) => {
+        db.all(`
+            SELECT u.username, SUM(a.tss) as total_tss
+            FROM activities a
+            JOIN users u ON a.user_id = u.id
+            WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
+              AND a.start_date >= datetime('now', '-7 days')
+            GROUP BY u.id
+            ORDER BY total_tss DESC
+        `, [userId, userId], (err, rows) => {
+            if (err || !rows || rows.length === 0) return resolve('');
+            const lb = rows.map((r, i) => `${i+1}. ${r.username} (${Math.round(r.total_tss)} TSS)`).join(', ');
+            resolve(`\\n\\nCurrent Leaderboard: ${lb}`);
+        });
+    });
+}
+
 // AI Proactive 24h Check-in Routine (Every Hour)
 setInterval(() => {
     console.log("🕒 Running 24h inactivity check...");
@@ -122,7 +140,8 @@ setInterval(() => {
 
         for (const user of inactiveUsers) {
             console.log(`🤖 User ${user.id} inactive for 24h. Generating proactive message...`);
-            const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${user.coach_tone || 'Friendly and motivating'}. Keep it under 2 sentences.`;
+            const lbString = await getUserLeaderboardString(user.id);
+            const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${user.coach_tone || 'Friendly and motivating'}. Keep it under 2 sentences. If applicable, playfully use their standing on the leaderboard to motivate them: ${lbString}`;
 
             try {
                 const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${user.coach_tone || 'Friendly and motivating'}. Act like a real human in a continuous text message thread.`;
@@ -142,7 +161,8 @@ app.post('/api/admin/simulate-24h', authenticateToken, async (req, res) => {
     console.log(`🤖 Simulating 24h inactivity for user ${user.id}...`);
 
     db.get(`SELECT coach_tone FROM users WHERE id = ?`, [user.id], async (err, row) => {
-        const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${row ? row.coach_tone : 'Friendly and motivating'}. Keep it under 2 sentences.`;
+        const lbString = await getUserLeaderboardString(user.id);
+        const prompt = `The user has not logged any activities or sent any messages in over 24 hours. Write a short, proactive message checking in on them and asking how their training is going. Use the tone: ${row ? row.coach_tone : 'Friendly and motivating'}. Keep it under 2 sentences. If applicable, playfully use their standing on the leaderboard to motivate them: ${lbString}`;
         try {
             const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${row ? row.coach_tone : 'Friendly and motivating'}. Act like a real human in a continuous text message thread.`;
             const aiReply = await generateWithFallback(prompt, systemPrompt);
@@ -2069,6 +2089,19 @@ app.post('/api/social/accept', authenticateToken, (req, res) => {
     db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [req.user.id, friendId], function(err) {
         db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [friendId, req.user.id], function(err2) {
             sendSSEEvent(friendId, 'connection_accepted', { fromUserId: req.user.id, username: req.user.username });
+            
+            db.get(`SELECT coach_tone FROM users WHERE id = ?`, [friendId], async (err, friendUser) => {
+                if (friendUser) {
+                    const prompt = `The athlete just connected with their friend ${req.user.username} on the app. Send a very short 1-sentence message to the athlete welcoming the new connection and telling them to use the competition as motivation.`;
+                    const sysPrompt = `You are an elite endurance coach. Your tone is: ${friendUser.coach_tone || 'Friendly and motivating'}.`;
+                    try {
+                        const msg = await generateWithFallback(prompt, sysPrompt);
+                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`, [friendId, msg]);
+                        sendSSEEvent(friendId, 'unread_message', { message: msg, mood: 'support' });
+                    } catch (e) { console.error(e); }
+                }
+            });
+            
             res.json({ success: true });
         });
     });
@@ -2124,6 +2157,18 @@ app.post('/api/social/kudos', authenticateToken, (req, res) => {
                 db.get(`SELECT user_id, name FROM activities WHERE id = ?`, [activityId], (err, act) => {
                     if (act && act.user_id !== req.user.id) {
                         sendSSEEvent(act.user_id, 'kudos_received', { activityName: act.name, fromUsername: req.user.username || 'Someone' });
+                        
+                        db.get(`SELECT coach_tone FROM users WHERE id = ?`, [act.user_id], async (err, coachUser) => {
+                            if (coachUser) {
+                                const prompt = `The athlete just received Kudos (a like) from their friend ${req.user.username || 'Someone'} on their activity "${act.name}". Send a very short 1-sentence message to the athlete acknowledging this and hyping them up.`;
+                                const sysPrompt = `You are an elite endurance coach. Your tone is: ${coachUser.coach_tone || 'Friendly and motivating'}.`;
+                                try {
+                                    const msg = await generateWithFallback(prompt, sysPrompt);
+                                    db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [act.user_id, msg]);
+                                    sendSSEEvent(act.user_id, 'unread_message', { message: msg, mood: 'hype' });
+                                } catch (e) { console.error(e); }
+                            }
+                        });
                     }
                 });
                 res.json({ success: true, added: true });
