@@ -3264,3 +3264,43 @@ async function toggleSearchPrivacy() {
         });
     } catch (e) { console.error("Failed to update privacy setting", e); }
 }
+
+// iOS Keyboard Bug Fixes
+if (window.visualViewport) {
+    const nav = document.getElementById('main-navigation');
+    
+    function handleViewportChange() {
+        if (!nav) return;
+        // If viewport height shrinks significantly, keyboard is likely open
+        const isKeyboardOpen = window.visualViewport.height < window.innerHeight - 150;
+        
+        if (isKeyboardOpen) {
+            // Hide nav to save space and prevent it from floating above inputs
+            nav.classList.add('hidden');
+            nav.classList.remove('flex');
+        } else {
+            // Restore nav when keyboard closes
+            nav.classList.remove('hidden');
+            nav.classList.add('flex');
+            
+            // Force reset any weird iOS body scrolling that happened while keyboard was open
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+                document.body.scrollTop = 0;
+            }, 50);
+        }
+    }
+    
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', handleViewportChange);
+}
+
+// Ensure body scroll is reset when any input loses focus (failsafe)
+document.addEventListener('focusout', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+        }, 100);
+    }
+});
