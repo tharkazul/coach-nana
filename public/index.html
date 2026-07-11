@@ -175,7 +175,7 @@
     class="bg-theme-bg text-theme-text font-sans antialiased h-[100dvh] overflow-hidden flex flex-col md:flex-row relative transition-colors duration-300">
     <!-- LOGIN OVERLAY -->
     <div id="login-overlay"
-        class="fixed inset-0 bg-theme-bg/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        class="fixed inset-0 bg-theme-bg/95 z-[9999] flex items-center justify-center p-4" style="transform: translateZ(0);">
         <div
             class="bg-theme-card w-full max-w-[350px] p-8 text-center rounded-sm shadow-2xl border border-theme-border relative overflow-hidden">
             <div
@@ -190,7 +190,7 @@
                         class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Username</label>
                     <input type="text" id="login-user"
                         class="w-full p-3 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm"
-                        placeholder="e.g. Spark">
+                        placeholder="e.g. Spark" style="-webkit-user-select: text !important; user-select: text !important; touch-action: manipulation;">
                 </div>
                 <div class="text-left relative">
                     <label
@@ -435,7 +435,7 @@
 
     <!-- SIDE NAVIGATION -->
     <aside id="main-navigation"
-        style="bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));"
+        style="bottom: max(1rem, env(safe-area-inset-bottom));"
         class="fixed left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] md:static md:w-64 md:translate-x-0 md:left-auto bg-theme-card/60 dark:bg-theme-card/50 md:bg-theme-card backdrop-blur-xl md:backdrop-blur-none border border-theme-border/50 md:border-t-0 md:border-l-0 md:border-b-0 md:border-r md:border-theme-border flex flex-row md:flex-col z-50 shadow-lg md:shadow-sm order-last md:order-first shrink-0 transition-colors duration-300 rounded-[2rem] md:rounded-none md:overflow-hidden">
         <div class="hidden md:flex h-16 items-center px-6 border-b border-theme-border shrink-0">
             <div
