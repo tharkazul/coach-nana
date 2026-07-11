@@ -449,8 +449,8 @@ async function loadSettings() {
 
             // Unhide the secret Admin-Only coach tone
             const select = document.getElementById('set-coach-tone');
-            if (select && !select.querySelector('option[value*="madison"]')) {
-                select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Madison Beer.">Coach Liana</option>`;
+            if (select && !select.querySelector('option[value*="liana"]')) {
+                select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Liana.">Coach Liana</option>`;
             }
         }
 
@@ -1975,7 +1975,7 @@ function getCoachAvatar(mood) {
     // Determine the active persona category
     let persona = 'empathetic';
     const toneCheck = currentCoachTone.toLowerCase();
-    if (toneCheck.includes('madison')) persona = 'madison';
+    if (toneCheck.includes('liana') || toneCheck.includes('madison')) persona = 'liana';
     else if (toneCheck.includes('strict')) persona = 'strict';
     else if (toneCheck.includes('cheerleader')) persona = 'cheer';
 
@@ -1992,7 +1992,7 @@ function getCoachAvatar(mood) {
         'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e', horny: '10b981' },
         'strict': { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626', horny: '2563eb' },
         'cheer': { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e', horny: 'd946ef' },
-        'madison': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' }
+        'liana': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' }
     };
     const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
     const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
