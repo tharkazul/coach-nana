@@ -1,14 +1,9 @@
-const CACHE_NAME = 'coach-nana-v6';
+const CACHE_NAME = 'coach-nana-v7';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/script.js',
-    '/icon4.png',
-    '/avatars/default.jpg',
-    '/avatars/happy.jpg',
-    '/avatars/proud.jpg',
-    '/avatars/thinking.jpg',
-    '/avatars/disappointed.jpg'
+    '/icon4.png'
 ];
 
 // Install event - cache static assets
