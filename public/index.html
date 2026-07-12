@@ -170,7 +170,7 @@
 </head>
 
 <body
-    class="bg-theme-bg text-theme-text font-sans antialiased h-[100dvh] overflow-hidden relative transition-colors duration-300">
+    class="bg-theme-bg text-theme-text font-sans antialiased h-[var(--app-height,100dvh)] overflow-hidden relative transition-colors duration-300">
 
 
 
@@ -1515,7 +1515,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=37"></script>
+    <script src="/script.js?v=38"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

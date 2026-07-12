@@ -3273,3 +3273,34 @@ function toggleNavMenu() {
         menu.classList.toggle('flex');
     }
 }
+
+// iOS Safari Keyboard Fix for fixed header layout
+function updateAppHeight() {
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    // Crucial for iOS: prevent Safari from pushing the fixed document up!
+    if (window.visualViewport && window.visualViewport.offsetTop > 0) {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+    }
+}
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateAppHeight);
+    window.visualViewport.addEventListener('scroll', () => {
+        // Only force scroll to 0 if the keyboard caused the viewport to shift up
+        if (window.visualViewport.height < window.innerHeight) {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+        }
+    });
+}
+window.addEventListener('resize', updateAppHeight);
+updateAppHeight();
+
+// Force a second correction shortly after the keyboard closes
+document.addEventListener('focusout', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        setTimeout(updateAppHeight, 100);
+        setTimeout(updateAppHeight, 400);
+    }
+});
