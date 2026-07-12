@@ -3270,6 +3270,9 @@ async function toggleSearchPrivacy() {
 function updateAppHeight() {
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    // Aggressively prevent iOS from pushing the fixed document up when keyboard opens
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
 }
 
 if (window.visualViewport) {
