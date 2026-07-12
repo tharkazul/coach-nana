@@ -3277,11 +3277,19 @@ function toggleNavMenu() {
 // iOS Safari Keyboard Fix for fixed header layout
 function updateAppHeight() {
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-height', `${vh}px`);
-    // Crucial for iOS: prevent Safari from pushing the fixed document up!
-    if (window.visualViewport && window.visualViewport.offsetTop > 0) {
+    const isKeyboardOpen = window.innerHeight - vh > 100; // Threshold for keyboard
+
+    if (isKeyboardOpen) {
+        document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        // Crucial for iOS: prevent Safari from pushing the fixed document up!
+        if (window.visualViewport && window.visualViewport.offsetTop > 0) {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+        }
+    } else {
+        // Keyboard is closed, let CSS 100dvh handle it to avoid bottom gaps
+        document.documentElement.style.removeProperty('--app-height');
         window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
     }
 }
 if (window.visualViewport) {
