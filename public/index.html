@@ -1537,13 +1537,17 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=33"></script>
+    <script src="/script.js?v=34"></script>
     <script>
+        // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then(registration => {
-                    console.log('ServiceWorker registration successful');
-                });
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(reg => reg.unregister());
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(keys => {
+                keys.forEach(key => caches.delete(key));
             });
         }
     </script>
