@@ -3265,42 +3265,42 @@ async function toggleSearchPrivacy() {
     } catch (e) { console.error("Failed to update privacy setting", e); }
 }
 
-// iOS Keyboard Bug Fixes
-if (window.visualViewport) {
-    const nav = document.getElementById('main-navigation');
-    
-    function handleViewportChange() {
-        if (!nav) return;
-        // If viewport height shrinks significantly, keyboard is likely open
-        const isKeyboardOpen = window.visualViewport.height < window.innerHeight - 150;
-        
-        if (isKeyboardOpen) {
-            // Hide nav to save space and prevent it from floating above inputs
-            nav.classList.add('hidden');
-            nav.classList.remove('flex');
-        } else {
-            // Restore nav when keyboard closes
-            nav.classList.remove('hidden');
-            nav.classList.add('flex');
-            
-            // Force reset any weird iOS body scrolling that happened while keyboard was open
-            setTimeout(() => {
-                window.scrollTo(0, 0);
-                document.body.scrollTop = 0;
-            }, 50);
-        }
-    }
-    
-    window.visualViewport.addEventListener('resize', handleViewportChange);
-    window.visualViewport.addEventListener('scroll', handleViewportChange);
+// Keep a CSS variable in sync with what's ACTUALLY visible right now,
+// since 100dvh doesn't reliably react to the software keyboard on iOS
+function updateAppHeight() {
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${vh}px`);
 }
 
-// Ensure body scroll is reset when any input loses focus (failsafe)
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateAppHeight);
+    window.visualViewport.addEventListener('scroll', updateAppHeight);
+}
+window.addEventListener('resize', updateAppHeight);
+updateAppHeight();
+
+// Force a second correction shortly after the keyboard closes — iOS sometimes
+// fires the resize event before the viewport has actually finished settling
 document.addEventListener('focusout', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        setTimeout(() => {
-            window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
-        }, 100);
+        setTimeout(updateAppHeight, 100);
+        setTimeout(updateAppHeight, 400);
     }
 });
+
+function pinNavToVisualViewport() {
+    const nav = document.getElementById('main-navigation');
+    if (!nav || !window.visualViewport) return;
+    const gap = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+    // Keep it above the keyboard, or fallback to the safe area if keyboard is closed
+    if (gap > 0) {
+        nav.style.bottom = `${gap}px`;
+    } else {
+        nav.style.bottom = `calc(env(safe-area-inset-bottom) + 0.5rem)`;
+    }
+}
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', pinNavToVisualViewport);
+    window.visualViewport.addEventListener('scroll', pinNavToVisualViewport);
+    pinNavToVisualViewport();
+}
