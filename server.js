@@ -288,9 +288,28 @@ db.serialize(() => {
         expires_at INTEGER NOT NULL,
         strava_id TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id)
-    )`);
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
-    db.run(`ALTER TABLE activities ADD COLUMN spark_score REAL`, (err) => {});
+    db.run(`ALTER TABLE activities ADD COLUMN spark_score REAL`, (err) => {
+        // Automatically backfill any activities that have a NULL spark_score
+        db.all(`SELECT id, moving_time_min, average_heartrate FROM activities WHERE spark_score IS NULL`, (err, rows) => {
+            if (!err && rows && rows.length > 0) {
+                console.log(`Backfilling spark_score for ${rows.length} activities...`);
+                const stmt = db.prepare(`UPDATE activities SET spark_score = ? WHERE id = ?`);
+                rows.forEach(row => {
+                    let bonus = 0;
+                    if (row.average_heartrate) {
+                        if (row.average_heartrate >= 180) bonus = 0.40;
+                        else if (row.average_heartrate >= 160) bonus = 0.30;
+                        else if (row.average_heartrate >= 140) bonus = 0.20;
+                        else if (row.average_heartrate >= 120) bonus = 0.10;
+                    }
+                    const score = (row.moving_time_min || 0) + ((row.moving_time_min || 0) * bonus);
+                    stmt.run(score, row.id);
+                });
+                stmt.finalize(() => console.log("Spark Score backfill complete."));
+            }
+        });
+    });
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
     
     // Ensure steps_json exists for legacy DBs (if table has id but no steps_json)
