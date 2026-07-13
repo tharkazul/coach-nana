@@ -2970,27 +2970,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Hide mobile navigation when keyboard is open using focus events (more reliable across iOS/Android)
-    const mainNav = document.getElementById('main-navigation');
-    const mainContent = document.getElementById('main-content');
-
-    document.addEventListener('focusin', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-            if (window.innerWidth < 768) {
-                if (mainNav) mainNav.classList.add('hidden');
-                if (mainContent) mainContent.classList.remove('pb-24');
-            }
-        }
-    });
-
-    document.addEventListener('focusout', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-            if (window.innerWidth < 768) {
-                if (mainNav) mainNav.classList.remove('hidden');
-                if (mainContent) mainContent.classList.add('pb-24');
-            }
-        }
-    });
+    }
 });
 
 // --- SOCIAL LOGIC ---
@@ -3280,26 +3260,36 @@ function updateAppHeight() {
     const isKeyboardOpen = window.innerHeight - vh > 100; // Threshold for keyboard
     
     const nav = document.getElementById('main-nav');
+    const coachInput = document.getElementById('coach-input-area');
+
+    // Always JS-driven now — 100dvh is what caused the drift in the first place
+    document.documentElement.style.setProperty('--app-height', `${vh}px`);
 
     if (isKeyboardOpen) {
-        document.documentElement.style.setProperty('--app-height', `${vh}px`);
         if (nav) {
             nav.style.opacity = '0';
             nav.style.pointerEvents = 'none';
             nav.style.transform = 'translate(-50%, 150%)'; // slide down and hide
+        }
+        if (coachInput) {
+            coachInput.classList.remove('pb-24', 'md:pb-24');
         }
         // Crucial for iOS: prevent Safari from pushing the fixed document up!
         if (window.visualViewport && window.visualViewport.offsetTop > 0) {
             window.scrollTo(0, 0);
             document.body.scrollTop = 0;
         }
+        // Re-anchor to the latest message now that the visible area just shrank
+        const chatWindow = document.getElementById('chat-window');
+        if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
     } else {
-        // Keyboard is closed, let CSS 100dvh handle it to avoid bottom gaps
-        document.documentElement.style.removeProperty('--app-height');
         if (nav) {
             nav.style.opacity = '1';
             nav.style.pointerEvents = 'auto';
             nav.style.transform = 'translate(-50%, 0)'; // restore
+        }
+        if (coachInput) {
+            coachInput.classList.add('pb-24', 'md:pb-24');
         }
         window.scrollTo(0, 0);
     }
