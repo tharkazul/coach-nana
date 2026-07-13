@@ -3184,7 +3184,7 @@ async function loadLeaderboard() {
                         <span class="text-[10px] text-theme-muted">${u.total_activities || 0} activities • ${Math.round((u.total_minutes || 0) / 60 * 2) / 2}h</span>
                     </div>
                 </div>
-                <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_tss)} TSS</span>
+                <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_spark_score)} Points</span>
             </div>
         `).join('');
     } catch (e) {

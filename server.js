@@ -107,17 +107,17 @@ setInterval(() => {
 function getUserLeaderboardString(userId) {
     return new Promise((resolve) => {
         db.all(`
-            SELECT u.username, SUM(a.tss) as total_tss
+            SELECT u.username, SUM(a.spark_score) as total_spark_score
             FROM activities a
             JOIN users u ON a.user_id = u.id
             WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
               AND a.start_date >= datetime('now', '-7 days')
             GROUP BY u.id
-            ORDER BY total_tss DESC
+            ORDER BY total_spark_score DESC
         `, [userId, userId], (err, rows) => {
             if (err || !rows || rows.length === 0) return resolve('');
-            const lb = rows.map((r, i) => `${i+1}. ${r.username} (${Math.round(r.total_tss)} TSS)`).join(', ');
-            resolve(`\\n\\nCurrent Leaderboard: ${lb}`);
+            const lb = rows.map((r, i) => `${i+1}. ${r.username} (${Math.round(r.total_spark_score)} Points)`).join(', ');
+            resolve(`\n\nCurrent Leaderboard: ${lb}`);
         });
     });
 }
@@ -290,6 +290,7 @@ db.serialize(() => {
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
+    db.run(`ALTER TABLE activities ADD COLUMN spark_score REAL`, (err) => {});
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
     
     // Ensure steps_json exists for legacy DBs (if table has id but no steps_json)
@@ -782,10 +783,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                     // Use negative ID to avoid collision with real Strava IDs
                                     const manualId = -Date.now();
                                     const startDate = new Date().toISOString();
+                                    const calculatedSparkScore = calculateSparkScore(act.moving_time_min || 0, null);
                                     
                                     db.run(
-                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, tss) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.tss || 0],
+                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, tss, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.tss || 0, calculatedSparkScore],
                                         (err) => {
                                             if (err) console.error("Failed to insert manual activity:", err);
                                         }
@@ -1874,6 +1876,21 @@ async function getStravaTokenForUser(userIdOrStravaId) {
     });
 }
 
+function calculateSparkScore(movingTimeMin, avgHr) {
+    if (!movingTimeMin) return 0;
+    let baseScore = movingTimeMin;
+    let bonus = 0;
+    
+    if (avgHr) {
+        if (avgHr >= 180) bonus = 0.40;
+        else if (avgHr >= 160) bonus = 0.30;
+        else if (avgHr >= 140) bonus = 0.20;
+        else if (avgHr >= 120) bonus = 0.10;
+    }
+    
+    return baseScore + (baseScore * bonus);
+}
+
 function mapStravaSportToSpark(stravaSport) {
     if (!stravaSport) return 'Other';
     if (stravaSport.includes('Run')) return 'Run';
@@ -1974,11 +1991,12 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         }
 
         const tss = data.suffer_score || Math.round((data.moving_time / 3600) * 50);
+        const sparkScore = calculateSparkScore(data.moving_time / 60, data.average_heartrate);
 
-        db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET tss=excluded.tss`,
-            [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || 0, data.start_date, tss], (err) => {
+        db.run(`INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
+            [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || null, data.start_date, tss, sparkScore], (err) => {
                 if (!err) {
                     sendSSEEvent(internalUserId, 'sync_complete', { provider: 'strava', activityId: data.id });
                 }
@@ -2171,13 +2189,13 @@ app.get('/api/social/feed', authenticateToken, (req, res) => {
 
 app.get('/api/social/leaderboard', authenticateToken, (req, res) => {
     db.all(`
-        SELECT u.id, u.username, SUM(a.tss) as total_tss, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
+        SELECT u.id, u.username, SUM(a.spark_score) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
         FROM activities a
         JOIN users u ON a.user_id = u.id
         WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
           AND a.start_date >= datetime('now', '-7 days')
         GROUP BY u.id
-        ORDER BY total_tss DESC
+        ORDER BY total_spark_score DESC
     `, [req.user.id, req.user.id], (err, rows) => {
         res.json({ leaderboard: rows || [] });
     });
