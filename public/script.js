@@ -587,7 +587,10 @@ function switchTab(t) {
     const views = ['dashboard', 'coach', 'settings', 'history', 'admin', 'physique', 'social'];
     views.forEach(view => {
         const el = document.getElementById(`view-${view}`);
-        if (el) el.classList.toggle('hidden', t !== view);
+        if (el) {
+            el.classList.toggle('hidden', t !== view);
+            el.toggleAttribute('inert', t !== view); // prevent inactive inputs from triggering keyboard toolbar
+        }
     });
 
     if (t === 'coach') {
@@ -3259,9 +3262,10 @@ function updateAppHeight() {
     
     const nav = document.getElementById('main-nav');
     const coachInput = document.getElementById('coach-input-area');
+    const shell = document.getElementById('app-shell');
 
-    // Always JS-driven now — 100dvh is what caused the drift in the first place
-    document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    // Always JS-driven now, but applied to the shell instead of the root document
+    if (shell) shell.style.height = `${vh}px`;
 
     if (isKeyboardOpen) {
         if (nav) {

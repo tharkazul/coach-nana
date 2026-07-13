@@ -166,11 +166,16 @@
         .animate-pop {
             animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        html, body {
+            position: fixed;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
     </style>
 </head>
 
-<body
-    class="bg-theme-bg text-theme-text font-sans antialiased h-[var(--app-height,100dvh)] overflow-hidden relative transition-colors duration-300 flex flex-col">
+<body class="bg-theme-bg text-theme-text font-sans antialiased overflow-hidden relative transition-colors duration-300">
 
 
 
@@ -447,8 +452,11 @@
     </div>
 
 
-    <!-- MAIN CONTENT AREA -->
-    <main id="main-content" class="flex-1 flex flex-col w-full overflow-hidden relative bg-theme-bg">
+    <!-- APP SHELL (Isolates viewport resizing from body) -->
+    <div id="app-shell" class="flex flex-col overflow-hidden w-full" style="height: 100dvh;">
+
+        <!-- MAIN CONTENT AREA -->
+        <main id="main-content" class="flex-1 flex flex-col w-full overflow-hidden relative bg-theme-bg">
         <header
             class="pt-safe min-h-[3.5rem] md:min-h-[4rem] py-2 bg-theme-card border-b border-theme-border flex items-center justify-between px-4 md:px-8 z-[100] shrink-0 transition-colors duration-300 relative">
             <div class="flex items-center gap-3 md:gap-4">
@@ -1352,7 +1360,8 @@
             </button>
         </nav>
 
-    </main>
+        </main>
+    </div>
 
     <!-- Add Person Modal -->
     <div id="add-person-modal"
@@ -1510,7 +1519,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=49"></script>
+    <script src="/script.js?v=50"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
