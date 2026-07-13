@@ -47,29 +47,37 @@
     <style>
         /* ☀️ OFFICE STEALTH (LIGHT MODE) */
         :root {
-            --bg-main: #f9fafb;
-            --bg-card: #ffffff;
-            --border-color: #e5e7eb;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --accent: #14b8a6;
-            --accent-hover: #0d9488;
-            --accent-soft: #f0fdfa;
-            --accent-border: #ccfbf1;
+            --bg-main: #EEF2F6;
+            --bg-card: #DDE3E9;
+            --border-color: #C8D1DB;
+            --text-main: #191C1E;
+            --text-muted: #5A6973;
+            --accent: #16ACBD;
+            --accent-hover: #1397A6;
+            --accent-soft: #E0F5F7;
+            --accent-border: #BAE8ED;
+            
+            /* Extended Palette */
+            --color-focus: #F9CF45;
+            --color-metric: #E3494F;
         }
 
         /* 🌙 PERFORMANCE APP (DARK MODE) */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-main: #121212;
-                --bg-card: #1e1e1e;
-                --border-color: #333333;
-                --text-main: #f3f4f6;
-                --text-muted: #9ca3af;
-                --accent: #f97316;
-                --accent-hover: #ea580c;
-                --accent-soft: #2a1a10;
-                --accent-border: #3d2514;
+                --bg-main: #101314;
+                --bg-card: #191C1E;
+                --border-color: #272C30;
+                --text-main: #FFFFFF;
+                --text-muted: #8E9BA4;
+                --accent: #108595;
+                --accent-hover: #16A8BC;
+                --accent-soft: #08343A;
+                --accent-border: #0D5761;
+                
+                /* Extended Palette */
+                --color-focus: #C99C0C;
+                --color-metric: #B22227;
             }
 
             .leaflet-layer,
@@ -1579,7 +1587,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=64"></script>
+    <script src="/script.js?v=65"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
