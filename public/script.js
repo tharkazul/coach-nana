@@ -3321,3 +3321,24 @@ document.addEventListener('focusout', (e) => {
         setTimeout(updateAppHeight, 400);
     }
 });
+
+// Automatically sync 'inert' with hidden/display status for all modals to keep iOS keyboard clean
+const overlaysToTrack = ['login-overlay', 'onboarding-overlay', 'add-person-modal', 'post-modal', 'edit-workout-modal', 'image-modal'];
+overlaysToTrack.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    // Set initial state
+    const isHidden = el.classList.contains('hidden') || el.style.display === 'none';
+    if (isHidden) el.setAttribute('inert', '');
+    
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'class' || mutation.attributeName === 'style') {
+                const hiddenNow = el.classList.contains('hidden') || el.style.display === 'none';
+                el.toggleAttribute('inert', hiddenNow);
+            }
+        });
+    });
+    observer.observe(el, { attributes: true });
+});
