@@ -404,11 +404,17 @@
             <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg shrink-0">
                 <h2 id="modal-title" class="text-sm font-bold text-theme-text truncate pr-4">Loading Telemetry...
                 </h2>
-                <button onclick="closeModal()" class="text-theme-muted hover:text-theme-text transition"><svg
-                        class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg></button>
+                <div class="flex items-center gap-4">
+                    <div id="modal-kudos" class="hidden flex items-center gap-1.5 transition">
+                        <svg id="modal-kudos-icon" class="w-4 h-4 text-theme-muted transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                        <span id="modal-kudos-count" class="text-xs font-bold text-theme-muted transition-colors">0</span>
+                    </div>
+                    <button onclick="closeModal()" class="text-theme-muted hover:text-theme-text transition"><svg
+                            class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                            </path>
+                        </svg></button>
+                </div>
             </div>
             <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-6 md:pb-6 bg-theme-card relative">
                 <div id="modal-loader"
@@ -1555,7 +1561,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=59"></script>
+    <script src="/script.js?v=60"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

@@ -1707,6 +1707,31 @@ async function openActivityModal(id) {
     try {
         const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
         document.getElementById('modal-title').innerText = data.name || "Activity Details";
+        
+        // Handle Kudos
+        if (data.kudos_count !== undefined) {
+            const kudosEl = document.getElementById('modal-kudos');
+            const iconEl = document.getElementById('modal-kudos-icon');
+            const countEl = document.getElementById('modal-kudos-count');
+            
+            kudosEl.classList.remove('hidden');
+            countEl.innerText = data.kudos_count;
+            
+            if (data.kudos_count > 0) {
+                iconEl.classList.remove('text-theme-muted');
+                iconEl.classList.add('text-[#ff6b6b]', 'fill-[#ff6b6b]');
+                countEl.classList.remove('text-theme-muted');
+                countEl.classList.add('text-[#ff6b6b]');
+            } else {
+                iconEl.classList.add('text-theme-muted');
+                iconEl.classList.remove('text-[#ff6b6b]', 'fill-[#ff6b6b]');
+                countEl.classList.add('text-theme-muted');
+                countEl.classList.remove('text-[#ff6b6b]');
+            }
+        } else {
+            document.getElementById('modal-kudos').classList.add('hidden');
+        }
+
         let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--';
         let distStr = '--';
         if (data.distance) {
