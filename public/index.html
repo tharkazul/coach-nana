@@ -451,11 +451,8 @@
         <header
             class="pt-safe min-h-[3.5rem] md:min-h-[4rem] py-2 bg-theme-card border-b border-theme-border flex items-center justify-between px-4 md:px-8 z-[100] shrink-0 transition-colors duration-300 relative">
             <div class="flex items-center gap-3 md:gap-4">
-                <button onclick="toggleNavMenu()" class="text-theme-text hover:text-theme-accent transition p-1 -ml-2">
-                    <svg class="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
+                <!-- Hamburger Menu Removed for Bottom Nav Testing -->
+                <div class="w-6 h-6 md:w-7 md:h-7 -ml-2"></div>
                 <div class="flex items-center text-xs md:text-sm text-theme-muted space-x-1 md:space-x-2">
                     <span class="hidden md:inline font-bold">Spark HQ</span>
                     <span class="hidden md:inline">/</span>
@@ -476,31 +473,6 @@
                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
                 </button>
-            <!-- NAV MENU OVERLAY -->
-            <div id="nav-menu-overlay" class="absolute top-full left-0 w-full bg-theme-card border-b border-theme-border shadow-2xl z-[90] hidden flex-col transition-all duration-300 origin-top">
-                <nav class="flex flex-col p-4 space-y-2">
-                    <button onclick="switchTab('dashboard'); toggleNavMenu()" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-theme-bg text-theme-text text-sm font-bold text-left transition">
-                        <span class="text-xl">🏠</span>
-                        <span>Home</span>
-                    </button>
-                    <button onclick="switchTab('history'); toggleNavMenu()" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-theme-bg text-theme-text text-sm font-bold text-left transition">
-                        <span class="text-xl">📖</span>
-                        <span>Log</span>
-                    </button>
-                    <button onclick="switchTab('coach'); toggleNavMenu()" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-theme-bg text-theme-text text-sm font-bold text-left transition">
-                        <span class="text-xl">🤖</span>
-                        <span>AI Coach</span>
-                    </button>
-                    <button onclick="switchTab('physique'); toggleNavMenu()" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-theme-bg text-theme-text text-sm font-bold text-left transition">
-                        <span class="text-xl">💪</span>
-                        <span>Body</span>
-                    </button>
-                    <button onclick="switchTab('social'); toggleNavMenu()" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-theme-bg text-theme-text text-sm font-bold text-left transition">
-                        <span class="text-xl">🌐</span>
-                        <span>Social</span>
-                    </button>
-                </nav>
-            </div>
         </header>
 
         <div class="flex-1 flex flex-col overflow-hidden relative min-h-0">
@@ -1354,6 +1326,31 @@
 
             </div>
         </div>
+
+        <!-- BOTTOM NAV SIBLING (Phase 2 Stage 1) -->
+        <nav class="bg-theme-card border-t border-theme-border flex justify-around items-end px-2 py-2 shrink-0 pb-safe z-50">
+            <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
+                <span class="text-xl">🏠</span>
+                <span class="text-[10px] font-bold">Home</span>
+            </button>
+            <button onclick="switchTab('history')" class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
+                <span class="text-xl">📖</span>
+                <span class="text-[10px] font-bold">Log</span>
+            </button>
+            <button onclick="switchTab('coach')" class="flex flex-col items-center gap-1 p-2 text-theme-accent font-bold transition">
+                <span class="text-2xl -mt-1">🤖</span>
+                <span class="text-[10px]">Coach</span>
+            </button>
+            <button onclick="switchTab('physique')" class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
+                <span class="text-xl">💪</span>
+                <span class="text-[10px] font-bold">Body</span>
+            </button>
+            <button onclick="switchTab('social')" class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
+                <span class="text-xl">🌐</span>
+                <span class="text-[10px] font-bold">Social</span>
+            </button>
+        </nav>
+
     </main>
 
     <!-- Add Person Modal -->
@@ -1512,7 +1509,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=41"></script>
+    <script src="/script.js?v=42"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
