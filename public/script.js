@@ -621,14 +621,14 @@ function switchTab(t) {
     document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'physique': 'Physique & Recovery', 'social': 'Social' }[t];
 
     views.forEach(tab => {
-        const btn = document.getElementById(`nav-${tab}`);
-        if (!btn) return;
+        const btn = document.getElementById(`nav-btn-${tab}`);
+        if (!btn || tab === 'coach') return; // Coach button has permanent styling
         if (tab === t) {
-            btn.classList.add('text-theme-accent', 'bg-theme-accent-soft');
-            btn.classList.remove('text-theme-muted', 'hover:text-theme-accent', 'hover:bg-theme-bg');
+            btn.classList.add('text-theme-accent');
+            btn.classList.remove('text-theme-muted', 'hover:text-theme-accent');
         } else {
-            btn.classList.remove('text-theme-accent', 'bg-theme-accent-soft');
-            btn.classList.add('text-theme-muted', 'hover:text-theme-accent', 'hover:bg-theme-bg');
+            btn.classList.remove('text-theme-accent');
+            btn.classList.add('text-theme-muted', 'hover:text-theme-accent');
         }
     });
 
@@ -3381,20 +3381,3 @@ overlaysToTrack.forEach(id => {
 setTimeout(() => {
     if (document.activeElement) document.activeElement.blur();
 }, 100);
-
-// WebKit inputAccessoryView suppression hack for the chat input
-const chatInput = document.getElementById('chat-input');
-if (chatInput) {
-    let suppressing = false;
-    chatInput.addEventListener('focus', function () {
-        if (suppressing) return;
-        suppressing = true;
-        this.setAttribute('readonly', 'readonly');
-        this.blur();
-        setTimeout(() => {
-            this.removeAttribute('readonly');
-            this.focus();
-            suppressing = false;
-        }, 50);
-    });
-}

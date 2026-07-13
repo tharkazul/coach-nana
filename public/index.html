@@ -1362,31 +1362,32 @@
 
             <!-- BOTTOM NAV PILL (Phase 2 Stage 2) -->
             <nav id="main-nav"
-                class="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/80 backdrop-blur-md border border-theme-border rounded-2xl flex justify-around items-center px-2 py-2 shadow-2xl z-50 transition-all duration-300">
-                <button onclick="switchTab('dashboard')"
-                    class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
-                    <span class="text-xl">🏠</span>
-                    <span class="text-[10px] font-bold">Home</span>
+                class="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/90 backdrop-blur-md border border-theme-border rounded-[2rem] flex justify-between items-center px-6 py-3 shadow-2xl z-50 transition-all duration-300">
+                <button onclick="switchTab('dashboard')" id="nav-btn-dashboard"
+                    class="nav-btn p-2 text-theme-accent transition relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                 </button>
-                <button onclick="switchTab('history')"
-                    class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
-                    <span class="text-xl">📖</span>
-                    <span class="text-[10px] font-bold">Log</span>
+                <button onclick="switchTab('history')" id="nav-btn-history"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                 </button>
-                <button onclick="switchTab('coach')"
-                    class="flex flex-col items-center gap-1 p-2 text-theme-accent font-bold transition">
-                    <span class="text-2xl -mt-1">🤖</span>
-                    <span class="text-[10px]">Coach</span>
+
+                <!-- Center Protruding Button -->
+                <div class="relative -mt-10 mb-2">
+                    <button onclick="switchTab('coach')" id="nav-btn-coach"
+                        class="nav-btn flex items-center justify-center w-14 h-14 bg-theme-accent text-white rounded-full shadow-lg border-[6px] border-theme-bg hover:scale-105 transition transform relative">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                        <span id="coach-badge" class="absolute top-0 right-0 w-4 h-4 bg-[#ff6b6b] rounded-full text-[9px] font-bold text-white flex items-center justify-center border-2 border-theme-bg transform translate-x-1 -translate-y-1 hidden">1</span>
+                    </button>
+                </div>
+
+                <button onclick="switchTab('physique')" id="nav-btn-physique"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                 </button>
-                <button onclick="switchTab('physique')"
-                    class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
-                    <span class="text-xl">💪</span>
-                    <span class="text-[10px] font-bold">Body</span>
-                </button>
-                <button onclick="switchTab('social')"
-                    class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
-                    <span class="text-xl">🌐</span>
-                    <span class="text-[10px] font-bold">Social</span>
+                <button onclick="switchTab('social')" id="nav-btn-social"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                 </button>
             </nav>
 
@@ -1549,7 +1550,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=56"></script>
+    <script src="/script.js?v=58"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
