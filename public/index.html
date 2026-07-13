@@ -1329,7 +1329,7 @@
         </div>
 
         <!-- BOTTOM NAV PILL (Phase 2 Stage 2) -->
-        <nav id="main-nav" class="fixed bottom-safe left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/80 backdrop-blur-md border border-theme-border rounded-2xl flex justify-around items-center px-2 py-2 shadow-2xl z-50 mb-2 md:mb-6">
+        <nav id="main-nav" class="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/80 backdrop-blur-md border border-theme-border rounded-2xl flex justify-around items-center px-2 py-2 shadow-2xl z-50 transition-all duration-300">
             <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
                 <span class="text-xl">🏠</span>
                 <span class="text-[10px] font-bold">Home</span>
@@ -1510,7 +1510,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=44"></script>
+    <script src="/script.js?v=45"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
