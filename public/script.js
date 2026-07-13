@@ -583,9 +583,10 @@ async function uploadProfilePicture(event) {
     formData.append('photo', file);
     
     try {
+        const token = localStorage.getItem('nana_token');
         const res = await fetch('/api/settings/profile-picture', {
             method: 'POST',
-            headers: getAuthHeaders(), // Note: Do not set Content-Type for FormData
+            headers: { 'Authorization': `Bearer ${token}` }, // Note: Do not set Content-Type for FormData
             body: formData
         });
         
