@@ -2969,8 +2969,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    }
 });
 
 // --- SOCIAL LOGIC ---
