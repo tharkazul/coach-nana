@@ -1,0 +1,8 @@
+git checkout main
+git pull origin main
+git merge staging
+git push origin main
+git checkout staging
+
+cd "/Users/rutgervandenberg/Documents/spark production"
+git pull origin main

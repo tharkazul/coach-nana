@@ -3179,7 +3179,10 @@ async function loadLeaderboard() {
             <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded p-3">
                 <div class="flex items-center gap-3">
                     <span class="text-xs font-bold text-theme-muted w-4 text-center">${i + 1}</span>
-                    <span class="text-sm font-bold text-theme-text">${u.username}</span>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-theme-text">${u.username}</span>
+                        <span class="text-[10px] text-theme-muted">${u.total_activities || 0} activities • ${Math.round((u.total_minutes || 0) / 60 * 2) / 2}h</span>
+                    </div>
                 </div>
                 <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_tss)} TSS</span>
             </div>
