@@ -3381,3 +3381,20 @@ overlaysToTrack.forEach(id => {
 setTimeout(() => {
     if (document.activeElement) document.activeElement.blur();
 }, 100);
+
+// WebKit inputAccessoryView suppression hack for the chat input
+const chatInput = document.getElementById('chat-input');
+if (chatInput) {
+    let suppressing = false;
+    chatInput.addEventListener('focus', function () {
+        if (suppressing) return;
+        suppressing = true;
+        this.setAttribute('readonly', 'readonly');
+        this.blur();
+        setTimeout(() => {
+            this.removeAttribute('readonly');
+            this.focus();
+            suppressing = false;
+        }, 50);
+    });
+}
