@@ -1163,6 +1163,22 @@
                         </div>
                     </div>
 
+                    <!-- STRAVA AUTOMATIONS -->
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-[#ff6b6b]"></span> Strava Automations
+                            </h3>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <p class="text-xs text-theme-muted mb-2">Select which activities Spark should proactively analyze and update in Strava with plan comparisons and TSS scores.</p>
+                            <div id="strava-automations-container" class="space-y-3">
+                                <!-- Dynamic toggles injected by JS -->
+                                <div class="text-[10px] font-bold text-theme-muted animate-pulse">LOADING ACTIVITY HISTORY...</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- RACE CALENDAR & MILESTONES -->
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                         <div
@@ -1563,7 +1579,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=62"></script>
+    <script src="/script.js?v=63"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

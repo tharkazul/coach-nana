@@ -147,6 +147,72 @@ async function saveMetrics() {
         }
     } catch (e) { alert("Failed to save metrics."); }
 }
+async function loadStravaAutomations() {
+    const container = document.getElementById('strava-automations-container');
+    if (!container) return;
+
+    try {
+        const typesRes = await fetch('/api/user/activities/types', { headers: getAuthHeaders() });
+        const activityTypes = await typesRes.json();
+        
+        let optOutList = [];
+        if (globalMetrics) {
+            const optOutMetric = globalMetrics.find(m => m.metric === 'strava_opt_out_activities');
+            if (optOutMetric && optOutMetric.value) {
+                try { optOutList = JSON.parse(optOutMetric.value); } catch(e) {}
+            }
+        }
+
+        if (activityTypes.length === 0) {
+            container.innerHTML = `<p class="text-xs text-theme-muted italic">No activities found in history.</p>`;
+            return;
+        }
+
+        container.innerHTML = activityTypes.map(type => {
+            const isOptedOut = optOutList.includes(type);
+            return `
+                <div class="flex items-center justify-between p-3 border border-theme-border rounded-md bg-theme-bg">
+                    <span class="text-xs font-bold text-theme-text">${type}</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer strava-opt-toggle" data-type="${type}" ${!isOptedOut ? 'checked' : ''} onchange="saveStravaAutomations()">
+                        <div class="w-9 h-5 bg-theme-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff6b6b]"></div>
+                    </label>
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        container.innerHTML = `<p class="text-xs text-red-500">Failed to load automations.</p>`;
+    }
+}
+
+async function saveStravaAutomations() {
+    const toggles = document.querySelectorAll('.strava-opt-toggle');
+    const optOutActivities = [];
+    toggles.forEach(t => {
+        if (!t.checked) optOutActivities.push(t.dataset.type);
+    });
+
+    try {
+        await fetch('/api/user/strava-opt-out', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ optOutActivities })
+        });
+        
+        // sync to globalMetrics so UI stays fresh without reload
+        if (globalMetrics) {
+            let m = globalMetrics.find(m => m.metric === 'strava_opt_out_activities');
+            if (!m) {
+                m = { metric: 'strava_opt_out_activities' };
+                globalMetrics.push(m);
+            }
+            m.value = JSON.stringify(optOutActivities);
+        }
+    } catch (e) {
+        console.error("Failed to save automations", e);
+    }
+}
 
 async function loadMetrics() {
     try {
@@ -491,7 +557,8 @@ async function loadSettings() {
             if (banner) banner.classList.add('hidden');
             if (content) content.classList.remove('hidden');
         }
-        loadMetrics();
+        await loadMetrics();
+        await loadStravaAutomations();
     } catch (e) { console.error("Failed to load settings."); }
 }
 

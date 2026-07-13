@@ -963,15 +963,38 @@ app.post('/api/user/metrics', authenticateToken, (req, res) => {
 
     db.serialize(() => {
         // We will just clear all custom metrics and re-insert what the user passed, or update them.
-        // But some might have been auto-added by the AI. It's safer to just clear and insert the passed array from the UI,
-        // assuming the UI sent the complete list.
-        db.run(`DELETE FROM athlete_metrics WHERE user_id = ?`, [req.user.id]);
+        // But some might have been auto-added by the AI, and we MUST preserve system metrics like strava_opt_out_activities.
+        db.run(`DELETE FROM athlete_metrics WHERE user_id = ? AND metric != 'strava_opt_out_activities'`, [req.user.id]);
         const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?)`);
         metrics.forEach(m => {
-            stmt.run(req.user.id, m.metric, m.value);
+            if (m.metric !== 'strava_opt_out_activities') {
+                stmt.run(req.user.id, m.metric, m.value);
+            }
         });
         stmt.finalize();
         res.json({ message: "Metrics updated successfully!" });
+    });
+});
+
+app.get('/api/user/activities/types', authenticateToken, (req, res) => {
+    db.all(`SELECT DISTINCT sport_type FROM activities WHERE user_id = ? ORDER BY sport_type ASC`, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Failed to load activity types." });
+        res.json(rows.map(r => r.sport_type));
+    });
+});
+
+app.post('/api/user/strava-opt-out', authenticateToken, (req, res) => {
+    const { optOutActivities } = req.body;
+    if (!Array.isArray(optOutActivities)) {
+        return res.status(400).json({ error: "optOutActivities must be an array" });
+    }
+    const val = JSON.stringify(optOutActivities);
+    
+    db.run(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, 'strava_opt_out_activities', ?) 
+            ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`, 
+            [req.user.id, val], (err) => {
+        if (err) return res.status(500).json({ error: "Failed to update preferences." });
+        res.json({ success: true });
     });
 });
 
@@ -1963,8 +1986,19 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         const activityDate = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
         const sparkSport = mapStravaSportToSpark(data.sport_type);
 
-        db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
-            [internalUserId, activityDate, sparkSport], async (err, plan) => {
+        db.get("SELECT value FROM athlete_metrics WHERE user_id = ? AND metric = 'strava_opt_out_activities'", [internalUserId], (err, optOutRow) => {
+            let optOutList = [];
+            if (optOutRow && optOutRow.value) {
+                try { optOutList = JSON.parse(optOutRow.value); } catch(e) {}
+            }
+
+            if (optOutList.includes(data.sport_type)) {
+                console.log(`🚫 Skipping AI automation and Strava update for ${data.sport_type} activity ${activityId} due to user opt-out.`);
+                return;
+            }
+
+            db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+                [internalUserId, activityDate, sparkSport], async (err, plan) => {
 
                 // Fetch the coach tone
                 db.get("SELECT coach_tone FROM users WHERE id = ?", [internalUserId], async (err, userRow) => {
@@ -2014,6 +2048,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                     }
                 });
             });
+        });
 
     } catch (e) {
         console.error(`❌ Fatal Webhook Processing Error for Strava Athlete ${stravaAthleteId}:`, e);
