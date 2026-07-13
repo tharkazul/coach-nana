@@ -810,6 +810,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                         [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.tss || 0, calculatedSparkScore],
                                         (err) => {
                                             if (err) console.error("Failed to insert manual activity:", err);
+                                            else {
+                                                // Invalidate today's nutrition cache so it incorporates the new workout
+                                                const todayStr = startDate.split('T')[0];
+                                                db.run(`DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [req.user.id, todayStr]);
+                                            }
                                         }
                                     );
                                     planUpdated = true; // Signal frontend to reload data/charts
@@ -1770,13 +1775,23 @@ app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
             const weight = weightRow ? weightRow.weight_kg : 75; // Default to 75kg if unknown
             const phase = await getUserMacroPhase(req.user.id);
             
-            db.all(`SELECT date, tss, description FROM micro_plan WHERE user_id = ? AND date >= date('now') LIMIT 1`, [req.user.id], async (err, todayPlan) => {
-                const todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].tss : 0;
-                const todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
+            // Fetch today's completed activities (if any)
+            db.all(`SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`, [req.user.id, todayStr], (err, actualAct) => {
+                const actualTSS = actualAct && actualAct.length > 0 && actualAct[0].total_score ? actualAct[0].total_score : 0;
 
-                const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
+                db.all(`SELECT date, tss, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`, [req.user.id, todayStr], async (err, todayPlan) => {
+                    let todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].tss : 0;
+                    let todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
+                    
+                    // If they already trained harder than planned (or trained on a rest day), update the prompt
+                    if (actualTSS > todayTSS || (actualTSS > 0 && todayDesc === 'Rest day')) {
+                        todayTSS = actualTSS;
+                        todayDesc = 'Completed Workout / Training Day';
+                    }
+
+                    const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
 Their latest weight is ${weight}kg.
-Today's training plan: ${todayDesc} (TSS: ${todayTSS}).
+Today's training load/plan: ${todayDesc} (Score/TSS: ${todayTSS}).
 
 Based on today's training load and their current macro phase, recommend a daily macro nutrition target.
 - For high TSS / intense days, prescribe higher carbohydrates.
@@ -1819,6 +1834,7 @@ You MUST respond with ONLY a raw JSON object containing exactly these keys:
                         fat: Math.round(weight * 1)
                     });
                 }
+            });
             });
         });
     });
@@ -2019,6 +2035,13 @@ async function getStravaActivity(stravaAthleteId, activityId) {
             [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || null, data.start_date, tss, sparkScore], (err) => {
                 if (!err) {
                     sendSSEEvent(internalUserId, 'sync_complete', { provider: 'strava', activityId: data.id });
+                    
+                    // Invalidate today's nutrition cache so it incorporates the new workout
+                    const activityDateStr = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    if (activityDateStr === todayStr) {
+                        db.run(`DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [internalUserId, todayStr]);
+                    }
                 }
             });
 
