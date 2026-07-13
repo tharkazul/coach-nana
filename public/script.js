@@ -344,6 +344,9 @@ function checkLogin() {
         loadPendingRequests();
     } else {
         document.getElementById('login-overlay').style.display = 'flex';
+        setTimeout(() => {
+            if (document.activeElement) document.activeElement.blur();
+        }, 50);
     }
 }
 
@@ -3342,3 +3345,8 @@ overlaysToTrack.forEach(id => {
     });
     observer.observe(el, { attributes: true });
 });
+
+// Force blur on initial load to prevent Safari auto-focusing the login field
+setTimeout(() => {
+    if (document.activeElement) document.activeElement.blur();
+}, 100);
