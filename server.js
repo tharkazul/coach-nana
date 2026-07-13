@@ -288,6 +288,7 @@ db.serialize(() => {
         expires_at INTEGER NOT NULL,
         strava_id TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id)
+    )`);
     db.run(`CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`);
     db.run(`ALTER TABLE activities ADD COLUMN spark_score REAL`, (err) => {
         // Automatically backfill any activities that have a NULL spark_score
