@@ -205,7 +205,7 @@
                 <div class="text-left relative">
                     <label
                         class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Password</label>
-                    <input type="text" id="login-pass"
+                    <input type="password" id="login-pass"
                         class="w-full p-3 pr-10 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm"
                         placeholder="••••••••" onkeypress="if(event.key === 'Enter') attemptAuth('login')">
                     <button type="button" onclick="togglePassword('login-pass')"
@@ -235,7 +235,7 @@
                 <div class="text-left relative">
                     <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Create
                         Password</label>
-                    <input type="text" id="reg-pass"
+                    <input type="password" id="reg-pass"
                         class="w-full p-3 pr-10 border border-theme-border rounded-sm text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text shadow-sm">
                     <button type="button" onclick="togglePassword('reg-pass')"
                         class="absolute bottom-3 right-3 text-theme-muted hover:text-theme-accent"><svg class="w-4 h-4"
@@ -327,7 +327,7 @@
                                 <div class="space-y-2">
                                     <input type="text" id="onboard-garmin-user" placeholder="Garmin Email"
                                         class="w-full p-2 border border-theme-border rounded-sm text-sm bg-theme-bg text-theme-text focus:border-theme-accent outline-none">
-                                    <input type="text" id="onboard-garmin-pass" placeholder="Garmin Password"
+                                    <input type="password" id="onboard-garmin-pass" placeholder="Garmin Password"
                                         class="w-full p-2 border border-theme-border rounded-sm text-sm bg-theme-bg text-theme-text focus:border-theme-accent outline-none">
                                 </div>
                             </div>
@@ -1255,7 +1255,7 @@
                                     <label
                                         class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-1">Garmin
                                         Password</label>
-                                    <input type="text" id="set-garmin-pass"
+                                    <input type="password" id="set-garmin-pass"
                                         class="w-full p-3 pr-10 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text"
                                         placeholder="••••••••">
                                     <button type="button" onclick="togglePassword('set-garmin-pass')"
@@ -1549,7 +1549,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=53"></script>
+    <script src="/script.js?v=55"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

@@ -591,8 +591,24 @@ function switchTab(t) {
     views.forEach(view => {
         const el = document.getElementById(`view-${view}`);
         if (el) {
-            el.classList.toggle('hidden', t !== view);
-            el.toggleAttribute('inert', t !== view); // prevent inactive inputs from triggering keyboard toolbar
+            const hiddenNow = t !== view;
+            el.classList.toggle('hidden', hiddenNow);
+            el.toggleAttribute('inert', hiddenNow); // prevent inactive inputs from triggering keyboard toolbar
+            
+            // Brute-force disable inputs for iOS Safari which sometimes ignores inert
+            el.querySelectorAll('input, textarea, select').forEach(child => {
+                if (hiddenNow) {
+                    if (!child.disabled) {
+                        child.disabled = true;
+                        child.dataset.autoDisabled = "true";
+                    }
+                } else {
+                    if (child.dataset.autoDisabled === "true") {
+                        child.disabled = false;
+                        delete child.dataset.autoDisabled;
+                    }
+                }
+            });
         }
     });
 
@@ -3340,6 +3356,21 @@ overlaysToTrack.forEach(id => {
             if (mutation.attributeName === 'class' || mutation.attributeName === 'style') {
                 const hiddenNow = el.classList.contains('hidden') || el.style.display === 'none';
                 el.toggleAttribute('inert', hiddenNow);
+                
+                // Brute-force disable inputs for iOS Safari
+                el.querySelectorAll('input, textarea, select').forEach(child => {
+                    if (hiddenNow) {
+                        if (!child.disabled) {
+                            child.disabled = true;
+                            child.dataset.autoDisabled = "true";
+                        }
+                    } else {
+                        if (child.dataset.autoDisabled === "true") {
+                            child.disabled = false;
+                            delete child.dataset.autoDisabled;
+                        }
+                    }
+                });
             }
         });
     });
