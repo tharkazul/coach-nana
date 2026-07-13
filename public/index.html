@@ -176,9 +176,10 @@
 
 
     <!-- LOGIN OVERLAY -->
-    <div id="login-overlay" class="fixed inset-0 bg-theme-bg/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-        <div
-            class="bg-theme-card w-full max-w-[350px] p-8 text-center rounded-sm shadow-2xl border border-theme-border relative overflow-hidden">
+    <div id="login-overlay" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <!-- Separate background for blur to avoid iOS Safari input hit-testing bug -->
+        <div class="absolute inset-0 bg-theme-bg/70 backdrop-blur-md"></div>
+        <div class="bg-theme-card w-full max-w-[350px] p-8 text-center rounded-sm shadow-2xl border border-theme-border relative overflow-hidden z-10">
             <div
                 class="w-16 h-16 mx-auto mb-4 rounded-sm shadow-sm flex items-center justify-center bg-theme-accent-soft text-theme-accent text-2xl font-bold">
                 N</div>
@@ -479,7 +480,7 @@
 
             <!-- DASHBOARD VIEW -->
             <div id="view-dashboard"
-                class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-6 max-w-7xl mx-auto w-full space-y-5 md:space-y-6">
+                class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-7xl mx-auto w-full space-y-5 md:space-y-6">
 
                 <!-- Coach's Desk (Hero Section) -->
                 <div id="coachs-desk"
@@ -709,7 +710,7 @@
 
             <!-- HISTORY VIEW -->
             <div id="view-history"
-                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-6 max-w-4xl mx-auto w-full space-y-6">
+                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
                 <div class="flex justify-between items-end mb-2 px-1">
                     <div>
                         <h2 class="text-xl font-bold text-theme-text">Activity Log</h2>
@@ -756,7 +757,7 @@
 
             <!-- COACH VIEW -->
             <div id="view-coach"
-                class="hidden flex-1 flex flex-col p-2 md:p-8 pb-6 md:pb-6 max-w-4xl mx-auto w-full overflow-hidden min-h-0">
+                class="hidden flex-1 flex flex-col p-2 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full overflow-hidden min-h-0">
                 <div
                     class="bg-theme-card border border-theme-border rounded-xl shadow-sm h-full flex flex-col overflow-hidden min-h-0">
                     <div
@@ -848,7 +849,7 @@
 
             <!-- PHYSIQUE VIEW -->
             <div id="view-physique"
-                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-6 max-w-4xl mx-auto w-full space-y-6">
+                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
                 <div>
                     <h2 class="text-xl font-bold text-theme-text">Physique & Recovery</h2>
                     <p class="text-xs text-theme-muted mt-1">Track your daily wellness and upload progress photos.
@@ -998,7 +999,7 @@
 
             <!-- SOCIAL VIEW -->
             <div id="view-social"
-                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-6 max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
+                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
 
                 <!-- Social Header & Segmented Control -->
                 <div class="flex flex-col gap-4 sticky top-0 bg-theme-bg z-10 pt-2 pb-4 border-b border-theme-border">
@@ -1044,7 +1045,7 @@
 
             <!-- SETTINGS VIEW -->
             <div id="view-settings"
-                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-6 max-w-4xl mx-auto w-full space-y-6">
+                class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
                 <div>
                     <h2 class="text-xl font-bold text-theme-text">Athlete Profile & Settings</h2>
                     <p class="text-xs text-theme-muted mt-1">Configure your AI Coach and connect your devices.</p>
@@ -1327,8 +1328,8 @@
             </div>
         </div>
 
-        <!-- BOTTOM NAV SIBLING (Phase 2 Stage 1) -->
-        <nav class="bg-theme-card border-t border-theme-border flex justify-around items-end px-2 py-2 shrink-0 pb-safe z-50">
+        <!-- BOTTOM NAV PILL (Phase 2 Stage 2) -->
+        <nav id="main-nav" class="fixed bottom-safe left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/80 backdrop-blur-md border border-theme-border rounded-2xl flex justify-around items-center px-2 py-2 shadow-2xl z-50 mb-2 md:mb-6">
             <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1 p-2 text-theme-muted hover:text-theme-accent transition">
                 <span class="text-xl">🏠</span>
                 <span class="text-[10px] font-bold">Home</span>
@@ -1509,7 +1510,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=42"></script>
+    <script src="/script.js?v=44"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

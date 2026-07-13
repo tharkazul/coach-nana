@@ -3277,16 +3277,50 @@ function toggleNavMenu() {
 // iOS Safari Keyboard Fix for fixed header layout
 function updateAppHeight() {
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-height', `${vh}px`);
-    // CRITICAL: Prevent iOS Safari from natively scrolling the window up when focusing input!
-    if (window.visualViewport && window.visualViewport.offsetTop > 0) {
+    const isKeyboardOpen = window.innerHeight - vh > 100; // Threshold for keyboard
+    
+    const nav = document.getElementById('main-nav');
+
+    if (isKeyboardOpen) {
+        document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        if (nav) {
+            nav.style.opacity = '0';
+            nav.style.pointerEvents = 'none';
+            nav.style.transform = 'translate(-50%, 150%)'; // slide down and hide
+        }
+        // Crucial for iOS: prevent Safari from pushing the fixed document up!
+        if (window.visualViewport && window.visualViewport.offsetTop > 0) {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+        }
+    } else {
+        // Keyboard is closed, let CSS 100dvh handle it to avoid bottom gaps
+        document.documentElement.style.removeProperty('--app-height');
+        if (nav) {
+            nav.style.opacity = '1';
+            nav.style.pointerEvents = 'auto';
+            nav.style.transform = 'translate(-50%, 0)'; // restore
+        }
         window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
     }
 }
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', updateAppHeight);
-    window.visualViewport.addEventListener('scroll', updateAppHeight);
+    window.visualViewport.addEventListener('scroll', () => {
+        // Only force scroll to 0 if the keyboard caused the viewport to shift up
+        if (window.visualViewport.height < window.innerHeight) {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+        }
+    });
 }
 window.addEventListener('resize', updateAppHeight);
 updateAppHeight();
+
+// Force a second correction shortly after the keyboard closes
+document.addEventListener('focusout', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        setTimeout(updateAppHeight, 100);
+        setTimeout(updateAppHeight, 400);
+    }
+});
