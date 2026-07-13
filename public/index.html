@@ -416,7 +416,7 @@
                         </svg></button>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-32 md:pb-6 bg-theme-card relative">
+            <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-6 md:pb-6 bg-theme-card relative">
                 <div id="modal-loader"
                     class="absolute inset-0 flex flex-col justify-center items-center bg-theme-card z-10">
                     <div
@@ -455,6 +455,8 @@
                             </table>
                         </div>
                     </div>
+                    <!-- Physical spacer to ensure scroll clears the nav bar -->
+                    <div class="h-28 shrink-0 w-full block"></div>
                 </div>
             </div>
         </div>
@@ -1561,7 +1563,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=61"></script>
+    <script src="/script.js?v=62"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
