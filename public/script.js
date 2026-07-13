@@ -3278,6 +3278,11 @@ function toggleNavMenu() {
 function updateAppHeight() {
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    // CRITICAL: Prevent iOS Safari from natively scrolling the window up when focusing input!
+    if (window.visualViewport && window.visualViewport.offsetTop > 0) {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+    }
 }
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', updateAppHeight);
