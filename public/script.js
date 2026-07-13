@@ -530,6 +530,15 @@ async function loadSettings() {
         document.getElementById('set-garmin-user').value = data.garminUsername || '';
         const searchPrivacyToggle = document.getElementById('setting-search-privacy');
         if (searchPrivacyToggle) searchPrivacyToggle.checked = !!data.searchPrivacy;
+        
+        const avatarPreview = document.getElementById('settings-avatar-preview');
+        if (avatarPreview) {
+            if (data.profilePictureUrl) {
+                avatarPreview.innerHTML = `<img src="${data.profilePictureUrl}" class="w-full h-full object-cover rounded-full" alt="Profile Picture">`;
+            } else {
+                avatarPreview.innerHTML = data.username ? data.username.charAt(0).toUpperCase() : '?';
+            }
+        }
         // --- ONBOARDING TRIGGER ---
         // In server.js, new users default to 'New athlete.'
         if (data.athleteContext === 'New athlete.') {
@@ -560,6 +569,43 @@ async function loadSettings() {
         await loadMetrics();
         await loadStravaAutomations();
     } catch (e) { console.error("Failed to load settings."); }
+}
+
+async function uploadProfilePicture(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const statusEl = document.getElementById('profile-picture-status');
+    statusEl.innerText = "Uploading...";
+    statusEl.classList.remove('hidden');
+    
+    const formData = new FormData();
+    formData.append('photo', file);
+    
+    try {
+        const res = await fetch('/api/settings/profile-picture', {
+            method: 'POST',
+            headers: getAuthHeaders(), // Note: Do not set Content-Type for FormData
+            body: formData
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            statusEl.innerText = "Photo uploaded successfully!";
+            const avatarPreview = document.getElementById('settings-avatar-preview');
+            if (avatarPreview && data.url) {
+                avatarPreview.innerHTML = `<img src="${data.url}" class="w-full h-full object-cover rounded-full" alt="Profile Picture">`;
+            }
+        } else {
+            statusEl.innerText = "Upload failed. Try again.";
+        }
+    } catch (err) {
+        statusEl.innerText = "Error uploading photo.";
+    }
+    
+    setTimeout(() => {
+        statusEl.classList.add('hidden');
+    }, 3000);
 }
 
 async function saveSettings(type) {
@@ -3129,8 +3175,10 @@ async function loadSocialFeed() {
             <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden p-4">
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs">
-                            ${act.username.charAt(0).toUpperCase()}
+                        <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+                            ${act.profile_picture_url 
+                                ? `<img src="${act.profile_picture_url}" class="w-full h-full object-cover">` 
+                                : act.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
                             <p class="text-sm font-bold text-theme-text">${act.username}</p>
@@ -3178,7 +3226,12 @@ async function loadLeaderboard() {
         container.innerHTML = data.leaderboard.map((u, i) => `
             <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded p-3">
                 <div class="flex items-center gap-3">
-                    <span class="text-xs font-bold text-theme-muted w-4 text-center">${i + 1}</span>
+                    <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
+                    <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+                        ${u.profile_picture_url 
+                            ? `<img src="${u.profile_picture_url}" class="w-full h-full object-cover">` 
+                            : u.username.charAt(0).toUpperCase()}
+                    </div>
                     <div class="flex flex-col">
                         <span class="text-sm font-bold text-theme-text">${u.username}</span>
                         <span class="text-[10px] text-theme-muted">${u.total_activities || 0} activities • ${Math.round((u.total_minutes || 0) / 60 * 2) / 2}h</span>

@@ -1095,6 +1095,26 @@
                         <h2 class="text-xl font-bold text-theme-text">Athlete Profile & Settings</h2>
                         <p class="text-xs text-theme-muted mt-1">Configure your AI Coach and connect your devices.</p>
                     </div>
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Profile Picture
+                            </h3>
+                        </div>
+                        <div class="p-6 flex items-center gap-6">
+                            <div id="settings-avatar-preview" class="w-20 h-20 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-bg flex items-center justify-center text-theme-muted font-bold text-2xl">
+                                <!-- JS will populate with img or initial -->
+                            </div>
+                            <div>
+                                <label for="profile-picture-upload" class="cursor-pointer text-sm font-bold bg-theme-accent text-white px-4 py-2 rounded-md hover:bg-opacity-90 transition inline-block">
+                                    Upload Photo
+                                </label>
+                                <input type="file" id="profile-picture-upload" accept="image/*" class="hidden" onchange="uploadProfilePicture(event)">
+                                <p class="text-xs text-theme-muted mt-2">Recommended: Square image, max 2MB.</p>
+                                <p id="profile-picture-status" class="text-xs text-theme-accent mt-1 hidden"></p>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
@@ -1587,7 +1607,7 @@
         <img id="enlarged-img" class="max-w-[90%] max-h-[90%] object-contain rounded-sm">
     </div>
 
-    <script src="/script.js?v=66"></script>
+    <script src="/script.js?v=67"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

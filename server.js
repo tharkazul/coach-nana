@@ -82,6 +82,21 @@ const physiqueStorage = multer.diskStorage({
 });
 const uploadPhysique = multer({ storage: physiqueStorage });
 
+const profileStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = path.join(__dirname, 'public/uploads/profiles');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, `profile_${req.user.id}_${Date.now()}${ext}`);
+    }
+});
+const uploadProfile = multer({ storage: profileStorage });
+
 // Image Cleanup Routine (Every Hour)
 setInterval(() => {
     const dir = path.join(__dirname, 'secure_uploads/chat_images');
@@ -274,13 +289,15 @@ db.serialize(() => {
         long_term_memory TEXT DEFAULT '',
         daily_token_usage INTEGER DEFAULT 0,
         last_token_reset_date TEXT,
-        search_privacy INTEGER DEFAULT 0
+        search_privacy INTEGER DEFAULT 0,
+        profile_picture_url TEXT
     )`);
     // Add columns if they don't exist (fails silently if they do)
     db.run(`ALTER TABLE users ADD COLUMN long_term_memory TEXT DEFAULT ''`, (err) => {});
     db.run(`ALTER TABLE users ADD COLUMN daily_token_usage INTEGER DEFAULT 0`, (err) => {});
     db.run(`ALTER TABLE users ADD COLUMN last_token_reset_date TEXT`, (err) => {});
     db.run(`ALTER TABLE users ADD COLUMN search_privacy INTEGER DEFAULT 0`, (err) => {});
+    db.run(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`, (err) => {});
     db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -945,7 +962,7 @@ CRITICAL RULES:
 
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
-        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy FROM users WHERE id = ?`,
+        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy, profile_picture_url FROM users WHERE id = ?`,
         [req.user.id],
         (err, row) => {
             if (err || !row) return res.status(500).json({ error: "DB Error" });
@@ -957,7 +974,8 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
                 garminUsername: row.garmin_username,
                 coachTone: row.coach_tone,
                 athleteContext: row.athlete_context,
-                searchPrivacy: row.search_privacy
+                searchPrivacy: row.search_privacy === 1,
+                profilePictureUrl: row.profile_picture_url
             });
         }
     );
@@ -2161,6 +2179,20 @@ app.post('/api/settings/privacy', authenticateToken, (req, res) => {
     });
 });
 
+app.post('/api/settings/profile-picture', authenticateToken, uploadProfile.single('photo'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    const url = `/uploads/profiles/${req.file.filename}`;
+    
+    db.run(`UPDATE users SET profile_picture_url = ? WHERE id = ?`, [url, req.user.id], function(err) {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'DB_ERROR' });
+        }
+        res.json({ success: true, url });
+    });
+});
+
 app.post('/api/social/search', authenticateToken, (req, res) => {
     const { username } = req.body;
     db.get(`SELECT id, username FROM users WHERE username = ? COLLATE NOCASE AND id != ? AND search_privacy = 0`, [username, req.user.id], (err, user) => {
@@ -2217,7 +2249,7 @@ app.get('/api/social/connections', authenticateToken, (req, res) => {
 
 app.get('/api/social/feed', authenticateToken, (req, res) => {
     db.all(`
-        SELECT a.*, u.username, 
+        SELECT a.*, u.username, u.profile_picture_url, 
                (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) as kudos_count,
                (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id AND k.user_id = ?) as has_kudosed
         FROM activities a
@@ -2232,7 +2264,7 @@ app.get('/api/social/feed', authenticateToken, (req, res) => {
 
 app.get('/api/social/leaderboard', authenticateToken, (req, res) => {
     db.all(`
-        SELECT u.id, u.username, SUM(a.spark_score) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
+        SELECT u.id, u.username, u.profile_picture_url, SUM(a.spark_score) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
         FROM activities a
         JOIN users u ON a.user_id = u.id
         WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
