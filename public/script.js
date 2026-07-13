@@ -3279,7 +3279,6 @@ function updateAppHeight() {
         // Crucial for iOS: prevent Safari from pushing the fixed document up!
         if (window.visualViewport && window.visualViewport.offsetTop > 0) {
             window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
         }
         // Re-anchor to the latest message now that the visible area just shrank
         const chatWindow = document.getElementById('chat-window');
@@ -3297,12 +3296,18 @@ function updateAppHeight() {
     }
 }
 if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', updateAppHeight);
+    window.visualViewport.addEventListener('resize', () => {
+        updateAppHeight();
+        // The keyboard animates open over ~250-300ms — the first resize event
+        // can fire mid-animation with a transitional height. Re-check once it's
+        // had time to settle, same as what happens naturally when you switch
+        // apps and back.
+        clearTimeout(window._appHeightSettleTimer);
+        window._appHeightSettleTimer = setTimeout(updateAppHeight, 350);
+    });
     window.visualViewport.addEventListener('scroll', () => {
-        // Only force scroll to 0 if the keyboard caused the viewport to shift up
         if (window.visualViewport.height < window.innerHeight) {
             window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
         }
     });
 }
