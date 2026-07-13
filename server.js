@@ -258,7 +258,8 @@ function decrypt(text) {
 }
 
 // --- DATABASE INITIALIZATION ---
-const db = new sqlite3.Database('./nana_multi.db');
+const dbPath = process.env.DB_PATH || './nana_multi.db';
+const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS users (
