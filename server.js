@@ -498,8 +498,18 @@ app.get('/api/events', authenticateToken, (req, res) => {
     const clients = sseClients.get(userId);
     clients.add(res);
 
+    // Send a heartbeat ping every 30 seconds to keep connection alive (prevents Cloudflare QUIC timeout)
+    const heartbeat = setInterval(() => {
+        try {
+            res.write(': ping\n\n');
+        } catch (err) {
+            clearInterval(heartbeat);
+        }
+    }, 30000);
+
     // Remove client when connection closes
     req.on('close', () => {
+        clearInterval(heartbeat);
         clients.delete(res);
         if (clients.size === 0) {
             sseClients.delete(userId);
