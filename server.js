@@ -1807,8 +1807,8 @@ app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
             db.all(`SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`, [req.user.id, todayStr], (err, actualAct) => {
                 const actualTSS = actualAct && actualAct.length > 0 && actualAct[0].total_score ? actualAct[0].total_score : 0;
 
-                db.all(`SELECT date, tss, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`, [req.user.id, todayStr], async (err, todayPlan) => {
-                    let todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].tss : 0;
+                db.all(`SELECT date, target_tss, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`, [req.user.id, todayStr], async (err, todayPlan) => {
+                    let todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].target_tss : 0;
                     let todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
                     
                     // If they already trained harder than planned (or trained on a rest day), update the prompt
