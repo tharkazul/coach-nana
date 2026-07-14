@@ -154,12 +154,12 @@ async function loadStravaAutomations() {
     try {
         const typesRes = await fetch('/api/user/activities/types', { headers: getAuthHeaders() });
         const activityTypes = await typesRes.json();
-        
+
         let optOutList = [];
         if (globalMetrics) {
             const optOutMetric = globalMetrics.find(m => m.metric === 'strava_opt_out_activities');
             if (optOutMetric && optOutMetric.value) {
-                try { optOutList = JSON.parse(optOutMetric.value); } catch(e) {}
+                try { optOutList = JSON.parse(optOutMetric.value); } catch (e) { }
             }
         }
 
@@ -199,7 +199,7 @@ async function saveStravaAutomations() {
             headers: getAuthHeaders(),
             body: JSON.stringify({ optOutActivities })
         });
-        
+
         // sync to globalMetrics so UI stays fresh without reload
         if (globalMetrics) {
             let m = globalMetrics.find(m => m.metric === 'strava_opt_out_activities');
@@ -530,7 +530,7 @@ async function loadSettings() {
         document.getElementById('set-garmin-user').value = data.garminUsername || '';
         const searchPrivacyToggle = document.getElementById('setting-search-privacy');
         if (searchPrivacyToggle) searchPrivacyToggle.checked = !!data.searchPrivacy;
-        
+
         const avatarPreview = document.getElementById('settings-avatar-preview');
         if (avatarPreview) {
             if (data.profilePictureUrl) {
@@ -574,14 +574,14 @@ async function loadSettings() {
 async function uploadProfilePicture(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const statusEl = document.getElementById('profile-picture-status');
     statusEl.innerText = "Uploading...";
     statusEl.classList.remove('hidden');
-    
+
     const formData = new FormData();
     formData.append('photo', file);
-    
+
     try {
         const token = localStorage.getItem('nana_token');
         const res = await fetch('/api/settings/profile-picture', {
@@ -589,7 +589,7 @@ async function uploadProfilePicture(event) {
             headers: { 'Authorization': `Bearer ${token}` }, // Note: Do not set Content-Type for FormData
             body: formData
         });
-        
+
         if (res.ok) {
             const data = await res.json();
             statusEl.innerText = "Photo uploaded successfully!";
@@ -603,7 +603,7 @@ async function uploadProfilePicture(event) {
     } catch (err) {
         statusEl.innerText = "Error uploading photo.";
     }
-    
+
     setTimeout(() => {
         statusEl.classList.add('hidden');
     }, 3000);
@@ -708,7 +708,7 @@ function switchTab(t) {
             const hiddenNow = t !== view;
             el.classList.toggle('hidden', hiddenNow);
             el.toggleAttribute('inert', hiddenNow); // prevent inactive inputs from triggering keyboard toolbar
-            
+
             // Brute-force disable inputs for iOS Safari which sometimes ignores inert
             el.querySelectorAll('input, textarea, select').forEach(child => {
                 if (hiddenNow) {
@@ -1829,16 +1829,16 @@ async function openActivityModal(id) {
     try {
         const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
         document.getElementById('modal-title').innerText = data.name || "Activity Details";
-        
+
         // Handle Kudos
         if (data.kudos_count !== undefined) {
             const kudosEl = document.getElementById('modal-kudos');
             const iconEl = document.getElementById('modal-kudos-icon');
             const countEl = document.getElementById('modal-kudos-count');
-            
+
             kudosEl.classList.remove('hidden');
             countEl.innerText = data.kudos_count;
-            
+
             if (data.kudos_count > 0) {
                 iconEl.classList.remove('text-theme-muted');
                 iconEl.classList.add('text-[#ff6b6b]', 'fill-[#ff6b6b]');
@@ -2708,7 +2708,7 @@ async function loadAdminUsage() {
                 } else {
                     usageTbody.innerHTML = usageData.map(u => {
                         const tokenUsage = u.daily_token_usage || 0;
-                        const tokenPercent = Math.min(100, Math.round((tokenUsage / 50000) * 100));
+                        const tokenPercent = Math.min(100, Math.round((tokenUsage / 100000) * 100));
                         let tokenColor = 'bg-green-500';
                         if (tokenPercent > 75) tokenColor = 'bg-yellow-500';
                         if (tokenPercent > 90) tokenColor = 'bg-red-500';
@@ -3185,9 +3185,9 @@ async function loadSocialFeed() {
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
-                            ${act.profile_picture_url 
-                                ? `<img src="${act.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">` 
-                                : act.username.charAt(0).toUpperCase()}
+                            ${act.profile_picture_url
+                ? `<img src="${act.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
+                : act.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
                             <p class="text-sm font-bold text-theme-text">${act.username}</p>
@@ -3237,9 +3237,9 @@ async function loadLeaderboard() {
                 <div class="flex items-center gap-3">
                     <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
                     <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
-                        ${u.profile_picture_url 
-                            ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">` 
-                            : u.username.charAt(0).toUpperCase()}
+                        ${u.profile_picture_url
+                ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
+                : u.username.charAt(0).toUpperCase()}
                     </div>
                     <div class="flex flex-col">
                         <span class="text-sm font-bold text-theme-text">${u.username}</span>
@@ -3435,7 +3435,7 @@ function toggleNavMenu() {
 function updateAppHeight() {
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const isKeyboardOpen = window.innerHeight - vh > 100; // Threshold for keyboard
-    
+
     const nav = document.getElementById('main-nav');
     const coachInput = document.getElementById('coach-input-area');
     const shell = document.getElementById('app-shell');
@@ -3503,17 +3503,17 @@ const overlaysToTrack = ['login-overlay', 'onboarding-overlay', 'add-person-moda
 overlaysToTrack.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    
+
     // Set initial state
     const isHidden = el.classList.contains('hidden') || el.style.display === 'none';
     if (isHidden) el.setAttribute('inert', '');
-    
+
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.attributeName === 'class' || mutation.attributeName === 'style') {
                 const hiddenNow = el.classList.contains('hidden') || el.style.display === 'none';
                 el.toggleAttribute('inert', hiddenNow);
-                
+
                 // Brute-force disable inputs for iOS Safari
                 el.querySelectorAll('input, textarea, select').forEach(child => {
                     if (hiddenNow) {
