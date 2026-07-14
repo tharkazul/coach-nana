@@ -3178,7 +3178,7 @@ async function loadSocialFeed() {
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
                             ${act.profile_picture_url 
-                                ? `<img src="${act.profile_picture_url}" class="w-full h-full object-cover">` 
+                                ? `<img src="${act.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">` 
                                 : act.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -3230,7 +3230,7 @@ async function loadLeaderboard() {
                     <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
                     <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
                         ${u.profile_picture_url 
-                            ? `<img src="${u.profile_picture_url}" class="w-full h-full object-cover">` 
+                            ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">` 
                             : u.username.charAt(0).toUpperCase()}
                     </div>
                     <div class="flex flex-col">
