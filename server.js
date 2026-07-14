@@ -655,7 +655,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             db.run(`UPDATE users SET daily_token_usage = 0, last_token_reset_date = ? WHERE id = ?`, [todayStr, req.user.id]);
         }
         
-        if (currentDailyUsage > 50000) {
+        if (currentDailyUsage > 100000) {
             return res.status(429).json({ error: "Daily token limit reached. Please try again tomorrow!" });
         }
 
