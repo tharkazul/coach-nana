@@ -1395,7 +1395,7 @@ async function loadMicroPlan() {
                     </div>
                     <div class="text-xs font-medium text-theme-text line-clamp-2 leading-tight">${p.description || 'Rest Day'}</div>
                     <div class="flex items-center justify-between mt-2">
-                        <span class="text-[9px] font-mono opacity-80">${actualSpark > 0 ? actualSpark + '/' : ''}${p.target_spark || 0} Spark</span>
+                        <span class="text-[9px] font-mono opacity-80">${actualSpark > 0 ? actualSpark + '/' : ''}${p.target_spark ? Math.round(p.target_spark) : 0} Spark</span>
                         <div class="flex items-center text-[9px] opacity-70">
                             <span class="truncate pr-2">${isStructured ? 'Structured' : 'Basic'}</span>
                             ${p.sport !== 'Rest' && dateStr >= todayStr ? `
@@ -2070,7 +2070,7 @@ async function loadHistory() {
                                 ${sportBadge}
                                 <div class="text-[10px] md:text-xs text-theme-muted flex items-center gap-1 font-mono">
                                     <span class="uppercase tracking-wider font-semibold">Spark:</span>
-                                    <span class="text-theme-text">${x.spark_score || '--'}</span>
+                                    <span class="text-theme-text">${x.spark_score ? Math.round(x.spark_score) : '--'}</span>
                                 </div>
                             </div>
                         </div>
@@ -2117,7 +2117,7 @@ async function downloadSelectedCSV() {
             cadence = Math.round(rawCadence);
         } catch (e) { }
 
-        let row = [item.start_date.split('T')[0], item.sport_type, cleanTitle, item.spark_score || 0, dist, time, elev, hr, cadence];
+        let row = [item.start_date.split('T')[0], item.sport_type, cleanTitle, item.spark_score ? Math.round(item.spark_score) : 0, dist, time, elev, hr, cadence];
         csvContent += row.join(",") + "\n";
     }
 
