@@ -2356,32 +2356,61 @@ async function triggerProactiveCheckin() {
 
         updateUnreadBadge(Date.now());
 
-        // Typewriter effect (token streaming simulation)
+        // Typewriter effect (word-based with DOM traversal for full HTML support)
         const targetEl = document.getElementById(msgId);
-        let i = 0;
-        function typeStep() {
-            if (i < formattedContent.length) {
-                if (formattedContent.charAt(i) === '<') {
-                    let tag = '';
-                    while (formattedContent.charAt(i) !== '>' && i < formattedContent.length) {
-                        tag += formattedContent.charAt(i);
-                        i++;
+        targetEl.innerHTML = formattedContent;
+        const spans = [];
+        
+        function walk(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent;
+                if (!text.trim()) return; 
+                
+                const words = text.split(/(\s+)/);
+                const fragment = document.createDocumentFragment();
+                words.forEach(word => {
+                    if (!word) return;
+                    if (/^\s+$/.test(word)) {
+                        fragment.appendChild(document.createTextNode(word));
+                    } else {
+                        const span = document.createElement('span');
+                        span.textContent = word;
+                        span.style.opacity = '0';
+                        span.style.display = 'none';
+                        span.style.transition = 'opacity 180ms ease-out';
+                        spans.push(span);
+                        fragment.appendChild(span);
                     }
-                    tag += '>';
-                    targetEl.innerHTML += tag;
-                    i++;
-                } else {
-                    let chunkLength = Math.floor(Math.random() * 5) + 3; // 3 to 7 characters
-                    let chunk = '';
-                    while (chunkLength > 0 && i < formattedContent.length && formattedContent.charAt(i) !== '<') {
-                        chunk += formattedContent.charAt(i);
-                        i++;
-                        chunkLength--;
-                    }
-                    targetEl.innerHTML += chunk;
+                });
+                node.parentNode.replaceChild(fragment, node);
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.tagName === 'IMG') {
+                    node.style.opacity = '0';
+                    node.style.display = 'none';
+                    node.style.transition = 'opacity 180ms ease-out';
+                    spans.push(node);
                 }
-                chatWindow.scrollTop = chatWindow.scrollHeight;
-                setTimeout(typeStep, 25); // Delay between token chunks
+                Array.from(node.childNodes).forEach(walk);
+            }
+        }
+        
+        walk(targetEl);
+        
+        let wordIndex = 0;
+        function typeStep() {
+            if (!document.getElementById(msgId)) return; // tab switch safety
+            if (wordIndex < spans.length) {
+                const el = spans[wordIndex];
+                el.style.display = ''; // restore normal display
+                void el.offsetWidth; // force layout reflow
+                el.style.opacity = '1'; 
+                wordIndex++;
+                
+                // only scroll if the user is already near the bottom — don't hijack their scroll position
+                if (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight < 100) {
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                }
+                setTimeout(typeStep, 40);
             }
         }
         typeStep();
@@ -2590,36 +2619,60 @@ async function sendMessage() {
 
         speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
 
-        // Typewriter effect (token streaming simulation)
+        // Typewriter effect (word-based with DOM traversal for full HTML support)
         const targetEl = document.getElementById(msgId);
-        let i = 0;
-        let currentHTML = '';
-        function typeStep() {
-            if (!document.getElementById(msgId)) return; // Stop if user switched tabs and chat reloaded
-
-            if (i < formattedContent.length) {
-                if (formattedContent.charAt(i) === '<') {
-                    let tag = '';
-                    while (formattedContent.charAt(i) !== '>' && i < formattedContent.length) {
-                        tag += formattedContent.charAt(i);
-                        i++;
+        targetEl.innerHTML = formattedContent;
+        const spans = [];
+        
+        function walk(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent;
+                if (!text.trim()) return; 
+                
+                const words = text.split(/(\s+)/);
+                const fragment = document.createDocumentFragment();
+                words.forEach(word => {
+                    if (!word) return;
+                    if (/^\s+$/.test(word)) {
+                        fragment.appendChild(document.createTextNode(word));
+                    } else {
+                        const span = document.createElement('span');
+                        span.textContent = word;
+                        span.style.opacity = '0';
+                        span.style.display = 'none';
+                        span.style.transition = 'opacity 180ms ease-out';
+                        spans.push(span);
+                        fragment.appendChild(span);
                     }
-                    tag += '>';
-                    currentHTML += tag;
-                    i++;
-                } else {
-                    let chunkLength = Math.floor(Math.random() * 5) + 3; // 3 to 7 characters
-                    let chunk = '';
-                    while (chunkLength > 0 && i < formattedContent.length && formattedContent.charAt(i) !== '<') {
-                        chunk += formattedContent.charAt(i);
-                        i++;
-                        chunkLength--;
-                    }
-                    currentHTML += chunk;
+                });
+                node.parentNode.replaceChild(fragment, node);
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.tagName === 'IMG') {
+                    node.style.opacity = '0';
+                    node.style.display = 'none';
+                    node.style.transition = 'opacity 180ms ease-out';
+                    spans.push(node);
                 }
-                targetEl.innerHTML = currentHTML;
-                chatWindow.scrollTop = chatWindow.scrollHeight;
-                setTimeout(typeStep, 25); // Delay between token chunks
+                Array.from(node.childNodes).forEach(walk);
+            }
+        }
+        
+        walk(targetEl);
+        
+        let wordIndex = 0;
+        function typeStep() {
+            if (!document.getElementById(msgId)) return; // tab switch safety
+            if (wordIndex < spans.length) {
+                const el = spans[wordIndex];
+                el.style.display = ''; // restore normal display
+                void el.offsetWidth; // force layout reflow
+                el.style.opacity = '1'; 
+                wordIndex++;
+                
+                if (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight < 100) {
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                }
+                setTimeout(typeStep, 40);
             }
         }
         typeStep();
