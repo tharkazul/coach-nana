@@ -328,7 +328,8 @@ db.serialize(() => {
             }
         });
     });
-    db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
+    db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_spark REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
+    db.run(`ALTER TABLE micro_plan RENAME COLUMN target_tss TO target_spark`, (err) => {});
     
     // Ensure steps_json exists for legacy DBs (if table has id but no steps_json)
     db.run(`ALTER TABLE micro_plan ADD COLUMN steps_json TEXT DEFAULT '[]'`, (err) => {
@@ -345,8 +346,8 @@ db.serialize(() => {
             if (!hasId) {
                 console.log("Migrating micro_plan table to include id column and drop unique constraints...");
                 db.serialize(() => {
-                    db.run(`CREATE TABLE IF NOT EXISTS micro_plan_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_tss REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
-                    db.run(`INSERT INTO micro_plan_new (user_id, date, sport, description, target_tss, details, steps_json) SELECT user_id, date, sport, description, target_tss, details, steps_json FROM micro_plan`);
+                    db.run(`CREATE TABLE IF NOT EXISTS micro_plan_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_spark REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
+                    db.run(`INSERT INTO micro_plan_new (user_id, date, sport, description, target_spark, details, steps_json) SELECT user_id, date, sport, description, target_tss as target_spark, details, steps_json FROM micro_plan`);
                     db.run(`DROP TABLE micro_plan`);
                     db.run(`ALTER TABLE micro_plan_new RENAME TO micro_plan`);
                 });
@@ -665,9 +666,9 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
             const phase = await getUserMacroPhase(req.user.id);
             try {
-                db.all(`SELECT name, sport_type, distance_km, moving_time_min, tss, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
+                db.all(`SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
                     const recentActivitiesText = (recentActivities && recentActivities.length > 0)
-                        ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n                    ')
+                        ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`).join('\n                    ')
                         : 'No recent activities recorded.';
 
                     db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
@@ -749,7 +750,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         "date": "YYYY-MM-DD",
                         "sport": "Run", 
                         "description": "5k Speed Intervals",
-                        "target_tss": 80,
+                        "target_spark": 80,
                         "details": "Push hard on the intervals, recover fully on the rests.",
                         "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}, {\\"type\\": \\"repeat\\", \\"iterations\\": 8, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 3, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 4}, {\\"type\\": \\"rest\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 1, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]}, {\\"type\\": \\"cooldown\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 10, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
                       }
@@ -784,7 +785,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         "sport_type": "Strength",
                         "distance_km": 0,
                         "moving_time_min": 30,
-                        "tss": 25
+                        "spark_score": 25
                       }
                     }
                     \`\`\``;
@@ -808,12 +809,12 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                             if (err) console.error("Failed to clear old plan data:", err);
 
                                             const stmt = db.prepare(`
-                                        INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
+                                        INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?)
                                     `);
 
                                             planData.forEach(day => {
-                                                stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                                stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
                                             });
                                             stmt.finalize();
                                         });
@@ -830,11 +831,10 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                     // Use negative ID to avoid collision with real Strava IDs
                                     const manualId = -Date.now();
                                     const startDate = new Date().toISOString();
-                                    const calculatedSparkScore = calculateSparkScore(act.moving_time_min || 0, null);
                                     
                                     db.run(
-                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, tss, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.tss || 0, calculatedSparkScore],
+                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.spark_score || 0],
                                         (err) => {
                                             if (err) console.error("Failed to insert manual activity:", err);
                                             else {
@@ -896,7 +896,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     });
 });
 
-app.get('/api/dashboard/briefing', authenticateToken, (req, res) => {
+app.get('/api/chat/briefing', authenticateToken, (req, res) => {
     db.get(`SELECT content, mood, timestamp FROM chat_history 
             WHERE user_id = ? AND role = 'coach' AND date(timestamp, 'localtime') = date('now', 'localtime') 
             ORDER BY timestamp ASC LIMIT 1`, 
@@ -913,9 +913,9 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
     db.get(`SELECT coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
 
-        db.all(`SELECT name, sport_type, distance_km, moving_time_min, tss, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
+        db.all(`SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
             const recentActivitiesText = (recentActivities && recentActivities.length > 0)
-                ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${a.tss} TSS`).join('\n')
+                ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`).join('\n')
                 : 'No recent activities recorded.';
 
             
@@ -952,7 +952,7 @@ CRITICAL RULES:
 2. Reference either a recent workout they crushed, an upcoming workout they have planned, or their current Macro Phase.
 3. Keep it brief, extremely human, and supportive. 
 4. DO NOT generate any JSON or workout plan updates. Just the greeting.
-5. GENERATIVE REWARDS: You have the ability to generate images by outputting Markdown: \`![description of image](https://image.pollinations.ai/prompt/{URL-encoded-description}?nologo=true)\`. IF the athlete recently crushed a massive workout (e.g., high TSS) or you just want to motivate them, you MUST include a highly stylized, cinematic, conceptual reward image (e.g., a glowing golden running shoe, a heroic finish line, a futuristic bicycle). Put the image markdown at the END of your greeting.`;
+5. GENERATIVE REWARDS: You have the ability to generate images by outputting Markdown: \`![description of image](https://image.pollinations.ai/prompt/{URL-encoded-description}?nologo=true)\`. IF the athlete recently crushed a massive workout (e.g., high Spark Points) or you just want to motivate them, you MUST include a highly stylized, cinematic, conceptual reward image (e.g., a glowing golden running shoe, a heroic finish line, a futuristic bicycle). Put the image markdown at the END of your greeting.`;
 
                 try {
                     let aiReply = await generateWithFallback("Generate the proactive greeting.", systemPrompt, []);
@@ -1217,30 +1217,30 @@ app.post('/api/user/settings/strava-exchange', authenticateToken, async (req, re
 
 
 app.get('/api/dashboard-data', authenticateToken, (req, res) => {
-    db.all(`SELECT substr(start_date, 1, 10) as date, sport_type, SUM(tss) as daily_tss FROM activities WHERE user_id = ? GROUP BY date, sport_type ORDER BY date ASC`, [req.user.id], (err, rows) => {
+    db.all(`SELECT substr(start_date, 1, 10) as date, sport_type, SUM(spark_score) as daily_spark FROM activities WHERE user_id = ? GROUP BY date, sport_type ORDER BY date ASC`, [req.user.id], (err, rows) => {
         if (!rows) return res.json([]);
         const aggregated = {};
         rows.forEach(r => {
             const mappedSport = mapStravaSportToSpark(r.sport_type);
             const key = `${r.date}_${mappedSport}`;
-            if (!aggregated[key]) aggregated[key] = { date: r.date, sport_type: mappedSport, daily_tss: 0 };
-            aggregated[key].daily_tss += r.daily_tss;
+            if (!aggregated[key]) aggregated[key] = { date: r.date, sport_type: mappedSport, daily_spark: 0 };
+            aggregated[key].daily_spark += r.daily_spark;
         });
         res.json(Object.values(aggregated));
     });
 });
 
 app.get('/api/history', authenticateToken, (req, res) => {
-    db.all(`SELECT id, name, sport_type, start_date, tss FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 50`, [req.user.id], (err, rows) => {
+    db.all(`SELECT id, name, sport_type, start_date, spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 50`, [req.user.id], (err, rows) => {
         res.json(rows || []);
     });
 });
 
 app.post('/api/micro-plan', authenticateToken, (req, res) => {
-    const { date, sport, description, target_tss, details, steps_json } = req.body;
+    const { date, sport, description, target_spark, details, steps_json } = req.body;
     db.run(
-        `INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [req.user.id, date, sport, description, target_tss, details, steps_json || '[]'],
+        `INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [req.user.id, date, sport, description, target_spark, details, steps_json || '[]'],
         (err) => {
             if (err) {
                 console.error("POST /api/micro-plan error:", err.message);
@@ -1260,19 +1260,19 @@ app.post('/api/micro-plan/day', authenticateToken, (req, res) => {
 
         if (workouts.length === 0) return res.json({ success: true });
 
-        const stmt = db.prepare(`INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+        const stmt = db.prepare(`INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`);
         workouts.forEach(w => {
-            stmt.run(req.user.id, date, w.sport, w.description, w.target_tss, w.details, w.steps_json || '[]');
+            stmt.run(req.user.id, date, w.sport, w.description, w.target_spark, w.details, w.steps_json || '[]');
         });
         stmt.finalize();
         res.json({ success: true });
     });
 });
 app.put('/api/micro-plan/:id', authenticateToken, (req, res) => {
-    const { date, sport, description, target_tss, details, steps_json } = req.body;
+    const { date, sport, description, target_spark, details, steps_json } = req.body;
     db.run(
-        `UPDATE micro_plan SET date = ?, sport = ?, description = ?, target_tss = ?, details = ?, steps_json = ? WHERE id = ? AND user_id = ?`,
-        [date, sport, description, target_tss, details, steps_json, req.params.id, req.user.id],
+        `UPDATE micro_plan SET date = ?, sport = ?, description = ?, target_spark = ?, details = ?, steps_json = ? WHERE id = ? AND user_id = ?`,
+        [date, sport, description, target_spark, details, steps_json, req.params.id, req.user.id],
         (err) => {
             if (err) {
                 console.error("PUT /api/micro-plan error:", err.message);
@@ -1327,7 +1327,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             "date": "YYYY-MM-DD",
             "sport": "Run", 
             "description": "5k Speed Intervals",
-            "target_tss": 80,
+            "target_spark": 80,
             "details": "Push hard on the intervals, recover fully on the rests.",
             "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}, {\\"type\\": \\"repeat\\", \\"iterations\\": 8, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 3, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 4}, {\\"type\\": \\"recovery\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 1, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]}, {\\"type\\": \\"cooldown\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 10, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
           },
@@ -1335,7 +1335,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
             "date": "YYYY-MM-DD",
             "sport": "Strength", 
             "description": "Leg Day Burner",
-            "target_tss": 40,
+            "target_spark": 40,
             "details": "Focus on depth and explosion.",
             "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 5, \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"repeat\\", \\"iterations\\": 3, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"reps\\", \\"condition_value\\": 10, \\"weight\\": 80, \\"exerciseName\\": \\"Barbell Squat\\", \\"target_type\\": \\"no.target\\"}, {\\"type\\": \\"rest\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 2, \\"target_type\\": \\"no.target\\"}]}]"
           }
@@ -1375,12 +1375,12 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                                 if (err) console.error("Failed to clear old plan data:", err);
 
                                 const stmt = db.prepare(`
-                                INSERT INTO micro_plan (user_id, date, sport, description, target_tss, details, steps_json) 
+                                INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?)
                             `);
 
                                 planData.forEach(day => {
-                                    stmt.run(req.user.id, day.date, day.sport, day.description, day.target_tss, day.details, day.steps_json || '[]');
+                                    stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
                                 });
                                 stmt.finalize();
                             });
@@ -1461,7 +1461,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
 
         const todayStr = getAMSDateString();
         const workouts = await new Promise((resolve, reject) => {
-            db.all(`SELECT date, sport, description, target_tss, steps_json FROM micro_plan WHERE user_id = ? AND date >= ?`,
+            db.all(`SELECT date, sport, description, target_spark, steps_json FROM micro_plan WHERE user_id = ? AND date >= ?`,
                 [req.user.id, todayStr], (err, rows) => {
                     if (err) reject(err);
                     else resolve(rows || []);
@@ -1484,7 +1484,7 @@ app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
             try { stepsArray = JSON.parse(workout.steps_json); } catch (e) { stepsArray = []; }
 
             if (stepsArray.length === 0) {
-                let durationMins = Math.max(5, Math.round((workout.target_tss / 55) * 60));
+                let durationMins = Math.max(5, Math.round((workout.target_spark / 55) * 60));
                 stepsArray = [{ type: 'interval', condition_type: 'time', condition_value: durationMins, target_type: 'no.target' }];
             }
 
@@ -1741,7 +1741,7 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
                     imageBase64 = imageBytes.toString('base64');
                 }
                 
-                db.all(`SELECT sport, description, target_tss FROM micro_plan WHERE user_id = ? AND date = ?`, [req.user.id, date], (err, planRows) => {
+                db.all(`SELECT sport, description, target_spark FROM micro_plan WHERE user_id = ? AND date = ?`, [req.user.id, date], (err, planRows) => {
                     if (planRows && planRows.length > 0) {
                         prompt += `Their planned workouts for today are: ` + planRows.map(r => `${r.sport} (${r.description})`).join(', ') + `.\\n`;
                     } else {
@@ -1805,25 +1805,25 @@ app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
             
             // Fetch today's completed activities (if any)
             db.all(`SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`, [req.user.id, todayStr], (err, actualAct) => {
-                const actualTSS = actualAct && actualAct.length > 0 && actualAct[0].total_score ? actualAct[0].total_score : 0;
+                const actualSpark = actualAct && actualAct.length > 0 && actualAct[0].total_score ? actualAct[0].total_score : 0;
 
-                db.all(`SELECT date, target_tss, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`, [req.user.id, todayStr], async (err, todayPlan) => {
-                    let todayTSS = todayPlan && todayPlan.length > 0 ? todayPlan[0].target_tss : 0;
+                db.all(`SELECT date, target_spark, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`, [req.user.id, todayStr], async (err, todayPlan) => {
+                    let todaySpark = todayPlan && todayPlan.length > 0 ? todayPlan[0].target_spark : 0;
                     let todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
                     
                     // If they already trained harder than planned (or trained on a rest day), update the prompt
-                    if (actualTSS > todayTSS || (actualTSS > 0 && todayDesc === 'Rest day')) {
-                        todayTSS = actualTSS;
+                    if (actualSpark > todaySpark || (actualSpark > 0 && todayDesc === 'Rest day')) {
+                        todaySpark = actualSpark;
                         todayDesc = 'Completed Workout / Training Day';
                     }
 
                     const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
 Their latest weight is ${weight}kg.
-Today's training load/plan: ${todayDesc} (Score/TSS: ${todayTSS}).
+Today's training load/plan: ${todayDesc} (Spark Points: ${todaySpark}).
 
 Based on today's training load and their current macro phase, recommend a daily macro nutrition target.
-- For high TSS / intense days, prescribe higher carbohydrates.
-- For rest / low TSS days, prescribe lower carbohydrates and higher protein/fat.
+- For high Spark Points / intense days, prescribe higher carbohydrates.
+- For rest / low Spark Points days, prescribe lower carbohydrates and higher protein/fat.
 - Ensure total calories make sense for an endurance athlete of their weight.
 
 You MUST respond with ONLY a raw JSON object containing exactly these keys:
@@ -2003,7 +2003,7 @@ async function tagStravaActivity(userId, activity, token) {
     const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
     const sparkSport = mapStravaSportToSpark(activity.sport_type || activity.type);
 
-    db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+    db.get("SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
         [userId, activityDate, sparkSport], async (err, plan) => {
 
             if (err || !plan) return;
@@ -2011,7 +2011,7 @@ async function tagStravaActivity(userId, activity, token) {
             let stepsContent = formatStepsForStrava(plan.steps_json);
             const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
 
-            const newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
+            const newDescription = `Spark Target: ${plan.target_spark} Spark\nActual: ${Math.round(sparkScore)} Spark\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
 
             const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
 
@@ -2087,21 +2087,21 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                 return;
             }
 
-            db.get("SELECT description, target_tss, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+            db.get("SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
                 [internalUserId, activityDate, sparkSport], async (err, plan) => {
 
                 // Fetch the coach tone
                 db.get("SELECT coach_tone FROM users WHERE id = ?", [internalUserId], async (err, userRow) => {
                     const tone = userRow ? userRow.coach_tone : 'Friendly and motivating';
 
-                    let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance / 1000).toFixed(1)}km in ${Math.round(data.moving_time / 60)} minutes, generating ${tss} TSS. `;
+                    let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance / 1000).toFixed(1)}km in ${Math.round(data.moving_time / 60)} minutes, generating ${Math.round(sparkScore)} Spark. `;
                     let newDescription = null;
 
                     if (plan) {
                         let stepsContent = formatStepsForStrava(plan.steps_json);
                         const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
-                        newDescription = `Spark Target: ${plan.target_tss} TSS\nActual: ${tss} TSS\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
-                        prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_tss} TSS. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
+                        newDescription = `Spark Target: ${plan.target_spark} Spark\nActual: ${Math.round(sparkScore)} Spark\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
+                        prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_spark} Spark. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
                     } else {
                         console.log(`⚠️ No matching ${sparkSport} plan found on ${activityDate}. Generating unplanned reaction.`);
                         prompt += `This was an unplanned activity. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}).`;

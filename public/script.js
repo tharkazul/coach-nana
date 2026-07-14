@@ -884,9 +884,9 @@ function updateDailyReflection(currentCtl, currentAtl) {
     if (refEl) refEl.innerText = quote;
 }
 
-function estimateWorkoutDetails(sport, desc, tss) {
-    if (!tss || tss === 0 || sport === 'Rest') return '<span class="text-theme-muted">Rest</span>';
-    return ''; // Hide estimated TSS time and zone per user request
+function estimateWorkoutDetails(sport, desc, spark) {
+    if (!spark || spark === 0 || sport === 'Rest') return '<span class="text-theme-muted">Rest</span>';
+    return ''; // Hide estimated Spark time and zone per user request
 }
 
 function getWeatherEmoji(code) {
@@ -896,18 +896,18 @@ function getWeatherEmoji(code) {
 // --- CORE DATA FUNCTIONS ---
 async function buildDashboard() {
     try {
-        // 1. Fetch TSS, Weight, Milestones, Briefing, and Physique
-        const [tssRes, weightRes, msRes, briefRes, physRes] = await Promise.all([
-            fetch('/api/dashboard-data', { headers: getAuthHeaders() }),
-            fetch('/api/weight', { headers: getAuthHeaders() }),
-            fetch('/api/milestones', { headers: getAuthHeaders() }),
-            fetch('/api/dashboard/briefing', { headers: getAuthHeaders() }),
-            fetch('/api/physique', { headers: getAuthHeaders() })
+        // 1. Fetch Spark, Weight, Milestones, Briefing, and Physique
+        const [sparkRes, weightRes, msRes, briefRes, physRes] = await Promise.all([
+            fetch('/api/dashboard-data', { headers: getAuthHeaders(), cache: 'no-store' }),
+            fetch('/api/weight', { headers: getAuthHeaders(), cache: 'no-store' }),
+            fetch('/api/milestones', { headers: getAuthHeaders(), cache: 'no-store' }),
+            fetch('/api/chat/briefing', { headers: getAuthHeaders(), cache: 'no-store' }),
+            fetch('/api/physique', { headers: getAuthHeaders(), cache: 'no-store' })
         ]);
 
-        if (!tssRes.ok || !weightRes.ok) return; // Prevent crash if backend is not ready
+        if (!sparkRes.ok || !weightRes.ok) return; // Prevent crash if backend is not ready
 
-        const data = await tssRes.json();
+        const data = await sparkRes.json();
         const weightData = await weightRes.json();
 
         // 2. Store milestones globally for charts & editor
@@ -980,29 +980,32 @@ async function buildDashboard() {
             }
         }
 
-        // 4. Prepare dictionaries and set start date
-        const tssDict = {};
+        // 3. Process Activity Data for CTL/ATL & Volume
+        const sparkDict = {};
         data.forEach(d => {
-            tssDict[d.date] = (tssDict[d.date] || 0) + d.daily_tss;
+            sparkDict[d.date] = (sparkDict[d.date] || 0) + d.daily_spark;
         });
         const weightMap = Object.fromEntries(weightData.map(w => [w.date, w.weight_kg]));
 
-        let minTssDate = data.length > 0 ? data[0].date : new Date().toISOString().split('T')[0];
-        let minWeightDate = weightData.length > 0 ? weightData[0].date : new Date().toISOString().split('T')[0];
-        let startDateStr = minTssDate < minWeightDate ? minTssDate : minWeightDate;
+        // Use the oldest date between activities and weight
+        let minSparkDate = data.length > 0 ? data[0].date : new Date().toISOString().split('T')[0];
+        let minWeightDate = weightData.length > 0 ? weightData[weightData.length - 1].date : new Date().toISOString().split('T')[0];
+        let startDateStr = minSparkDate < minWeightDate ? minSparkDate : minWeightDate;
 
-        let ctl = 0, atl = 0, d = new Date(startDateStr);
+        let curDate = new Date(startDateStr);
+        let ctl = 0;
+        let atl = 0;
         const today = new Date();
         const dates = [], ctlData = [], atlData = [], tsbData = [], weightPlot = [], targetData = [], eventMarkerData = [];
 
         // 5. Loop 1: Calculate historical Form, Fitness, and Fatigue up to TODAY
-        while (d <= today) {
-            let str = d.toISOString().split('T')[0];
-            let tss = tssDict[str] || 0;
+        while (curDate <= today) {
+            let str = curDate.toISOString().split('T')[0];
+            let spark = sparkDict[str] || 0;
 
-            // Standard rolling averages (CTL = 42 days, ATL = 7 days)
-            ctl += (tss - ctl) / 42;
-            atl += (tss - atl) / 7;
+            // Exponential moving average formulation
+            ctl += (spark - ctl) / 42;
+            atl += (spark - atl) / 7;
 
             dates.push(str);
             ctlData.push(ctl);
@@ -1013,7 +1016,7 @@ async function buildDashboard() {
             // We don't draw the target line in the past, so push nulls
             targetData.push(null);
             eventMarkerData.push(null);
-            d.setDate(d.getDate() + 1);
+            curDate.setDate(curDate.getDate() + 1);
         }
 
         // Update Top Dashboard Metrics
@@ -1173,8 +1176,8 @@ async function buildDashboard() {
 
             let currentIdx = 0;
 
-            while (d <= lastDate) {
-                let str = d.toISOString().split('T')[0];
+            while (curDate <= lastDate) {
+                let str = curDate.toISOString().split('T')[0];
 
                 // Push empty data for actuals since this is the future
                 dates.push(str);
@@ -1184,15 +1187,15 @@ async function buildDashboard() {
                 weightPlot.push(weightMap[str] || null);
 
                 // Linear interpolation for the target line
-                while (currentIdx < controlPoints.length - 1 && d > controlPoints[currentIdx + 1].date) currentIdx++;
+                while (currentIdx < controlPoints.length - 1 && curDate > controlPoints[currentIdx + 1].date) currentIdx++;
                 let p1 = controlPoints[currentIdx], p2 = controlPoints[currentIdx + 1] || p1, targetCtl = p1.ctl;
                 if (p1.date < p2.date) {
-                    targetCtl = p1.ctl + ((p2.ctl - p1.ctl) * ((d - p1.date) / (p2.date - p1.date)));
+                    targetCtl = p1.ctl + ((p2.ctl - p1.ctl) * ((curDate - p1.date) / (p2.date - p1.date)));
                 }
 
                 targetData.push(targetCtl);
                 eventMarkerData.push(globalMilestones.find(m => m.date === str) ? targetCtl : null);
-                d.setDate(d.getDate() + 1);
+                curDate.setDate(curDate.getDate() + 1);
             }
         }
 
@@ -1293,27 +1296,27 @@ async function buildDashboard() {
 
 async function loadMicroPlan() {
     try {
-        const [planRes, tssRes, weatherRes] = await Promise.all([
+        const [planRes, sparkRes, weatherRes] = await Promise.all([
             fetch('/api/micro-plan', { headers: getAuthHeaders(), cache: 'no-store' }),
             fetch('/api/dashboard-data', { headers: getAuthHeaders(), cache: 'no-store' }),
-            fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&daily=weather_code,temperature_2m_max,precipitation_sum&timezone=Europe%2FAmsterdam')
+            fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&current=temperature_2m,weather_code&hourly=temperature_2m,precipitation_probability,weather_code&timezone=Europe%2FBerlin')
         ]);
-        if (!planRes.ok || !tssRes.ok) return;
+        if (!planRes.ok || !sparkRes.ok) return;
 
-        const data = await planRes.json();
-        const actualData = await tssRes.json();
+        const planData = await planRes.json();
+        const actualData = await sparkRes.json();
         const weatherObj = await weatherRes.json();
 
         // 1. Group workouts into arrays by date (Prevents Overwriting!)
         currentPlan = {}; // Update global variable instead of shadowing
-        data.forEach(d => {
-            if (!currentPlan[d.date]) currentPlan[d.date] = [];
-            currentPlan[d.date].push(d);
+        planData.forEach(p => {
+            if (!currentPlan[p.date]) currentPlan[p.date] = [];
+            currentPlan[p.date].push(p);
         });
 
-        const actualTssMap = {};
+        const actualSparkMap = {};
         actualData.forEach(d => {
-            actualTssMap[`${d.date}_${d.sport_type}`] = Math.round(d.daily_tss);
+            actualSparkMap[`${d.date}_${d.sport_type}`] = Math.round(d.daily_spark);
         });
         const weatherMap = {};
         if (weatherObj && weatherObj.daily && weatherObj.daily.time) {
@@ -1326,7 +1329,7 @@ async function loadMicroPlan() {
             });
         }
 
-        renderQuickActions(currentPlan, actualTssMap);
+        renderQuickActions(currentPlan, actualSparkMap);
 
         const container = document.getElementById('micro-plan-container');
         if (!container) return;
@@ -1351,7 +1354,7 @@ async function loadMicroPlan() {
             let dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
 
             // Get array of workouts, or default to Rest if empty
-            let workoutsForDay = currentPlan[dateStr] || [{ sport: 'Rest', description: 'Active recovery', target_tss: 0, details: '' }];
+            let workoutsForDay = currentPlan[dateStr] || [{ sport: 'Rest', description: 'Active recovery', target_spark: 0, details: '' }];
 
             let isToday = (dateStr === todayStr);
 
@@ -1373,7 +1376,7 @@ async function loadMicroPlan() {
             html += `<div class="p-2 flex flex-col gap-2 flex-grow">`;
 
             workoutsForDay.forEach((p, wIdx) => {
-                let actualTss = actualTssMap[`${dateStr}_${p.sport}`] || 0;
+                let actualSpark = actualSparkMap[`${dateStr}_${p.sport}`] || 0;
 
                 // Color coding
                 let sportColor = "bg-gray-500/10 border-gray-500/20 text-gray-500";
@@ -1389,15 +1392,17 @@ async function loadMicroPlan() {
                 <div class="relative group p-2 rounded-md border ${sportColor} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
                     <div class="flex justify-between items-start mb-1">
                         <span class="text-[10px] font-bold uppercase tracking-wider">${p.sport}</span>
-                        <span class="text-[9px] font-mono opacity-80">${actualTss > 0 ? actualTss + '/' : ''}${p.target_tss || 0} TSS</span>
                     </div>
                     <div class="text-xs font-medium text-theme-text line-clamp-2 leading-tight">${p.description || 'Rest Day'}</div>
-                    <div class="mt-2 text-[9px] opacity-70 flex justify-between items-end">
-                        <span class="truncate pr-2">${isStructured ? 'Structured' : 'Basic'}</span>
-                        ${p.sport !== 'Rest' && dateStr >= todayStr ? `
-                        <button onclick="event.stopPropagation(); syncSingleToGarmin(${p.id || null}, '${dateStr}', '${p.sport}')" class="p-1 rounded hover:bg-black/10 transition" title="Send to Garmin">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                        </button>` : ''}
+                    <div class="flex items-center justify-between mt-2">
+                        <span class="text-[9px] font-mono opacity-80">${actualSpark > 0 ? actualSpark + '/' : ''}${p.target_spark || 0} Spark</span>
+                        <div class="flex items-center text-[9px] opacity-70">
+                            <span class="truncate pr-2">${isStructured ? 'Structured' : 'Basic'}</span>
+                            ${p.sport !== 'Rest' && dateStr >= todayStr ? `
+                            <button onclick="event.stopPropagation(); syncSingleToGarmin(${p.id || null}, '${dateStr}', '${p.sport}')" class="p-1 rounded hover:bg-black/10 transition" title="Send to Garmin">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            </button>` : ''}
+                        </div>
                     </div>
                 </div>`;
             });
@@ -1439,7 +1444,7 @@ function openEditWorkoutModal(workoutData, dateStr) {
         document.getElementById('edit-workout-date').value = p.date || dateStr;
         document.getElementById('edit-workout-sport').value = p.sport;
         document.getElementById('edit-workout-desc').value = p.description || '';
-        document.getElementById('edit-workout-tss').value = p.target_tss || 0;
+        document.getElementById('edit-workout-spark').value = p.target_spark || 0;
 
         try {
             wbSteps = (p.steps_json && p.steps_json !== 'null') ? JSON.parse(p.steps_json) : [];
@@ -1486,25 +1491,28 @@ function closeEditWorkoutModal() {
     }, 300);
 }
 
-function calculateWbTss() {
+function calculateWbSpark() {
+    const blocks = document.querySelectorAll('.wb-block-item');
     let totalMins = 0;
-    wbSteps.forEach(s => {
-        if (s.type === 'repeat') {
-            let repeatMins = 0;
-            (s.steps || []).forEach(sub => {
-                if (sub.condition_type === 'time') repeatMins += Number(sub.condition_value) || 0;
-            });
-            totalMins += repeatMins * (s.iterations || 1);
-        } else {
-            if (s.condition_type === 'time') totalMins += Number(s.condition_value) || 0;
+    blocks.forEach(block => {
+        let val = parseFloat(block.dataset.conditionValue) || 0;
+        let condType = block.dataset.conditionType || 'time';
+        let iterations = parseInt(block.dataset.iterations) || 1;
+
+        if (condType === 'time') {
+            totalMins += (val * iterations);
+        } else if (condType === 'distance') {
+            // Rough estimate: 5 min per km
+            totalMins += ((val / 1000) * 5 * iterations);
         }
     });
-    const tssInput = document.getElementById('edit-workout-tss');
+
+    const sparkInput = document.getElementById('edit-workout-spark');
     if (totalMins > 0) {
-        // Roughly 1 TSS per minute as a generic estimate
-        tssInput.value = Math.round(totalMins * 1.0);
+        // Roughly 1 Spark per minute as a generic estimate
+        sparkInput.value = Math.round(totalMins * 1.0);
     } else {
-        tssInput.value = '';
+        sparkInput.value = '';
     }
 }
 
@@ -1561,9 +1569,9 @@ function wbUpdateStep(idx, subIdx, field, val) {
         step.zone = 2;
         renderWbSteps();
     }
-    // Only re-calculate TSS if condition_type or value changes
-    if (field === 'condition_type' || field === 'condition_value' || field === 'iterations') {
-        calculateWbTss();
+    // Only re-calculate Spark if condition_type or value changes
+    if (field === 'condition_type' || field === 'condition_value') {
+        calculateWbSpark();
     }
 }
 
@@ -1571,7 +1579,7 @@ function renderWbSteps() {
     const container = document.getElementById('wb-steps-container');
     if (!container) return;
 
-    calculateWbTss();
+    calculateWbSpark();
 
     if (wbSteps.length === 0) {
         container.innerHTML = `<div class="text-xs text-theme-muted italic py-4 text-center border border-dashed border-theme-border rounded-lg">No structured steps. Click above to add blocks.</div>`;
@@ -1592,14 +1600,14 @@ function renderWbBlock(s, idx, parentIdx, isStrength) {
     const isRepeat = s.type === 'repeat';
 
     // Color coding for blocks
-    let bgClass = "bg-theme-bg border-theme-border";
-    if (s.type === 'warmup') bgClass = "bg-green-500/10 border-green-500/30";
-    if (s.type === 'interval') bgClass = "bg-blue-500/10 border-blue-500/30";
-    if (s.type === 'recovery') bgClass = "bg-amber-500/10 border-amber-500/30";
-    if (s.type === 'cooldown') bgClass = "bg-purple-500/10 border-purple-500/30";
-    if (s.type === 'repeat') bgClass = "bg-theme-accent/5 border-theme-accent/30";
+    let bgClass = "bg-theme-bg border-theme-border wb-block-item";
+    if (s.type === 'warmup') bgClass = "bg-green-500/10 border-green-500/30 wb-block-item";
+    if (s.type === 'interval') bgClass = "bg-blue-500/10 border-blue-500/30 wb-block-item";
+    if (s.type === 'recovery') bgClass = "bg-amber-500/10 border-amber-500/30 wb-block-item";
+    if (s.type === 'cooldown') bgClass = "bg-purple-500/10 border-purple-500/30 wb-block-item";
+    if (s.type === 'repeat') bgClass = "bg-theme-accent/5 border-theme-accent/30 wb-block-item";
 
-    let html = `<div class="flex flex-col border rounded-md ${bgClass} p-2 relative ${isSub ? 'mt-2' : ''}">`;
+    let html = `<div class="flex flex-col border rounded-md ${bgClass} p-2 relative ${isSub ? 'mt-2' : ''}" data-condition-value="${s.condition_value || 0}" data-condition-type="${s.condition_type || 'time'}" data-iterations="${s.iterations || 1}">`;
 
     // Top Row
     html += `<div class="flex flex-wrap items-center gap-2">`;
@@ -1677,7 +1685,7 @@ if (document.getElementById('btn-edit-workout-save')) {
         const date = document.getElementById('edit-workout-date').value;
         const sport = document.getElementById('edit-workout-sport').value;
         const desc = document.getElementById('edit-workout-desc').value;
-        const tss = parseFloat(document.getElementById('edit-workout-tss').value) || 0;
+        const spark = parseFloat(document.getElementById('edit-workout-spark').value) || 0;
         const stepsJson = JSON.stringify(wbSteps);
 
         if (wbCurrentWorkoutId) {
@@ -1685,14 +1693,14 @@ if (document.getElementById('btn-edit-workout-save')) {
             await fetch(`/api/micro-plan/${wbCurrentWorkoutId}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ date: date, sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson })
+                body: JSON.stringify({ date: date, sport: sport, description: desc, target_spark: spark, details: '', steps_json: stepsJson })
             });
         } else {
             // CREATE - add a single new workout instead of overwriting the day
             await fetch(`/api/micro-plan`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ date: date, sport: sport, description: desc, target_tss: tss, details: '', steps_json: stepsJson })
+                body: JSON.stringify({ date: date, sport: sport, description: desc, target_spark: spark, details: '', steps_json: stepsJson })
             });
         }
 
@@ -2061,8 +2069,8 @@ async function loadHistory() {
                             <div class="flex items-center gap-3">
                                 ${sportBadge}
                                 <div class="text-[10px] md:text-xs text-theme-muted flex items-center gap-1 font-mono">
-                                    <span class="uppercase tracking-wider font-semibold">TSS:</span>
-                                    <span class="text-theme-text">${x.tss || '--'}</span>
+                                    <span class="uppercase tracking-wider font-semibold">Spark:</span>
+                                    <span class="text-theme-text">${x.spark_score || '--'}</span>
                                 </div>
                             </div>
                         </div>
@@ -2088,7 +2096,7 @@ async function downloadSelectedCSV() {
     exportBtn.innerText = "Exporting...";
     exportBtn.disabled = true;
 
-    let csvContent = "Date,Sport,Title,TSS,Distance (meters),Moving Time (seconds),Elevation (meters),Avg Heart Rate (bpm),Avg Cadence (spm/rpm)\n";
+    let csvContent = "Date,Sport,Title,Spark Points,Distance (meters),Moving Time (seconds),Elevation (meters),Avg Heart Rate (bpm),Avg Cadence (spm/rpm)\n";
 
     for (const cb of checkboxes) {
         let item = globalHistoryData[cb.value];
@@ -2109,7 +2117,7 @@ async function downloadSelectedCSV() {
             cadence = Math.round(rawCadence);
         } catch (e) { }
 
-        let row = [item.start_date.split('T')[0], item.sport_type, cleanTitle, item.tss || 0, dist, time, elev, hr, cadence];
+        let row = [item.start_date.split('T')[0], item.sport_type, cleanTitle, item.spark_score || 0, dist, time, elev, hr, cadence];
         csvContent += row.join(",") + "\n";
     }
 
@@ -2442,12 +2450,12 @@ function clearImageSelection() {
     document.getElementById('image-preview').src = '';
 }
 
-function renderQuickActions(planMap, tssMap) {
+function renderQuickActions(planMap, sparkMap) {
     const container = document.getElementById('quick-actions-container');
     if (!container) return;
 
     let todayStr = new Date().toISOString().split('T')[0];
-    let actualTss = tssMap[todayStr] || 0;
+    let actualSpark = sparkMap[todayStr] || 0;
 
     // Check if there is a scheduled workout today that isn't just rest
     let workoutsToday = planMap[todayStr] || [];
@@ -2455,7 +2463,7 @@ function renderQuickActions(planMap, tssMap) {
 
     let actions = [];
 
-    if (actualTss > 0) {
+    if (actualSpark > 0) {
         // Workout completed today
         actions.push({ text: "🔥 Debrief Workout", msg: "I crushed my workout today! Let's debrief." });
         actions.push({ text: "📉 Felt Terrible", msg: "That workout felt terrible today, I really struggled." });
@@ -3197,8 +3205,8 @@ async function loadSocialFeed() {
                         <p class="text-xs font-bold text-theme-text">${act.distance_km ? parseFloat(act.distance_km).toFixed(2) + ' km' : '-'}</p>
                     </div>
                     <div>
-                        <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">TSS</p>
-                        <p class="text-xs font-bold text-theme-text">${Math.round(act.tss || 0)}</p>
+                        <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Spark</p>
+                        <p class="text-xs font-bold text-theme-text">${Math.round(act.spark_score || 0)}</p>
                     </div>
                 </div>
                 <div class="mt-4 pt-3 border-t border-theme-border flex items-center gap-2">
