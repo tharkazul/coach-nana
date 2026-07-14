@@ -42,6 +42,29 @@ let viewingWeekStart = getMonday(new Date());
 let globalMilestones = [];
 let globalMetrics = [];
 
+function getSportCardColor(sportType) {
+    if (!sportType) return "bg-gray-500/10 border-gray-500/20 text-gray-500";
+    let s = sportType.toLowerCase();
+    if (s.includes('run')) return "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400";
+    if (s.includes('swim')) return "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400";
+    if (s.includes('strength')) return "bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400";
+    if (s.includes('ride') || s.includes('bike')) return "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400";
+    return "bg-gray-500/10 border-gray-500/20 text-gray-500";
+}
+
+function getSportBadge(sportType) {
+    if (!sportType) sportType = 'Activity';
+    let s = sportType.toLowerCase();
+    
+    let colorClass = "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:border-gray-700";
+    if (s.includes('run')) colorClass = "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-400 dark:border-orange-800";
+    else if (s.includes('swim')) colorClass = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800";
+    else if (s.includes('strength')) colorClass = "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/40 dark:text-purple-400 dark:border-purple-800";
+    else if (s.includes('ride') || s.includes('bike')) colorClass = "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800";
+    
+    return `<span class="${colorClass} border text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide shrink-0 inline-flex items-center justify-center">${sportType}</span>`;
+}
+
 // --- METRICS UI LOGIC ---
 function renderMetricsEditor() {
     const container = document.getElementById('metrics-container');
@@ -1379,11 +1402,7 @@ async function loadMicroPlan() {
                 let actualSpark = actualSparkMap[`${dateStr}_${p.sport}`] || 0;
 
                 // Color coding
-                let sportColor = "bg-gray-500/10 border-gray-500/20 text-gray-500";
-                if (p.sport === 'Run') sportColor = "bg-red-500/10 border-red-500/20 text-red-500";
-                else if (p.sport === 'Bike') sportColor = "bg-green-500/10 border-green-500/20 text-green-500";
-                else if (p.sport === 'Swim') sportColor = "bg-blue-500/10 border-blue-500/20 text-blue-500";
-                else if (p.sport === 'Strength') sportColor = "bg-purple-500/10 border-purple-500/20 text-purple-500";
+                let sportColor = getSportCardColor(p.sport);
 
                 const isStructured = p.steps_json && p.steps_json !== '[]' && p.steps_json !== 'null';
                 const pJson = encodeURIComponent(JSON.stringify(p)).replace(/'/g, "%27");
@@ -2045,13 +2064,8 @@ async function loadHistory() {
         if (!container) return;
 
         container.innerHTML = globalHistoryData.map((x, idx) => {
-            let sportBadge = '';
-            let s = x.sport_type ? x.sport_type.toLowerCase() : '';
-            if (s.includes('run')) sportBadge = `<span class="bg-orange-100 text-orange-700 border border-orange-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Run</span>`;
-            else if (s.includes('swim')) sportBadge = `<span class="bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Swim</span>`;
-            else if (s.includes('strength')) sportBadge = `<span class="bg-purple-100 text-purple-700 border border-purple-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Strength</span>`;
-            else if (s.includes('ride') || s.includes('bike')) sportBadge = `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">Bike</span>`;
-            else sportBadge = `<span class="bg-gray-100 text-gray-700 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">${x.sport_type || 'Activity'}</span>`;
+            let s = (x.sport_type || x.name || '').toLowerCase();
+            let sportBadge = getSportBadge(x.sport_type || 'Activity');
 
             let dateObj = new Date(x.start_date);
             let dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -3247,8 +3261,8 @@ async function loadSocialFeed() {
                             <p class="text-[10px] text-theme-muted">${new Date(act.start_date).toLocaleString()}</p>
                         </div>
                     </div>
-                    <div class="text-[10px] bg-theme-bg px-2 py-1 rounded text-theme-muted uppercase tracking-wider font-bold">
-                        ${act.sport_type || 'Activity'}
+                    <div class="shrink-0 ml-2">
+                        ${getSportBadge(act.sport_type)}
                     </div>
                 </div>
                 <h3 class="text-sm font-bold text-theme-text mt-2">${act.name}</h3>
