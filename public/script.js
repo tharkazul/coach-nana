@@ -1774,6 +1774,23 @@ async function syncSingleToGarmin(id, dateStr, sport) {
 }
 
 async function generateTemplate() {
+    const btn = document.getElementById('auto-generate-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Generating... <span class="animate-pulse">...</span>';
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    const t1 = setTimeout(() => {
+        if (btn) btn.innerHTML = 'Thinking deeply... <span class="animate-pulse">...</span>';
+    }, 6000);
+    const t2 = setTimeout(() => {
+        if (btn) btn.innerHTML = 'Building complex plan... <span class="animate-pulse">...</span>';
+    }, 15000);
+    const t3 = setTimeout(() => {
+        if (btn) btn.innerHTML = 'Almost there, finalizing... <span class="animate-pulse">...</span>';
+    }, 30000);
+
     // 1. Scrape the current metrics from the DOM
     const ctlText = document.getElementById('ctl-metric').innerText;
     const atlText = document.getElementById('atl-metric').innerText;
@@ -1812,6 +1829,15 @@ async function generateTemplate() {
         }
     } catch (error) {
         console.error("❌ Fetch error:", error);
+    } finally {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Auto-Generate Week';
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
     }
 
     // 6. Reload the plan
@@ -2537,36 +2563,42 @@ async function sendQuickAction(msg) {
     sendMessage();
 }
 
-async function sendMessage() {
+async function sendMessage(retryMessage = null, retryImage = null, errorBubbleToRemove = null) {
     const input = document.getElementById('chat-input');
-    const message = input.value.trim();
-    if (!message && !currentImageBase64) return;
+    const message = retryMessage !== null ? retryMessage : input.value.trim();
+    const imageToUse = retryMessage !== null ? retryImage : currentImageBase64;
+    
+    if (!message && !imageToUse) return;
 
     if (navigator.vibrate) navigator.vibrate(50);
 
     const chatWindow = document.getElementById('chat-window');
-
-    let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    let userImgHtml = '';
-    if (currentImageBase64) {
-        userImgHtml = `<img src="${currentImageBase64}" class="w-full rounded-xl mb-1 object-cover animate-pop">`;
+    
+    if (errorBubbleToRemove) {
+        errorBubbleToRemove.remove();
     }
 
-    chatWindow.insertAdjacentHTML('beforeend', `
-                <div class="flex justify-end animate-msg">
-                    <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
-                        ${userImgHtml}
-                        <div class="whitespace-pre-wrap leading-relaxed">${message}</div>
-                        <div class="text-[9px] text-white/70 text-right mt-1">${timeStr}</div>
-                    </div>
-                </div>`);
+    if (retryMessage === null) {
+        let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let userImgHtml = '';
+        if (currentImageBase64) {
+            userImgHtml = `<img src="${currentImageBase64}" class="w-full rounded-xl mb-1 object-cover animate-pop">`;
+        }
+        chatWindow.insertAdjacentHTML('beforeend', `
+                    <div class="flex justify-end animate-msg">
+                        <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
+                            ${userImgHtml}
+                            <div class="whitespace-pre-wrap leading-relaxed">${message}</div>
+                            <div class="text-[9px] text-white/70 text-right mt-1">${timeStr}</div>
+                        </div>
+                    </div>`);
+        
+        input.value = '';
+        input.style.height = '44px';
+        clearImageSelection();
+    }
 
-    const payload = { message, imageBase64: currentImageBase64 };
-
-    input.value = '';
-    input.style.height = '44px';
-    clearImageSelection();
+    const payload = { message, imageBase64: imageToUse };
     chatWindow.scrollTop = chatWindow.scrollHeight;
 
     const loadId = 'loading-' + Date.now();
@@ -2577,13 +2609,36 @@ async function sendMessage() {
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                         <img src="${thinkingAvatar}" alt="Coach" class="w-full h-full object-cover opacity-70">
                     </div>
-                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none shadow-sm text-theme-text flex items-center gap-1.5 h-[44px]">
+                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none shadow-sm text-theme-text flex items-center gap-1.5 h-[44px]" id="bubble-${loadId}">
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce"></span>
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
                     </div>
                 </div>`);
     chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    // Progressive loading indicator for long requests
+    const originalDots = `
+        <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce"></span>
+        <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
+        <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+    `;
+
+    setTimeout(() => {
+        const bubble = document.getElementById(`bubble-${loadId}`);
+        if (bubble) bubble.innerHTML = `<span class="italic opacity-70">Thinking deeply...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+    }, 6000);
+
+    setTimeout(() => {
+        const bubble = document.getElementById(`bubble-${loadId}`);
+        if (bubble) bubble.innerHTML = `<span class="italic opacity-70">Generating complex plan...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+    }, 15000);
+
+    setTimeout(() => {
+        const bubble = document.getElementById(`bubble-${loadId}`);
+        if (bubble) bubble.innerHTML = `<span class="italic opacity-70">Almost there, finalizing...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+    }, 30000);
+
 
     try {
         const res = await fetch('/api/chat', {
@@ -2605,6 +2660,10 @@ async function sendMessage() {
                 </div>`;
             chatWindow.scrollTop = chatWindow.scrollHeight;
             return;
+        }
+        
+        if (!res.ok) {
+            throw new Error(data.error || "Server returned an error status: " + res.status);
         }
 
         let finalAvatar = getCoachAvatar(data.mood || 'default');
@@ -2695,16 +2754,27 @@ async function sendMessage() {
         console.error("Chat Error:", error);
         const loadEl = document.getElementById(loadId);
         if (loadEl) {
+            window.failedMessages = window.failedMessages || {};
+            window.failedMessages[loadId] = { message, imageToUse };
+            
             loadEl.outerHTML = `
-                <div class="flex justify-center my-4">
-                    <div class="bg-red-50 text-red-500 text-xs px-4 py-2 rounded-full border border-red-100 flex items-center gap-2">
+                <div class="flex justify-center my-4" id="err-${loadId}">
+                    <div class="bg-red-50 text-red-500 text-xs px-4 py-2 rounded-full border border-red-100 flex items-center gap-2 shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Connection interrupted. Please try again.
+                        Connection interrupted.
+                        <button onclick="resendFailedMessage('${loadId}')" class="ml-2 font-bold underline hover:text-red-700 cursor-pointer">Resend</button>
                     </div>
                 </div>
             `;
         }
     }
+}
+
+function resendFailedMessage(loadId) {
+    const data = window.failedMessages[loadId];
+    if (!data) return;
+    const errBubble = document.getElementById('err-' + loadId);
+    sendMessage(data.message, data.imageToUse, errBubble);
 }
 
 // --- MANUAL WEIGHT LOGGING (UPDATED FOR COMMAS) ---

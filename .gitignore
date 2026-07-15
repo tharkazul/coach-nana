@@ -1,3 +1,11 @@
 node_modules/
 nana_multi.db
 .env
+nana_staging.db
+test*.js
+server-live.js
+check_js.js
+temp_extracted.js
+gemini_debug.txt
+models_output.json
+public/admin-live.html
