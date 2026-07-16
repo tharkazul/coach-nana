@@ -2536,6 +2536,7 @@ async function syncAllStravaUsersOnStartup() {
             }
         }
     });
+    });
 }
 
 // --- SOCIAL ENDPOINTS ---
