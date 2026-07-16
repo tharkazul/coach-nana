@@ -1554,6 +1554,63 @@ app.get('/api/admin/usage', authenticateToken, (req, res) => {
     });
 });
 
+app.get('/api/social/feed', authenticateToken, async (req, res) => {
+    db.all(`
+        SELECT a.id, a.user_id, a.name, a.distance_km, a.moving_time_s, a.start_date, a.sport_type, a.spark_score, u.username, u.profile_picture_url
+        FROM activities a
+        JOIN users u ON a.user_id = u.id
+        ORDER BY a.start_date DESC LIMIT 50
+    `, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: "DB Error" });
+        res.json({ activities: rows });
+    });
+});
+
+app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
+    const targetUserId = req.params.id;
+    
+    db.get(`SELECT username, athlete_context, profile_picture_url FROM users WHERE id = ?`, [targetUserId], (err, user) => {
+        if (err || !user) return res.status(404).json({ error: "User not found" });
+        
+        db.all(`SELECT name, distance_km, moving_time_s, start_date, sport_type, spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
+            
+            db.all(`SELECT date, tsb, ctl, atl, weight FROM log WHERE user_id = ? ORDER BY date DESC LIMIT 30`, [targetUserId], async (err, logs) => {
+                const recentLogs = logs || [];
+                
+                // Construct sparklines data arrays
+                const dates = recentLogs.map(l => l.date).reverse();
+                const tsb = recentLogs.map(l => l.tsb).reverse();
+                const ctl = recentLogs.map(l => l.ctl).reverse();
+                const atl = recentLogs.map(l => l.atl).reverse();
+                const weight = recentLogs.map(l => l.weight).reverse();
+
+                // Generate AI Highlight using a generic coach persona
+                const genericCoachTone = "Empathetic but demanding elite endurance coach.";
+                const prompt = `Write a 2-3 sentence "Coach Highlight" for ${user.username}. 
+Context about them: ${user.athlete_context}
+Recent Activities: ${activities.map(a => a.name).join(', ')}
+
+Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep it brief, dynamic, and highly personalized! Do not include any markdown bolding or headers.`;
+
+                let highlight = "Keep pushing! You're doing great.";
+                try {
+                    highlight = await generateWithFallback("Generate public profile highlight", prompt, []);
+                } catch (e) {
+                    console.error("Highlight generation failed", e);
+                }
+
+                res.json({
+                    username: user.username,
+                    profilePictureUrl: user.profile_picture_url,
+                    highlight: highlight,
+                    activities: activities,
+                    trends: { dates, tsb, ctl, atl, weight }
+                });
+            });
+        });
+    });
+});
+
 app.post('/api/sync-garmin', authenticateToken, async (req, res) => {
     console.log("DEBUG: Sync route triggered for user:", req.user.id);
     const selectedWorkouts = req.body.workouts;

@@ -73,7 +73,7 @@ function renderMetricsEditor() {
         return;
     }
     container.innerHTML = globalMetrics.map((m, idx) => `
-                <div class="flex items-center gap-2 md:gap-4 bg-theme-bg p-2 rounded border border-theme-border metric-row">
+                <div class="metric-row ${m.metric === 'strava_opt_out_activities' ? 'hidden' : 'flex items-center gap-2 md:gap-4 bg-theme-bg p-2 rounded border border-theme-border'}">
                     <input type="text" class="metric-key flex-1 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text font-bold" value="${m.metric}" placeholder="Metric (e.g. 5K PB)">
                     <input type="text" class="metric-val flex-1 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text" value="${m.value}" placeholder="Value (e.g. 19:30)">
                     <button onclick="removeMetricRow(${idx})" class="text-red-500 hover:text-red-700 font-bold px-2">✕</button>
@@ -115,7 +115,7 @@ function renderOnboardMetricsEditor() {
         return;
     }
     container.innerHTML = onboardMetrics.map((m, idx) => `
-        <div class="flex items-center gap-2 onboard-metric-row">
+        <div class="onboard-metric-row ${m.metric === 'strava_opt_out_activities' ? 'hidden' : 'flex items-center gap-2'}">
             <input type="text" class="onboard-metric-key flex-1 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text font-bold focus:border-theme-accent outline-none" value="${m.metric}" placeholder="Metric (e.g. FTP, 5K PB)">
             <input type="text" class="onboard-metric-val flex-1 p-1.5 border border-theme-border rounded text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none" value="${m.value}" placeholder="Value">
             <button onclick="removeOnboardMetricRow(${idx})" class="text-red-500 hover:text-red-700 font-bold px-2">✕</button>
@@ -3439,7 +3439,7 @@ async function loadSocialFeed() {
                 : act.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-theme-text">${act.username}</p>
+                            <p class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${act.user_id})">${act.username}</p>
                             <p class="text-[10px] text-theme-muted">${new Date(act.start_date).toLocaleString()}</p>
                         </div>
                     </div>
@@ -3748,7 +3748,7 @@ document.addEventListener('focusout', (e) => {
 });
 
 // Automatically sync 'inert' with hidden/display status for all modals to keep iOS keyboard clean
-const overlaysToTrack = ['login-overlay', 'onboarding-overlay', 'add-person-modal', 'post-modal', 'edit-workout-modal', 'image-modal'];
+const overlaysToTrack = ['login-overlay', 'onboarding-overlay', 'add-person-modal', 'post-modal', 'edit-workout-modal', 'image-modal', 'public-profile-modal'];
 overlaysToTrack.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -3787,3 +3787,136 @@ overlaysToTrack.forEach(id => {
 setTimeout(() => {
     if (document.activeElement) document.activeElement.blur();
 }, 100);
+
+// --- PUBLIC PROFILE MODAL LOGIC ---
+async function openPublicProfile(userId) {
+    const modal = document.getElementById('public-profile-modal');
+    const content = document.getElementById('public-profile-modal-content');
+    
+    // Reset contents to loading state
+    document.getElementById('public-profile-avatar').innerHTML = '';
+    document.getElementById('public-profile-username').innerText = 'Loading...';
+    document.getElementById('public-profile-highlight').innerHTML = `
+        <div class="animate-pulse space-y-2">
+            <div class="h-4 bg-theme-border rounded w-3/4"></div>
+            <div class="h-4 bg-theme-border rounded w-full"></div>
+        </div>`;
+    document.getElementById('public-profile-activities').innerHTML = `
+        <div class="animate-pulse flex gap-2">
+            <div class="w-8 h-8 bg-theme-border rounded-full"></div>
+            <div class="flex-1 space-y-2">
+                <div class="h-3 bg-theme-border rounded w-1/2"></div>
+                <div class="h-3 bg-theme-border rounded w-1/4"></div>
+            </div>
+        </div>`;
+        
+    ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
+        if (window[`public_sparkline_${metric}`]) window[`public_sparkline_${metric}`].destroy();
+    });
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    // slight delay for transition
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        content.classList.remove('translate-y-full', 'md:scale-95');
+    }, 10);
+
+    try {
+        const res = await fetch(`/api/social/profile/${userId}`, { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error("Failed to load profile");
+        const data = await res.json();
+        
+        document.getElementById('public-profile-avatar').innerHTML = data.profilePictureUrl
+            ? `<img src="${data.profilePictureUrl}" class="w-full h-full object-cover">`
+            : data.username.charAt(0).toUpperCase();
+            
+        document.getElementById('public-profile-username').innerText = data.username;
+        document.getElementById('public-profile-highlight').innerHTML = `<p>${data.highlight}</p>`;
+        
+        const actContainer = document.getElementById('public-profile-activities');
+        if (!data.activities || data.activities.length === 0) {
+            actContainer.innerHTML = '<p class="text-xs text-theme-muted italic">No recent activities.</p>';
+        } else {
+            actContainer.innerHTML = data.activities.map(act => `
+                <div class="flex justify-between items-center bg-theme-bg p-3 rounded border border-theme-border/50">
+                    <div>
+                        <div class="text-xs font-bold text-theme-text flex items-center gap-2">
+                            ${getSportBadge(act.sport_type)}
+                            ${act.name}
+                        </div>
+                        <div class="text-[10px] text-theme-muted mt-1">${new Date(act.start_date).toLocaleDateString()}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-bold text-theme-text">${act.distance_km ? parseFloat(act.distance_km).toFixed(2) + ' km' : '-'}</div>
+                        <div class="text-[10px] text-theme-muted">Dist</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Render Sparklines
+        const d = data.trends;
+        renderPublicSparkline('public-sparkline-fitness', d.dates, d.ctl, '#3b82f6');
+        renderPublicSparkline('public-sparkline-fatigue', d.dates, d.atl, '#ef4444');
+        renderPublicSparkline('public-sparkline-readiness', d.dates, d.tsb, '#10b981');
+        renderPublicSparkline('public-sparkline-weight', d.dates, d.weight, '#f59e0b');
+
+    } catch (e) {
+        document.getElementById('public-profile-username').innerText = 'Error loading profile';
+        document.getElementById('public-profile-highlight').innerHTML = '<p class="text-xs text-theme-muted">Failed to load data.</p>';
+        document.getElementById('public-profile-activities').innerHTML = '';
+    }
+}
+
+function closePublicProfile() {
+    const modal = document.getElementById('public-profile-modal');
+    const content = document.getElementById('public-profile-modal-content');
+    modal.classList.add('opacity-0');
+    content.classList.add('translate-y-full', 'md:scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+function renderPublicSparkline(canvasId, labels, dataPoints, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    // Clean up old chart
+    const metric = canvasId.split('-').pop();
+    if (window[`public_sparkline_${metric}`]) window[`public_sparkline_${metric}`].destroy();
+    
+    window[`public_sparkline_${metric}`] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: dataPoints,
+                borderColor: color,
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                tension: 0.3,
+                spanGaps: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            },
+            interaction: {
+                mode: null
+            },
+            animation: false
+        }
+    });
+}
