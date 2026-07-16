@@ -423,6 +423,12 @@ db.serialize(() => {
         data TEXT,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS system_state (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 });
 
 // --- AUTHENTICATION MIDDLEWARE ---
@@ -2479,9 +2485,22 @@ async function getStravaActivity(stravaAthleteId, activityId) {
 }
 
 async function syncAllStravaUsersOnStartup() {
-    console.log('🔄 Running initial Strava sync for all connected users...');
-    db.all('SELECT id FROM users WHERE strava_refresh_token IS NOT NULL', [], async (err, users) => {
-        if (err || !users) return;
+    const SYNC_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour cooldown
+    
+    db.get(`SELECT value FROM system_state WHERE key = 'last_strava_sync_time'`, [], (err, row) => {
+        if (!err && row && row.value) {
+            const lastSync = parseInt(row.value, 10);
+            if (Date.now() - lastSync < SYNC_COOLDOWN_MS) {
+                console.log('⏳ Skipping initial Strava sync to respect rate limits (ran less than 1 hour ago).');
+                return;
+            }
+        }
+        
+        db.run(`INSERT OR REPLACE INTO system_state (key, value, last_updated) VALUES ('last_strava_sync_time', ?, datetime('now'))`, [Date.now().toString()]);
+        
+        console.log('🔄 Running initial Strava sync for all connected users...');
+        db.all('SELECT id FROM users WHERE strava_refresh_token IS NOT NULL', [], async (err, users) => {
+            if (err || !users) return;
 
         for (const user of users) {
             try {
