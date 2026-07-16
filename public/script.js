@@ -3903,7 +3903,9 @@ async function openPublicProfile(userId) {
                             color: '#9ca3af',
                             font: { size: 10, weight: 'bold', family: 'Inter' }
                         },
-                        ticks: { display: false, min: 0, max: 100 }
+                        ticks: { display: false },
+                        min: 0,
+                        max: 100
                     }
                 },
                 plugins: {
