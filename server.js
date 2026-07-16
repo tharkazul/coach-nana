@@ -1556,7 +1556,7 @@ app.get('/api/admin/usage', authenticateToken, (req, res) => {
 
 app.get('/api/social/feed', authenticateToken, async (req, res) => {
     db.all(`
-        SELECT a.id, a.user_id, a.name, a.distance_km, a.moving_time_s, a.start_date, a.sport_type, a.spark_score, u.username, u.profile_picture_url
+        SELECT a.id, a.user_id, a.name, a.distance_km, a.moving_time_min, a.start_date, a.sport_type, a.tss as spark_score, u.username, u.profile_picture_url
         FROM activities a
         JOIN users u ON a.user_id = u.id
         ORDER BY a.start_date DESC LIMIT 50
@@ -1572,7 +1572,7 @@ app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
     db.get(`SELECT username, athlete_context, profile_picture_url FROM users WHERE id = ?`, [targetUserId], (err, user) => {
         if (err || !user) return res.status(404).json({ error: "User not found" });
         
-        db.all(`SELECT name, distance_km, moving_time_s, start_date, sport_type, spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
+        db.all(`SELECT name, distance_km, moving_time_min, start_date, sport_type, tss as spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
             
             db.all(`SELECT date, tsb, ctl, atl, weight FROM log WHERE user_id = ? ORDER BY date DESC LIMIT 30`, [targetUserId], async (err, logs) => {
                 const recentLogs = logs || [];
@@ -2463,7 +2463,7 @@ app.get('/api/social/feed', authenticateToken, (req, res) => {
 
 app.get('/api/social/leaderboard', authenticateToken, (req, res) => {
     db.all(`
-        SELECT u.id, u.username, u.profile_picture_url, SUM(a.spark_score) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
+        SELECT u.id, u.username, u.profile_picture_url, SUM(a.tss) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
         FROM activities a
         JOIN users u ON a.user_id = u.id
         WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
