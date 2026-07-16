@@ -680,7 +680,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`).join('\n                    ')
                         : 'No recent activities recorded.';
 
-                    db.all(`SELECT sport_type, start_date, sets_json FROM activities WHERE user_id = ? AND sets_json IS NOT NULL AND sets_json != '[]' ORDER BY start_date DESC LIMIT 5`, [req.user.id], (err, recentSetsRows) => {
+                    db.all(`SELECT sport_type, start_date, sets_json FROM activities WHERE user_id = ? AND sets_json IS NOT NULL AND sets_json != '[]' ORDER BY start_date DESC LIMIT 5`, [req.user.id], async (err, recentSetsRows) => {
                         let recentSetsText = "No recent strength/PB data recorded.";
                         if (recentSetsRows && recentSetsRows.length > 0) {
                             recentSetsText = recentSetsRows.map(row => `Date: ${row.start_date}, Sport: ${row.sport_type}, Details: ${row.sets_json}`).join('\n');
@@ -1360,7 +1360,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                 ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ')
                 : 'None explicitly recorded yet.';
 
-            db.all(`SELECT sport_type, start_date, sets_json FROM activities WHERE user_id = ? AND sets_json IS NOT NULL AND sets_json != '[]' ORDER BY start_date DESC LIMIT 5`, [req.user.id], (err, recentSetsRows) => {
+            db.all(`SELECT sport_type, start_date, sets_json FROM activities WHERE user_id = ? AND sets_json IS NOT NULL AND sets_json != '[]' ORDER BY start_date DESC LIMIT 5`, [req.user.id], async (err, recentSetsRows) => {
                 let recentSetsText = "No recent strength/PB data recorded.";
                 if (recentSetsRows && recentSetsRows.length > 0) {
                     recentSetsText = recentSetsRows.map(row => `Date: ${row.start_date}, Sport: ${row.sport_type}, Details: ${row.sets_json}`).join('\n');
