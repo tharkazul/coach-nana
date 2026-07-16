@@ -1545,7 +1545,7 @@ app.get('/api/social/feed', authenticateToken, async (req, res) => {
 });
 
 // Function to generate the public profile data
-function generatePublicProfile(targetUserId, globalMaxCtl) {
+function generatePublicProfile(targetUserId, globalMaxStats) {
     return new Promise((resolve, reject) => {
         db.get(`SELECT username, athlete_context, profile_picture_url FROM users WHERE id = ?`, [targetUserId], (err, user) => {
             if (err || !user) return resolve(null);
@@ -1602,15 +1602,15 @@ function generatePublicProfile(targetUserId, globalMaxCtl) {
                             }
                         }
 
-                        let endurance = Math.min(100, Math.round((ctl / globalMaxCtl) * 100));
+                        let endurance = Math.min(100, Math.round((ctl / globalMaxStats.ctl) * 100));
                         let weightTrainingCount = rows ? rows.filter(r => r.sport_type === 'WeightTraining').length : 0;
                         let totalElevation = rows ? rows.reduce((sum, r) => sum + (r.elevation_m || 0), 0) : 0;
                         let strengthScore = (weightTrainingCount * 5) + (totalElevation / 1000); 
-                        let strength = Math.min(100, Math.round(strengthScore * 3));
+                        let strength = Math.min(100, Math.round((strengthScore / globalMaxStats.strength) * 100));
                         const uniqueSports = new Set(rows ? rows.map(r => r.sport_type) : []).size;
-                        let versatility = Math.min(100, Math.round((uniqueSports / 5) * 100));
+                        let versatility = Math.min(100, Math.round((uniqueSports / globalMaxStats.versatility) * 100));
                         let explosiveSessions = rows ? rows.filter(r => (r.tss / (r.moving_time_min || 1)) > 1.2).length : 0;
-                        let explosiveness = Math.min(100, Math.round((explosiveSessions / 10) * 100));
+                        let explosiveness = Math.min(100, Math.round((explosiveSessions / globalMaxStats.explosiveness) * 100));
 
                         const radar = { endurance: endurance || 10, strength: strength || 10, versatility: versatility || 10, explosiveness: explosiveness || 10 };
 
@@ -1648,52 +1648,75 @@ Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep
     });
 }
 
-async function calculateGlobalMaxCtl() {
+async function calculateGlobalMaxStats() {
     return new Promise((resolve) => {
-        db.all(`SELECT user_id, substr(start_date, 1, 10) as date, SUM(tss) as daily_tss FROM activities GROUP BY user_id, date ORDER BY date ASC`, [], (err, rows) => {
-            if (err || !rows) return resolve(1);
+        db.all(`SELECT user_id, start_date, substr(start_date, 1, 10) as date, tss, sport_type, elevation_m, moving_time_min FROM activities ORDER BY start_date ASC`, [], (err, rows) => {
+            if (err || !rows) return resolve({ ctl: 1, strength: 1, versatility: 1, explosiveness: 1 });
             
-            const userCtls = {};
+            const userStats = {};
             rows.forEach(r => {
-                if (!userCtls[r.user_id]) userCtls[r.user_id] = { ctl: 0, map: {}, earliest: r.date };
-                else if (!userCtls[r.user_id].earliest) userCtls[r.user_id].earliest = r.date;
-                userCtls[r.user_id].map[r.date] = r.daily_tss;
+                if (!userStats[r.user_id]) {
+                    userStats[r.user_id] = { 
+                        ctlMap: {}, earliest: r.date, 
+                        weightTrainingCount: 0, totalElevation: 0, 
+                        uniqueSports: new Set(), explosiveSessions: 0 
+                    };
+                }
+                const stats = userStats[r.user_id];
+                if (!stats.earliest) stats.earliest = r.date;
+                
+                stats.ctlMap[r.date] = (stats.ctlMap[r.date] || 0) + (r.tss || 0);
+                
+                if (r.sport_type === 'WeightTraining') stats.weightTrainingCount++;
+                stats.totalElevation += (r.elevation_m || 0);
+                if (r.sport_type) stats.uniqueSports.add(r.sport_type);
+                if (r.moving_time_min && (r.tss / r.moving_time_min) > 1.2) stats.explosiveSessions++;
             });
 
-            let globalMaxCtl = 1; // Start at 1 to prevent division by zero
-            Object.keys(userCtls).forEach(uid => {
+            let globalMax = { ctl: 1, strength: 1, versatility: 1, explosiveness: 1 };
+            
+            Object.keys(userStats).forEach(uid => {
+                const stats = userStats[uid];
+                
                 let ctl = 0;
-                const earliestDateStr = userCtls[uid].earliest;
-                if (earliestDateStr) {
-                    let currentDate = new Date(earliestDateStr);
+                if (stats.earliest) {
+                    let currentDate = new Date(stats.earliest);
                     const today = new Date();
                     currentDate.setUTCHours(0,0,0,0);
                     today.setUTCHours(0,0,0,0);
                     while (currentDate <= today) {
                         const dateStr = currentDate.toISOString().split('T')[0];
-                        const dailyTss = userCtls[uid].map[dateStr] || 0;
+                        const dailyTss = stats.ctlMap[dateStr] || 0;
                         ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
                         currentDate.setUTCDate(currentDate.getUTCDate() + 1);
                     }
                 }
-                if (ctl > globalMaxCtl) globalMaxCtl = ctl;
+                
+                let strengthScore = (stats.weightTrainingCount * 5) + (stats.totalElevation / 1000);
+                let versatilityScore = stats.uniqueSports.size;
+                let explosivenessScore = stats.explosiveSessions;
+
+                if (ctl > globalMax.ctl) globalMax.ctl = ctl;
+                if (strengthScore > globalMax.strength) globalMax.strength = strengthScore;
+                if (versatilityScore > globalMax.versatility) globalMax.versatility = versatilityScore;
+                if (explosivenessScore > globalMax.explosiveness) globalMax.explosiveness = explosivenessScore;
             });
-            resolve(globalMaxCtl);
+            resolve(globalMax);
         });
     });
 }
 
 async function generateAllPublicProfiles() {
     console.log("🕒 Running 15:00 / 20:00 Profile Caching Routine...");
-    // 1. Calculate Global Max CTL using ALL activities
-    const globalMaxCtl = await calculateGlobalMaxCtl();
-    console.log(`[Cache] Global Max CTL calculated as: ${globalMaxCtl}`);
+    // 1. Calculate Global Max Stats using ALL activities
+    const globalMaxStats = await calculateGlobalMaxStats();
+    console.log(`[Cache] Global Max Stats calculated as:`, globalMaxStats);
 
     // 2. Iterate all users and generate profile
         db.all(`SELECT id FROM users`, [], async (err, users) => {
             if (err || !users) return;
             for (const u of users) {
-                await generatePublicProfile(u.id, globalMaxCtl);
+                await generatePublicProfile(u.id, globalMaxStats);
                 // sleep 2s to not hammer AI
                 await new Promise(r => setTimeout(r, 2000));
             }
@@ -1724,8 +1747,8 @@ app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
             return res.json(JSON.parse(row.data));
         } else {
             // Fallback generation if missing
-            const globalMaxCtl = await calculateGlobalMaxCtl();
-            const profileData = await generatePublicProfile(targetUserId, globalMaxCtl);
+            const globalMaxStats = await calculateGlobalMaxStats();
+            const profileData = await generatePublicProfile(targetUserId, globalMaxStats);
             if (profileData) res.json(profileData);
             else res.status(404).json({ error: "User not found" });
         }
