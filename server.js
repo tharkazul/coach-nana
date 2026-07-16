@@ -995,34 +995,6 @@ CRITICAL RULES:
         });
     });
 });
-
-app.get('/api/profile/highlights', authenticateToken, (req, res) => {
-    db.get(`SELECT username, coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], (err, user) => {
-        if (err || !user) return res.status(500).json({ error: "DB Error" });
-
-        db.all(`SELECT name, date, ctl_target FROM milestones WHERE user_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 3`, [req.user.id], async (err, milestones) => {
-
-            const msText = milestones && milestones.length > 0
-                ? milestones.map(m => `- ${m.name} on ${m.date} (Target CTL: ${m.ctl_target})`).join('\n')
-                : "No upcoming races logged.";
-
-            const prompt = `Write a 2-3 sentence "Coach Highlight" for ${user.username}. 
-Context about them: ${user.athlete_context}
-Upcoming Races/Goals: 
-${msText}
-
-Write this from the perspective of their coach (Tone: ${user.coach_tone}). Highlight their upcoming goals and encourage them. Keep it brief, dynamic, and highly personalized! Do not include any markdown bolding or headers.`;
-
-            try {
-                const highlight = await generateWithFallback("Generate profile highlight", prompt, []);
-                res.json({ highlight });
-            } catch (e) {
-                res.json({ highlight: "Keep pushing! You're doing great, but I need to analyze more data to give you a personalized highlight." });
-            }
-        });
-    });
-});
-
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
         `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy, profile_picture_url FROM users WHERE id = ?`,

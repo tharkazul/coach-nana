@@ -516,21 +516,6 @@ function logout() {
 }
 
 // --- SETTINGS LOGIC ---
-async function loadProfileHighlights() {
-    const highlightsContent = document.getElementById('profile-highlights-content');
-    try {
-        const res = await fetch('/api/profile/highlights', { headers: getAuthHeaders() });
-        if (res.ok) {
-            const data = await res.json();
-            highlightsContent.innerHTML = `<p>${data.highlight.replace(/\n/g, '<br>')}</p>`;
-        } else {
-            highlightsContent.innerHTML = `<p class="text-theme-muted text-xs">Highlights are not available right now.</p>`;
-        }
-    } catch (e) {
-        highlightsContent.innerHTML = `<p class="text-theme-muted text-xs">Highlights are not available right now.</p>`;
-    }
-}
-
 async function loadSettings() {
     try {
         const res = await fetch('/api/user/settings', { headers: getAuthHeaders() });
@@ -846,7 +831,6 @@ function switchTab(t) {
 
     if (t === 'profile') {
         loadSettings();
-        loadProfileHighlights();
     }
     if (t === 'history') loadHistory();
     if (t === 'social') loadSocialFeed();
