@@ -1661,6 +1661,7 @@ async function generateAllPublicProfiles() {
                 // sleep 2s to not hammer AI
                 await new Promise(r => setTimeout(r, 2000));
             }
+            console.log("✅ All public profiles (Radar Charts & AI Highlights) have been successfully generated and cached!");
         });
     });
 }
