@@ -1546,14 +1546,16 @@ function generatePublicProfile(targetUserId, globalMaxCtl) {
             
             db.all(`SELECT id, name, distance_km, moving_time_min, start_date, sport_type, tss as spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
                 
-                db.all(`SELECT start_date, substr(start_date, 1, 10) as date, tss, sport_type, distance_km, elevation_m, moving_time_min FROM activities WHERE user_id = ? AND start_date >= datetime('now', '-90 days') ORDER BY start_date ASC`, [targetUserId], async (err, rows) => {
+                db.all(`SELECT start_date, substr(start_date, 1, 10) as date, tss, sport_type, distance_km, elevation_m, moving_time_min FROM activities WHERE user_id = ? ORDER BY start_date ASC`, [targetUserId], async (err, rows) => {
                     
                     db.all(`SELECT date, weight_kg FROM biometrics WHERE user_id = ? AND date >= date('now', '-30 days') ORDER BY date ASC`, [targetUserId], async (err, weights) => {
                         
                         const trends = { dates: [], tsb: [], ctl: [], atl: [], weight: [] };
                         
                         const tssMap = {};
-                        if (rows) {
+                        let earliestDateStr = null;
+                        if (rows && rows.length > 0) {
+                            earliestDateStr = rows[0].date;
                             rows.forEach(r => {
                                 if (!tssMap[r.date]) tssMap[r.date] = 0;
                                 tssMap[r.date] += (r.tss || 0);
@@ -1563,21 +1565,34 @@ function generatePublicProfile(targetUserId, globalMaxCtl) {
                         if (weights) weights.forEach(w => weightMap[w.date] = w.weight_kg || null);
 
                         let ctl = 0; let atl = 0;
-                        for (let i = 89; i >= 0; i--) {
-                            const d = new Date();
-                            d.setDate(d.getDate() - i);
-                            const dateStr = d.toISOString().split('T')[0];
+                        if (earliestDateStr) {
+                            let currentDate = new Date(earliestDateStr);
+                            const today = new Date();
+                            currentDate.setUTCHours(0,0,0,0);
+                            today.setUTCHours(0,0,0,0);
                             
-                            const dailyTss = tssMap[dateStr] || 0;
-                            ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
-                            atl = atl + (dailyTss - atl) * (1 - Math.exp(-1/7));
+                            // Calculate how many days to push to trends
+                            const totalDays = Math.round((today - currentDate) / (1000 * 60 * 60 * 24));
+                            const trendStartIdx = totalDays - 29; // We only want the last 30 days
                             
-                            if (i < 30) {
-                                trends.dates.push(dateStr);
-                                trends.ctl.push(ctl);
-                                trends.atl.push(atl);
-                                trends.tsb.push(ctl - atl);
-                                trends.weight.push(weightMap[dateStr] || null);
+                            let currentDayIdx = 0;
+                            while (currentDate <= today) {
+                                const dateStr = currentDate.toISOString().split('T')[0];
+                                
+                                const dailyTss = tssMap[dateStr] || 0;
+                                ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+                                atl = atl + (dailyTss - atl) * (1 - Math.exp(-1/7));
+                                
+                                if (currentDayIdx >= trendStartIdx) {
+                                    trends.dates.push(dateStr);
+                                    trends.ctl.push(ctl);
+                                    trends.atl.push(atl);
+                                    trends.tsb.push(ctl - atl);
+                                    trends.weight.push(weightMap[dateStr] || null);
+                                }
+                                
+                                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                                currentDayIdx++;
                             }
                         }
 
@@ -1629,24 +1644,32 @@ Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep
 
 async function generateAllPublicProfiles() {
     console.log("🕒 Running 15:00 / 20:00 Profile Caching Routine...");
-    // 1. Calculate Global Max CTL
-    db.all(`SELECT user_id, substr(start_date, 1, 10) as date, SUM(tss) as daily_tss FROM activities WHERE start_date >= datetime('now', '-90 days') GROUP BY user_id, date ORDER BY date ASC`, [], async (err, rows) => {
+    // 1. Calculate Global Max CTL using ALL activities
+    db.all(`SELECT user_id, substr(start_date, 1, 10) as date, SUM(tss) as daily_tss FROM activities GROUP BY user_id, date ORDER BY date ASC`, [], async (err, rows) => {
         if (err || !rows) return;
         
         const userCtls = {};
         rows.forEach(r => {
-            if (!userCtls[r.user_id]) userCtls[r.user_id] = { ctl: 0, map: {} };
+            if (!userCtls[r.user_id]) userCtls[r.user_id] = { ctl: 0, map: {}, earliest: r.date };
+            else if (!userCtls[r.user_id].earliest) userCtls[r.user_id].earliest = r.date;
             userCtls[r.user_id].map[r.date] = r.daily_tss;
         });
 
         let globalMaxCtl = 1; // Start at 1 to prevent division by zero, scale to whatever the actual max is
         Object.keys(userCtls).forEach(uid => {
             let ctl = 0;
-            for (let i = 89; i >= 0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
-                const dateStr = d.toISOString().split('T')[0];
-                const dailyTss = userCtls[uid].map[dateStr] || 0;
-                ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+            const earliestDateStr = userCtls[uid].earliest;
+            if (earliestDateStr) {
+                let currentDate = new Date(earliestDateStr);
+                const today = new Date();
+                currentDate.setUTCHours(0,0,0,0);
+                today.setUTCHours(0,0,0,0);
+                while (currentDate <= today) {
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const dailyTss = userCtls[uid].map[dateStr] || 0;
+                    ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                }
             }
             if (ctl > globalMaxCtl) globalMaxCtl = ctl;
         });

@@ -1935,7 +1935,29 @@ async function openActivityModal(id) {
     document.getElementById('modal-content').classList.add('hidden');
     document.getElementById('modal-title').innerText = "Connecting to Strava...";
     try {
-        const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); const data = await res.json();
+        const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); 
+        
+        if (!res.ok) {
+            document.getElementById('modal-loader').classList.add('hidden');
+            document.getElementById('modal-title').innerText = "Error Fetching Data";
+            if (res.status === 429) {
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-theme-muted mt-20">
+                        <svg class="w-12 h-12 mb-4 text-[#ff6b6b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="font-bold text-[#ff6b6b]">STRAVA RATE LIMIT EXCEEDED</p>
+                        <p class="text-xs text-center mt-2 max-w-xs">Strava limits how many activities we can fetch in a 15-minute window. Please wait a bit before viewing more map data.</p>
+                    </div>`;
+            } else {
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="flex items-center justify-center h-full text-red-500 font-bold uppercase mt-20 tracking-wider">
+                        Connection Failed
+                    </div>`;
+            }
+            document.getElementById('modal-content').classList.remove('hidden');
+            return;
+        }
+
+        const data = await res.json();
         document.getElementById('modal-title').innerText = data.name || "Activity Details";
 
         // Handle Kudos
