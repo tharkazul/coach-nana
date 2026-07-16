@@ -1648,41 +1648,48 @@ Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep
     });
 }
 
+async function calculateGlobalMaxCtl() {
+    return new Promise((resolve) => {
+        db.all(`SELECT user_id, substr(start_date, 1, 10) as date, SUM(tss) as daily_tss FROM activities GROUP BY user_id, date ORDER BY date ASC`, [], (err, rows) => {
+            if (err || !rows) return resolve(1);
+            
+            const userCtls = {};
+            rows.forEach(r => {
+                if (!userCtls[r.user_id]) userCtls[r.user_id] = { ctl: 0, map: {}, earliest: r.date };
+                else if (!userCtls[r.user_id].earliest) userCtls[r.user_id].earliest = r.date;
+                userCtls[r.user_id].map[r.date] = r.daily_tss;
+            });
+
+            let globalMaxCtl = 1; // Start at 1 to prevent division by zero
+            Object.keys(userCtls).forEach(uid => {
+                let ctl = 0;
+                const earliestDateStr = userCtls[uid].earliest;
+                if (earliestDateStr) {
+                    let currentDate = new Date(earliestDateStr);
+                    const today = new Date();
+                    currentDate.setUTCHours(0,0,0,0);
+                    today.setUTCHours(0,0,0,0);
+                    while (currentDate <= today) {
+                        const dateStr = currentDate.toISOString().split('T')[0];
+                        const dailyTss = userCtls[uid].map[dateStr] || 0;
+                        ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+                        currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                    }
+                }
+                if (ctl > globalMaxCtl) globalMaxCtl = ctl;
+            });
+            resolve(globalMaxCtl);
+        });
+    });
+}
+
 async function generateAllPublicProfiles() {
     console.log("🕒 Running 15:00 / 20:00 Profile Caching Routine...");
     // 1. Calculate Global Max CTL using ALL activities
-    db.all(`SELECT user_id, substr(start_date, 1, 10) as date, SUM(tss) as daily_tss FROM activities GROUP BY user_id, date ORDER BY date ASC`, [], async (err, rows) => {
-        if (err || !rows) return;
-        
-        const userCtls = {};
-        rows.forEach(r => {
-            if (!userCtls[r.user_id]) userCtls[r.user_id] = { ctl: 0, map: {}, earliest: r.date };
-            else if (!userCtls[r.user_id].earliest) userCtls[r.user_id].earliest = r.date;
-            userCtls[r.user_id].map[r.date] = r.daily_tss;
-        });
+    const globalMaxCtl = await calculateGlobalMaxCtl();
+    console.log(`[Cache] Global Max CTL calculated as: ${globalMaxCtl}`);
 
-        let globalMaxCtl = 1; // Start at 1 to prevent division by zero, scale to whatever the actual max is
-        Object.keys(userCtls).forEach(uid => {
-            let ctl = 0;
-            const earliestDateStr = userCtls[uid].earliest;
-            if (earliestDateStr) {
-                let currentDate = new Date(earliestDateStr);
-                const today = new Date();
-                currentDate.setUTCHours(0,0,0,0);
-                today.setUTCHours(0,0,0,0);
-                while (currentDate <= today) {
-                    const dateStr = currentDate.toISOString().split('T')[0];
-                    const dailyTss = userCtls[uid].map[dateStr] || 0;
-                    ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
-                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-                }
-            }
-            if (ctl > globalMaxCtl) globalMaxCtl = ctl;
-        });
-
-        console.log(`[Cache] Global Max CTL calculated as: ${globalMaxCtl}`);
-
-        // 2. Iterate all users and generate profile
+    // 2. Iterate all users and generate profile
         db.all(`SELECT id FROM users`, [], async (err, users) => {
             if (err || !users) return;
             for (const u of users) {
@@ -1692,7 +1699,6 @@ async function generateAllPublicProfiles() {
             }
             console.log("✅ All public profiles (Radar Charts & AI Highlights) have been successfully generated and cached!");
         });
-    });
 }
 
 // Background Task for 15:00 and 20:00
@@ -1718,7 +1724,8 @@ app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
             return res.json(JSON.parse(row.data));
         } else {
             // Fallback generation if missing
-            const profileData = await generatePublicProfile(targetUserId, 150); // fallback 150 max ctl
+            const globalMaxCtl = await calculateGlobalMaxCtl();
+            const profileData = await generatePublicProfile(targetUserId, globalMaxCtl);
             if (profileData) res.json(profileData);
             else res.status(404).json({ error: "User not found" });
         }
