@@ -2456,19 +2456,28 @@ async function syncAllStravaUsersOnStartup() {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
+                if (!actRes.ok) {
+                    console.error(`❌ Strava Sync API Error ${actRes.status} for user ${user.id}`);
+                    continue;
+                }
+
                 const activities = await actRes.json();
 
-                activities.forEach(act => {
-                    const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50);
-                    db.run(
-                        `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
-                    );
+                if (Array.isArray(activities)) {
+                    activities.forEach(act => {
+                        const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50);
+                        db.run(
+                            `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
+                        );
 
-                    tagStravaActivity(user.id, act, token);
-                });
-                console.log(`✅ Startup sync complete for user ${user.id}`);
+                        tagStravaActivity(user.id, act, token);
+                    });
+                    console.log(`✅ Startup sync complete for user ${user.id}`);
+                } else {
+                    console.error(`❌ Startup sync failed for user ${user.id}: Response is not an array`);
+                }
             } catch (err) {
                 console.error(`❌ Startup sync failed for user ${user.id}:`, err);
             }
