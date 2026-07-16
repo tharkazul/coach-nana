@@ -1639,7 +1639,7 @@ async function generateAllPublicProfiles() {
             userCtls[r.user_id].map[r.date] = r.daily_tss;
         });
 
-        let globalMaxCtl = 100; // minimum benchmark
+        let globalMaxCtl = 1; // Start at 1 to prevent division by zero, scale to whatever the actual max is
         Object.keys(userCtls).forEach(uid => {
             let ctl = 0;
             for (let i = 89; i >= 0; i--) {
@@ -1650,6 +1650,8 @@ async function generateAllPublicProfiles() {
             }
             if (ctl > globalMaxCtl) globalMaxCtl = ctl;
         });
+
+        console.log(`[Cache] Global Max CTL calculated as: ${globalMaxCtl}`);
 
         // 2. Iterate all users and generate profile
         db.all(`SELECT id FROM users`, [], async (err, users) => {
