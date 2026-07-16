@@ -328,6 +328,9 @@ db.serialize(() => {
             }
         });
     });
+    db.run(`ALTER TABLE activities ADD COLUMN sets_json TEXT`, (err) => {
+        if (!err) console.log("Added sets_json column to activities table.");
+    });
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_spark REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
     db.run(`ALTER TABLE micro_plan RENAME COLUMN target_tss TO target_spark`, (err) => {});
     
@@ -677,7 +680,13 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`).join('\n                    ')
                         : 'No recent activities recorded.';
 
-                    db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
+                    db.all(`SELECT sport_type, start_date, sets_json FROM activities WHERE user_id = ? AND sets_json IS NOT NULL AND sets_json != '[]' ORDER BY start_date DESC LIMIT 5`, [req.user.id], (err, recentSetsRows) => {
+                        let recentSetsText = "No recent strength/PB data recorded.";
+                        if (recentSetsRows && recentSetsRows.length > 0) {
+                            recentSetsText = recentSetsRows.map(row => `Date: ${row.start_date}, Sport: ${row.sport_type}, Details: ${row.sets_json}`).join('\n');
+                        }
+
+                        db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
                         try {
                             let cleanHistory = [];
 
@@ -729,6 +738,9 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     
                     RECENT COMPLETED WORKOUTS (For context):
                     ${recentActivitiesText}
+
+                    RECENT STRENGTH & PB HISTORY:
+                    ${recentSetsText}
 
                     PHASE GUIDANCE:
                     - If phase is BASE: Focus on aerobic volume and consistency. Discourage racing or excessive intensity.
@@ -898,6 +910,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                 res.status(500).json({ error: "Internal chat processing error" });
                             }
                         }
+                    });
                     });
                 });
             } catch (e) {
@@ -1181,6 +1194,30 @@ app.get('/api/activity/:id', authenticateToken, (req, res) => {
             }
 
             const activityData = await actRes.json();
+            
+            // Extract sets or best efforts for the AI Coach
+            let extractedSets = [];
+            
+            if (activityData.best_efforts && activityData.best_efforts.length > 0) {
+                extractedSets = activityData.best_efforts.map(be => ({
+                    name: be.name,
+                    time: be.moving_time,
+                    distance: be.distance
+                }));
+            }
+            // Strava strength training structure (defensive parsing)
+            if (activityData.sport_type === 'WeightTraining') {
+                 // Try to pull from sets, exercises, or laps (depending on how partner apps sync)
+                 if (activityData.sets) extractedSets = activityData.sets;
+                 else if (activityData.exercises) extractedSets = activityData.exercises;
+                 else if (activityData.laps) extractedSets = activityData.laps; // sometimes sets are stored as laps
+            }
+
+            if (extractedSets.length > 0) {
+                db.run(`UPDATE activities SET sets_json = ? WHERE id = ?`, [JSON.stringify(extractedSets), activityId]);
+                activityData.sets_json = extractedSets; // attach for frontend
+            }
+
             res.json(activityData);
 
         } catch (err) {
@@ -1323,10 +1360,18 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                 ? metricsRows.map(m => `${m.metric}: ${m.value}`).join(', ')
                 : 'None explicitly recorded yet.';
 
-            const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
+            db.all(`SELECT sport_type, start_date, sets_json FROM activities WHERE user_id = ? AND sets_json IS NOT NULL AND sets_json != '[]' ORDER BY start_date DESC LIMIT 5`, [req.user.id], (err, recentSetsRows) => {
+                let recentSetsText = "No recent strength/PB data recorded.";
+                if (recentSetsRows && recentSetsRows.length > 0) {
+                    recentSetsText = recentSetsRows.map(row => `Date: ${row.start_date}, Sport: ${row.sport_type}, Details: ${row.sets_json}`).join('\n');
+                }
+
+                const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
             Tone: ${user.coach_tone || 'empathetic'}
             Athlete Context: ${user.athlete_context || 'General endurance athlete'}
             Key Physiological Metrics: ${metricsText}
+            Recent Strength & PB History:
+            ${recentSetsText}
         
         CRITICAL RULES:
         1. You are generating a 7-day training plan starting exactly on ${targetDate}.
@@ -1426,6 +1471,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                 console.error("AI Generation Error:", e);
                 res.status(500).json({ error: "AI failed to respond." });
             }
+        }); // End activities fetch
         }); // End metrics fetch
     });
 });

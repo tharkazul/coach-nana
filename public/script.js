@@ -2036,31 +2036,64 @@ async function openActivityModal(id) {
         } else {
             document.getElementById('modal-laps-container').classList.add('hidden');
         }
-        if (activityMap) activityMap.remove(); document.getElementById('actual-map').innerHTML = '';
-        activityMap = L.map('actual-map', { zoomControl: false }); L.control.zoom({ position: 'bottomright' }).addTo(activityMap); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(activityMap);
 
+        if (data.sets_json && data.sets_json.length > 0) {
+            document.getElementById('modal-sets-container').classList.remove('hidden');
+            document.getElementById('modal-sets-table').innerHTML = data.sets_json.map(set => {
+                let name = set.name || set.exerciseName || 'Set';
+                let weightDist = set.weight ? `${set.weight} kg` : (set.distance ? `${set.distance} m` : '--');
+                let repsTime = set.reps ? `${set.reps} reps` : (set.time ? `${set.time} s` : (set.moving_time ? `${set.moving_time} s` : '--'));
+                return `
+                    <tr class="hover:bg-theme-bg transition">
+                        <td class="px-3 py-2 font-medium">${name}</td>
+                        <td class="px-3 py-2">${weightDist}</td>
+                        <td class="px-3 py-2">${repsTime}</td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            document.getElementById('modal-sets-container').classList.add('hidden');
+        }
+
+        const mapParent = document.getElementById('actual-map').parentElement;
         let boundsToFit = null;
-        if (data.map && data.map.summary_polyline) {
-            const coords = decodePolyline(data.map.summary_polyline);
-            if (coords.length > 0) {
-                const polyline = L.polyline(coords, { color: '#0f766e', weight: 5, opacity: 0.9, lineJoin: 'round' }).addTo(activityMap);
-                boundsToFit = polyline.getBounds();
+
+        if (data.type === 'WeightTraining' || (!data.map || !data.map.summary_polyline)) {
+            mapParent.classList.add('hidden');
+            if (activityMap) {
+                activityMap.remove();
+                activityMap = null;
+            }
+            document.getElementById('actual-map').innerHTML = '';
+        } else {
+            mapParent.classList.remove('hidden');
+            if (activityMap) activityMap.remove(); document.getElementById('actual-map').innerHTML = '';
+            activityMap = L.map('actual-map', { zoomControl: false }); L.control.zoom({ position: 'bottomright' }).addTo(activityMap); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(activityMap);
+
+            if (data.map && data.map.summary_polyline) {
+                const coords = decodePolyline(data.map.summary_polyline);
+                if (coords.length > 0) {
+                    const polyline = L.polyline(coords, { color: '#0f766e', weight: 5, opacity: 0.9, lineJoin: 'round' }).addTo(activityMap);
+                    boundsToFit = polyline.getBounds();
+                }
             }
         }
 
         document.getElementById('modal-loader').classList.add('hidden'); document.getElementById('modal-content').classList.remove('hidden'); document.getElementById('modal-content').classList.add('flex');
         setTimeout(() => {
-            activityMap.invalidateSize();
-            if (boundsToFit) {
-                let dynamicMaxZoom = 15;
-                if (data.distance) {
-                    if (data.distance < 10000) dynamicMaxZoom = 14;      // < 10km: zoom out more to show neighborhood context
-                    else if (data.distance < 30000) dynamicMaxZoom = 13; // < 30km: show city context
-                    else dynamicMaxZoom = 12;                            // > 30km: zoom out
+            if (activityMap) {
+                activityMap.invalidateSize();
+                if (boundsToFit) {
+                    let dynamicMaxZoom = 15;
+                    if (data.distance) {
+                        if (data.distance < 10000) dynamicMaxZoom = 14;
+                        else if (data.distance < 30000) dynamicMaxZoom = 13;
+                        else dynamicMaxZoom = 12;
+                    }
+                    activityMap.fitBounds(boundsToFit, { padding: [40, 40], maxZoom: dynamicMaxZoom });
+                } else {
+                    activityMap.setView([52.3676, 4.9041], 13);
                 }
-                activityMap.fitBounds(boundsToFit, { padding: [40, 40], maxZoom: dynamicMaxZoom });
-            } else {
-                activityMap.setView([52.3676, 4.9041], 13);
             }
         }, 100);
     } catch (e) { document.getElementById('modal-title').innerText = "Error Fetching Data"; document.getElementById('modal-loader').innerHTML = `<span class="text-red-500 font-bold uppercase tracking-widest text-xs">Connection Failed</span>`; }
