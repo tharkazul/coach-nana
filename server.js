@@ -1264,6 +1264,32 @@ app.post('/api/user/settings/strava-exchange', authenticateToken, async (req, re
     }
 });
 
+app.post('/api/user/disconnect/strava', authenticateToken, (req, res) => {
+    db.get(`SELECT access_token FROM strava_tokens WHERE user_id = ?`, [req.user.id], async (err, row) => {
+        if (row && row.access_token) {
+            try {
+                await fetch('https://www.strava.com/oauth/deauthorize', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${row.access_token}` }
+                });
+            } catch (e) {
+                console.error("Failed to deauthorize Strava:", e);
+            }
+        }
+        db.run(`UPDATE users SET strava_refresh_token = NULL WHERE id = ?`, [req.user.id]);
+        db.run(`DELETE FROM strava_tokens WHERE user_id = ?`, [req.user.id], (err) => {
+            if (err) return res.status(500).json({ error: "Failed to disconnect Strava from database." });
+            res.json({ message: "Strava disconnected successfully!" });
+        });
+    });
+});
+
+app.post('/api/user/disconnect/garmin', authenticateToken, (req, res) => {
+    db.run(`UPDATE users SET garmin_username = NULL, garmin_password = NULL WHERE id = ?`, [req.user.id], (err) => {
+        if (err) return res.status(500).json({ error: "Failed to disconnect Garmin." });
+        res.json({ message: "Garmin disconnected successfully!" });
+    });
+});
 
 app.get('/api/dashboard-data', authenticateToken, (req, res) => {
     db.all(`SELECT substr(start_date, 1, 10) as date, sport_type, SUM(spark_score) as daily_spark FROM activities WHERE user_id = ? GROUP BY date, sport_type ORDER BY date ASC`, [req.user.id], (err, rows) => {
@@ -1380,6 +1406,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
         5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and push for progressive overload.
         6. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
+        7. SPARK TARGETS: Calculate "target_spark" for your plan. 1 minute of activity = 1 Spark (add +20% for high intensity). For Strength Training, assume each set takes 1 minute of work, plus the rest time between sets, to estimate the total duration and resulting target_spark.
 
         WORKOUT PLANNING (CRITICAL):
         If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -2063,6 +2090,18 @@ function formatStepsForStrava(stepsJson) {
 async function tagStravaActivity(userId, activity, token) {
     if (activity.description && activity.description.includes("Spark Target")) return;
 
+    db.get("SELECT value FROM athlete_metrics WHERE user_id = ? AND metric = 'strava_opt_out_activities'", [userId], (err, optOutRow) => {
+        let optOutList = [];
+        if (optOutRow && optOutRow.value) {
+            try { optOutList = JSON.parse(optOutRow.value); } catch(e) {}
+        }
+
+        const activityType = activity.sport_type || activity.type;
+        if (optOutList.includes(activityType)) {
+            console.log(`🚫 Skipping Strava tag for ${activityType} activity ${activity.id} due to user opt-out.`);
+            return;
+        }
+
     const tss = activity.suffer_score || Math.round((activity.moving_time / 3600) * 50);
     const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
     const sparkSport = mapStravaSportToSpark(activity.sport_type || activity.type);
@@ -2090,6 +2129,7 @@ async function tagStravaActivity(userId, activity, token) {
                 console.error("Failed to tag Strava activity:", e);
             }
         });
+    });
 }
 
 async function getStravaActivity(stravaAthleteId, activityId) {

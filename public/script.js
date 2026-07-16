@@ -217,11 +217,16 @@ async function saveStravaAutomations() {
     });
 
     try {
-        await fetch('/api/user/strava-opt-out', {
+        const res = await fetch('/api/user/strava-opt-out', {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ optOutActivities })
         });
+
+        if (!res.ok) {
+            console.error("Backend failed to save automations:", await res.text());
+            return;
+        }
 
         // sync to globalMetrics so UI stays fresh without reload
         if (globalMetrics) {
@@ -575,11 +580,36 @@ async function loadSettings() {
             const b = document.getElementById('garmin-status');
             b.innerText = "Connected";
             b.className = "text-[10px] font-bold px-2 py-1 rounded bg-theme-accent-soft text-theme-accent border border-theme-accent-border";
+            const btn = document.getElementById('garmin-disconnect-btn');
+            if (btn) btn.classList.remove('hidden');
+            const cbtn = document.getElementById('garmin-connect-btn');
+            if (cbtn) cbtn.classList.add('hidden');
+        } else {
+            const b = document.getElementById('garmin-status');
+            b.innerText = "Disconnected";
+            b.className = "text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-600 border border-red-200";
+            const btn = document.getElementById('garmin-disconnect-btn');
+            if (btn) btn.classList.add('hidden');
+            const cbtn = document.getElementById('garmin-connect-btn');
+            if (cbtn) cbtn.classList.remove('hidden');
         }
+        
         if (data.hasStrava) {
             const b = document.getElementById('strava-status');
             b.innerText = "Connected";
             b.className = "text-[10px] font-bold px-2 py-1 rounded bg-theme-accent-soft text-theme-accent border border-theme-accent-border";
+            const btn = document.getElementById('strava-disconnect-btn');
+            if (btn) btn.classList.remove('hidden');
+            const cbtn = document.getElementById('strava-connect-btn');
+            if (cbtn) cbtn.classList.add('hidden');
+        } else {
+            const b = document.getElementById('strava-status');
+            b.innerText = "Disconnected";
+            b.className = "text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-600 border border-red-200";
+            const btn = document.getElementById('strava-disconnect-btn');
+            if (btn) btn.classList.add('hidden');
+            const cbtn = document.getElementById('strava-connect-btn');
+            if (cbtn) cbtn.classList.remove('hidden');
         }
 
         // If user is connected, hide the banner and show the dashboard!
@@ -684,6 +714,36 @@ async function saveSettings(type) {
     } catch (e) {
         statusEl.textContent = "Server error. Please try again.";
         statusEl.classList.remove('hidden');
+    }
+}
+
+async function disconnectStrava() {
+    if (!confirm("Are you sure you want to disconnect Strava? This will stop Spark from analyzing your workouts.")) return;
+    try {
+        const res = await fetch('/api/user/disconnect/strava', { method: 'POST', headers: getAuthHeaders() });
+        if (res.ok) {
+            alert("Strava disconnected successfully.");
+            loadSettings();
+        } else {
+            alert("Failed to disconnect Strava.");
+        }
+    } catch (e) {
+        alert("Error disconnecting Strava.");
+    }
+}
+
+async function disconnectGarmin() {
+    if (!confirm("Are you sure you want to disconnect Garmin? This will stop Spark from pushing micro-plans to your watch.")) return;
+    try {
+        const res = await fetch('/api/user/disconnect/garmin', { method: 'POST', headers: getAuthHeaders() });
+        if (res.ok) {
+            alert("Garmin disconnected successfully.");
+            loadSettings();
+        } else {
+            alert("Failed to disconnect Garmin.");
+        }
+    } catch (e) {
+        alert("Error disconnecting Garmin.");
     }
 }
 

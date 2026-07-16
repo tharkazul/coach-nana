@@ -1339,9 +1339,10 @@
                                         </svg></button>
                                 </div>
                             </div>
-                            <button onclick="saveSettings('garmin')"
-                                class="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-blue-700 transition">Connect
-                                Garmin</button>
+                            <div class="flex gap-3">
+                                <button id="garmin-connect-btn" onclick="saveSettings('garmin')" class="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-blue-700 transition">Connect Garmin</button>
+                                <button id="garmin-disconnect-btn" onclick="disconnectGarmin()" class="hidden bg-red-600 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-red-700 transition">Disconnect Garmin</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1367,13 +1368,17 @@
                                         class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Authorize
                                         Spark</label>
                                     <div class="flex flex-wrap gap-3">
-                                        <button onclick="connectStravaOAuth()"
+                                        <button id="strava-connect-btn" onclick="connectStravaOAuth()"
                                             class="bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-orange-600 transition flex items-center gap-2">
                                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                                 <path
                                                     d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
                                             </svg>
                                             Connect with Strava
+                                        </button>
+                                        <button id="strava-disconnect-btn" onclick="disconnectStrava()"
+                                            class="hidden bg-red-600 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-red-700 transition flex items-center gap-2">
+                                            Disconnect Strava
                                         </button>
                                         <button onclick="forceStravaSync()"
                                             class="bg-theme-bg border border-theme-border text-theme-text text-xs font-bold px-4 py-2 rounded shadow-sm hover:bg-theme-border transition">Pull
