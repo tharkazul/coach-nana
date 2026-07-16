@@ -2471,8 +2471,6 @@ async function syncAllStravaUsersOnStartup() {
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                             [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
                         );
-
-                        tagStravaActivity(user.id, act, token);
                     });
                     console.log(`✅ Startup sync complete for user ${user.id}`);
                 } else {
