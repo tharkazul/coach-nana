@@ -417,6 +417,12 @@ db.serialize(() => {
         FOREIGN KEY(activity_id) REFERENCES activities(id),
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS public_profile_cache (
+        user_id INTEGER PRIMARY KEY,
+        data TEXT,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 });
 
 // --- AUTHENTICATION MIDDLEWARE ---
