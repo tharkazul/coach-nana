@@ -509,15 +509,12 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <div class="text-[10px] md:text-xs text-theme-muted font-mono" id="header-date"></div>
-                    <button onclick="switchTab('settings')"
+                    <button onclick="switchTab('profile')"
                         class="text-theme-muted hover:text-theme-accent transition flex items-center gap-1.5 group">
                         <svg class="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform duration-300"
                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
-                            </path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                         </svg>
                     </button>
             </header>
@@ -1108,13 +1105,33 @@
 
                 </div>
 
-                <!-- SETTINGS VIEW -->
-                <div id="view-settings"
+                <!-- PROFILE VIEW -->
+                <div id="view-profile"
                     class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
                     <div>
-                        <h2 class="text-xl font-bold text-theme-text">Athlete Profile & Settings</h2>
-                        <p class="text-xs text-theme-muted mt-1">Configure your AI Coach and connect your devices.</p>
+                        <h2 class="text-xl font-bold text-theme-text">Athlete Profile</h2>
+                        <p class="text-xs text-theme-muted mt-1">Your Coach Highlights, Configuration, and Connections.</p>
                     </div>
+
+                    <!-- COACH HIGHLIGHTS -->
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Coach Highlights
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <div id="profile-highlights-content" class="text-sm text-theme-text italic bg-theme-bg/50 p-4 rounded-lg border border-theme-border/50">
+                                <!-- Loading skeleton -->
+                                <div class="animate-pulse space-y-2">
+                                    <div class="h-4 bg-theme-border rounded w-3/4"></div>
+                                    <div class="h-4 bg-theme-border rounded w-full"></div>
+                                    <div class="h-4 bg-theme-border rounded w-5/6"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
                             <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">

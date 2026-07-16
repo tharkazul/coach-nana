@@ -516,6 +516,21 @@ function logout() {
 }
 
 // --- SETTINGS LOGIC ---
+async function loadProfileHighlights() {
+    const highlightsContent = document.getElementById('profile-highlights-content');
+    try {
+        const res = await fetch('/api/profile/highlights', { headers: getAuthHeaders() });
+        if (res.ok) {
+            const data = await res.json();
+            highlightsContent.innerHTML = `<p>${data.highlight.replace(/\n/g, '<br>')}</p>`;
+        } else {
+            highlightsContent.innerHTML = `<p class="text-theme-muted text-xs">Highlights are not available right now.</p>`;
+        }
+    } catch (e) {
+        highlightsContent.innerHTML = `<p class="text-theme-muted text-xs">Highlights are not available right now.</p>`;
+    }
+}
+
 async function loadSettings() {
     try {
         const res = await fetch('/api/user/settings', { headers: getAuthHeaders() });
@@ -784,7 +799,7 @@ function updateUnreadBadge(latestMsgTime) {
 
 function switchTab(t) {
     // Safely toggle visibility to prevent missing ID crashes
-    const views = ['dashboard', 'coach', 'settings', 'history', 'admin', 'physique', 'social'];
+    const views = ['dashboard', 'coach', 'profile', 'history', 'admin', 'physique', 'social'];
     views.forEach(view => {
         const el = document.getElementById(`view-${view}`);
         if (el) {
@@ -815,7 +830,7 @@ function switchTab(t) {
         if (badge) badge.classList.add('hidden');
     }
 
-    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'settings': 'Athlete Profile', 'history': 'Log', 'physique': 'Physique & Recovery', 'social': 'Social' }[t];
+    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'profile': 'Athlete Profile', 'history': 'Log', 'physique': 'Physique & Recovery', 'social': 'Social' }[t];
 
     views.forEach(tab => {
         const btn = document.getElementById(`nav-btn-${tab}`);
@@ -829,6 +844,10 @@ function switchTab(t) {
         }
     });
 
+    if (t === 'profile') {
+        loadSettings();
+        loadProfileHighlights();
+    }
     if (t === 'history') loadHistory();
     if (t === 'social') loadSocialFeed();
     if (t === 'physique') {

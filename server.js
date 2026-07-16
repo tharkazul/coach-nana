@@ -20,7 +20,7 @@ try {
 
 function matchGarminExercise(name) {
     if (!name || garminExercises.length === 0) return null;
-    const results = fuzzysort.go(name, garminExercises, {key: 'exercise_name', limit: 1});
+    const results = fuzzysort.go(name, garminExercises, { key: 'exercise_name', limit: 1 });
     if (results && results.length > 0) {
         // Only return if it's a reasonably good match
         if (results[0].score > 0.4) {
@@ -48,7 +48,7 @@ const geminiConfigs = [
     {
         name: "Tertiary",
         model: "gemini-3.1-flash-lite",
-        apiKey: process.env.GEMINI_API_KEY_TERTIARY || process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY 
+        apiKey: process.env.GEMINI_API_KEY_TERTIARY || process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY
     }
 ];
 
@@ -131,7 +131,7 @@ function getUserLeaderboardString(userId) {
             ORDER BY total_spark_score DESC
         `, [userId, userId], (err, rows) => {
             if (err || !rows || rows.length === 0) return resolve('');
-            const lb = rows.map((r, i) => `${i+1}. ${r.username} (${Math.round(r.total_spark_score)} Points)`).join(', ');
+            const lb = rows.map((r, i) => `${i + 1}. ${r.username} (${Math.round(r.total_spark_score)} Points)`).join(', ');
             resolve(`\n\nCurrent Leaderboard: ${lb}`);
         });
     });
@@ -293,11 +293,11 @@ db.serialize(() => {
         profile_picture_url TEXT
     )`);
     // Add columns if they don't exist (fails silently if they do)
-    db.run(`ALTER TABLE users ADD COLUMN long_term_memory TEXT DEFAULT ''`, (err) => {});
-    db.run(`ALTER TABLE users ADD COLUMN daily_token_usage INTEGER DEFAULT 0`, (err) => {});
-    db.run(`ALTER TABLE users ADD COLUMN last_token_reset_date TEXT`, (err) => {});
-    db.run(`ALTER TABLE users ADD COLUMN search_privacy INTEGER DEFAULT 0`, (err) => {});
-    db.run(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`, (err) => {});
+    db.run(`ALTER TABLE users ADD COLUMN long_term_memory TEXT DEFAULT ''`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN daily_token_usage INTEGER DEFAULT 0`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN last_token_reset_date TEXT`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN search_privacy INTEGER DEFAULT 0`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`, (err) => { });
     db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -332,8 +332,8 @@ db.serialize(() => {
         if (!err) console.log("Added sets_json column to activities table.");
     });
     db.run(`CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_spark REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`);
-    db.run(`ALTER TABLE micro_plan RENAME COLUMN target_tss TO target_spark`, (err) => {});
-    
+    db.run(`ALTER TABLE micro_plan RENAME COLUMN target_tss TO target_spark`, (err) => { });
+
     // Ensure steps_json exists for legacy DBs (if table has id but no steps_json)
     db.run(`ALTER TABLE micro_plan ADD COLUMN steps_json TEXT DEFAULT '[]'`, (err) => {
         if (err && !err.message.includes("duplicate column name")) {
@@ -658,12 +658,12 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         // Token limit logic
         const todayStr = new Date().toISOString().split('T')[0];
         let currentDailyUsage = user.daily_token_usage || 0;
-        
+
         if (user.last_token_reset_date !== todayStr) {
             currentDailyUsage = 0;
             db.run(`UPDATE users SET daily_token_usage = 0, last_token_reset_date = ? WHERE id = ?`, [todayStr, req.user.id]);
         }
-        
+
         if (currentDailyUsage > 100000) {
             return res.status(429).json({ error: "Daily token limit reached. Please try again tomorrow!" });
         }
@@ -687,38 +687,38 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         }
 
                         db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
-                        try {
-                            let cleanHistory = [];
+                            try {
+                                let cleanHistory = [];
 
-                            (historyRows || []).forEach(row => {
-                                let currentRole = row.role === 'coach' ? 'model' : 'user';
+                                (historyRows || []).forEach(row => {
+                                    let currentRole = row.role === 'coach' ? 'model' : 'user';
 
-                            if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === currentRole) {
-                                cleanHistory[cleanHistory.length - 1].parts[0].text += "\n\n" + row.content;
-                            } else {
-                                cleanHistory.push({
-                                    role: currentRole,
-                                    parts: [{ text: row.content }]
+                                    if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === currentRole) {
+                                        cleanHistory[cleanHistory.length - 1].parts[0].text += "\n\n" + row.content;
+                                    } else {
+                                        cleanHistory.push({
+                                            role: currentRole,
+                                            parts: [{ text: row.content }]
+                                        });
+                                    }
                                 });
-                            }
-                        });
 
-                        if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
-                            cleanHistory.shift();
-                        }
-                        if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
-                            cleanHistory.pop();
-                        }
+                                if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
+                                    cleanHistory.shift();
+                                }
+                                if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
+                                    cleanHistory.pop();
+                                }
 
-                        const todayStr = getAMSDateString();
-                        const next7Days = Array.from({ length: 7 }, (_, i) => {
-                            const d = new Date();
-                            d.setDate(d.getDate() + i);
-                            return `${getAMSWeekday(d)}: ${getAMSDateString(d)}`;
-                        }).join(', ');
+                                const todayStr = getAMSDateString();
+                                const next7Days = Array.from({ length: 7 }, (_, i) => {
+                                    const d = new Date();
+                                    d.setDate(d.getDate() + i);
+                                    return `${getAMSWeekday(d)}: ${getAMSDateString(d)}`;
+                                }).join(', ');
 
-                        const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
-                    Name: Coach Nana
+                                const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
+                    Name: Spark
                     Tone: ${user.coach_tone}
                     Current Training Phase: ${phase || user.training_phase || 'Base/General'}
                     
@@ -808,109 +808,109 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     }
                     \`\`\``;
 
-                        let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data, req.user.id);
-                        let planUpdated = false;
+                                let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data, req.user.id);
+                                let planUpdated = false;
 
-                        const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
-                        for (const match of jsonMatches) {
-                            try {
-                                const parsedData = JSON.parse(match[1]);
+                                const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
+                                for (const match of jsonMatches) {
+                                    try {
+                                        const parsedData = JSON.parse(match[1]);
 
-                                if (Array.isArray(parsedData)) {
-                                    const planData = parsedData;
-                                    const affectedDates = [...new Set(planData.map(day => day.date))];
+                                        if (Array.isArray(parsedData)) {
+                                            const planData = parsedData;
+                                            const affectedDates = [...new Set(planData.map(day => day.date))];
 
-                                    if (affectedDates.length > 0) {
-                                        const placeholders = affectedDates.map(() => '?').join(',');
+                                            if (affectedDates.length > 0) {
+                                                const placeholders = affectedDates.map(() => '?').join(',');
 
-                                        db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
-                                            if (err) console.error("Failed to clear old plan data:", err);
+                                                db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                                    if (err) console.error("Failed to clear old plan data:", err);
 
-                                            const stmt = db.prepare(`
+                                                    const stmt = db.prepare(`
                                         INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?)
                                     `);
 
-                                            planData.forEach(day => {
-                                                stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
-                                            });
-                                            stmt.finalize();
-                                        });
-                                    }
-                                    planUpdated = true;
-                                } else if (parsedData && parsedData.type === 'metrics' && parsedData.data) {
-                                    const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?) ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`);
-                                    for (const [key, val] of Object.entries(parsedData.data)) {
-                                        stmt.run(req.user.id, key, String(val));
-                                    }
-                                    stmt.finalize();
-                                } else if (parsedData && parsedData.type === 'log_activity' && parsedData.data) {
-                                    const act = parsedData.data;
-                                    // Use negative ID to avoid collision with real Strava IDs
-                                    const manualId = -Date.now();
-                                    const startDate = new Date().toISOString();
-                                    
-                                    db.run(
-                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.spark_score || 0],
-                                        (err) => {
-                                            if (err) console.error("Failed to insert manual activity:", err);
-                                            else {
-                                                // Invalidate today's nutrition cache so it incorporates the new workout
-                                                const todayStr = startDate.split('T')[0];
-                                                db.run(`DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [req.user.id, todayStr]);
+                                                    planData.forEach(day => {
+                                                        stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
+                                                    });
+                                                    stmt.finalize();
+                                                });
                                             }
+                                            planUpdated = true;
+                                        } else if (parsedData && parsedData.type === 'metrics' && parsedData.data) {
+                                            const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?) ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`);
+                                            for (const [key, val] of Object.entries(parsedData.data)) {
+                                                stmt.run(req.user.id, key, String(val));
+                                            }
+                                            stmt.finalize();
+                                        } else if (parsedData && parsedData.type === 'log_activity' && parsedData.data) {
+                                            const act = parsedData.data;
+                                            // Use negative ID to avoid collision with real Strava IDs
+                                            const manualId = -Date.now();
+                                            const startDate = new Date().toISOString();
+
+                                            db.run(
+                                                `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                                                [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.spark_score || 0],
+                                                (err) => {
+                                                    if (err) console.error("Failed to insert manual activity:", err);
+                                                    else {
+                                                        // Invalidate today's nutrition cache so it incorporates the new workout
+                                                        const todayStr = startDate.split('T')[0];
+                                                        db.run(`DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [req.user.id, todayStr]);
+                                                    }
+                                                }
+                                            );
+                                            planUpdated = true; // Signal frontend to reload data/charts
                                         }
-                                    );
-                                    planUpdated = true; // Signal frontend to reload data/charts
+                                    } catch (e) {
+                                        console.error("Failed to parse an AI JSON block", e);
+                                    }
                                 }
-                            } catch (e) {
-                                console.error("Failed to parse an AI JSON block", e);
-                            }
-                        }
 
-                        aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
+                                aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
 
-                        let mood = 'default';
-                        const lowerReply = aiReply.toLowerCase();
+                                let mood = 'default';
+                                const lowerReply = aiReply.toLowerCase();
 
-                        // if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
-                        // if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+                                // if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
+                                // if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
 
-                        // Define your keyword arrays here
-                        const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
-                        const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
-                        const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust', 'dream', 'hot'];
-                        // .some() acts as a giant OR statement across the whole array
-                        if (hypeKeywords.some(word => lowerReply.includes(word))) {
-                            mood = 'hype';
-                        } else if (hornyKeywords.some(word => lowerReply.includes(word))) {
-                            mood = 'horny';
-                        } else if (disappointedKeywords.some(word => lowerReply.includes(word))) {
-                            mood = 'disappointed';
-                        }
+                                // Define your keyword arrays here
+                                const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
+                                const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
+                                const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust', 'dream', 'hot'];
+                                // .some() acts as a giant OR statement across the whole array
+                                if (hypeKeywords.some(word => lowerReply.includes(word))) {
+                                    mood = 'hype';
+                                } else if (hornyKeywords.some(word => lowerReply.includes(word))) {
+                                    mood = 'horny';
+                                } else if (disappointedKeywords.some(word => lowerReply.includes(word))) {
+                                    mood = 'disappointed';
+                                }
 
 
-                        const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
-                        const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
+                                const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
+                                const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
 
-                        db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
-                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
+                                db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
+                                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
 
-                        db.get(`SELECT COUNT(*) as count FROM chat_history WHERE user_id = ?`, [req.user.id], (err, row) => {
-                            if (row && row.count > 0 && row.count % 6 === 0) {
-                                triggerBackgroundSummary(req.user.id);
+                                db.get(`SELECT COUNT(*) as count FROM chat_history WHERE user_id = ?`, [req.user.id], (err, row) => {
+                                    if (row && row.count > 0 && row.count % 6 === 0) {
+                                        triggerBackgroundSummary(req.user.id);
+                                    }
+                                });
+
+                                res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
+                            } catch (innerErr) {
+                                console.error("Async Error in chat history callback:", innerErr);
+                                if (!res.headersSent) {
+                                    res.status(500).json({ error: "Internal chat processing error" });
+                                }
                             }
                         });
-
-                        res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
-                        } catch (innerErr) {
-                            console.error("Async Error in chat history callback:", innerErr);
-                            if (!res.headersSent) {
-                                res.status(500).json({ error: "Internal chat processing error" });
-                            }
-                        }
-                    });
                     });
                 });
             } catch (e) {
@@ -924,14 +924,14 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 app.get('/api/chat/briefing', authenticateToken, (req, res) => {
     db.get(`SELECT content, mood, timestamp FROM chat_history 
             WHERE user_id = ? AND role = 'coach' AND date(timestamp, 'localtime') = date('now', 'localtime') 
-            ORDER BY timestamp ASC LIMIT 1`, 
-    [req.user.id], (err, row) => {
-        if (err) {
-            console.error("Error fetching briefing:", err);
-            return res.status(500).json({ error: "Failed to fetch briefing." });
-        }
-        res.json({ briefing: row || null });
-    });
+            ORDER BY timestamp ASC LIMIT 1`,
+        [req.user.id], (err, row) => {
+            if (err) {
+                console.error("Error fetching briefing:", err);
+                return res.status(500).json({ error: "Failed to fetch briefing." });
+            }
+            res.json({ briefing: row || null });
+        });
 });
 
 app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
@@ -943,10 +943,10 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
                 ? recentActivities.map(a => `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`).join('\n')
                 : 'No recent activities recorded.';
 
-            
+
             db.all(`SELECT metric, value FROM athlete_metrics WHERE user_id = ?`, [req.user.id], async (err, metrics) => {
-                const metricsText = (metrics && metrics.length > 0) 
-                    ? metrics.map(m => `${m.metric}: ${m.value}`).join(', ') 
+                const metricsText = (metrics && metrics.length > 0)
+                    ? metrics.map(m => `${m.metric}: ${m.value}`).join(', ')
                     : 'No metrics recorded.';
 
                 db.all(`SELECT date, sport, description FROM micro_plan WHERE user_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 2`, [req.user.id], async (err, upcomingPlan) => {
@@ -980,18 +980,45 @@ CRITICAL RULES:
 3. Keep it brief, extremely human, and supportive. 
 4. DO NOT generate any JSON or workout plan updates. Just the greeting.`;
 
-                try {
-                    let aiReply = await generateWithFallback("Generate the proactive greeting.", systemPrompt, []);
-                    aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
+                    try {
+                        let aiReply = await generateWithFallback("Generate the proactive greeting.", systemPrompt, []);
+                        aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
 
-                    db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'default')`, [req.user.id, aiReply]);
-                    res.json({ reply: aiReply, mood: 'default' });
-                } catch (e) {
-                    console.error("Checkin Server Error:", e);
-                    res.status(500).json({ error: "AI failed to respond." });
-                }
+                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'default')`, [req.user.id, aiReply]);
+                        res.json({ reply: aiReply, mood: 'default' });
+                    } catch (e) {
+                        console.error("Checkin Server Error:", e);
+                        res.status(500).json({ error: "AI failed to respond." });
+                    }
                 });
             });
+        });
+    });
+});
+
+app.get('/api/profile/highlights', authenticateToken, (req, res) => {
+    db.get(`SELECT username, coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], (err, user) => {
+        if (err || !user) return res.status(500).json({ error: "DB Error" });
+
+        db.all(`SELECT name, date, ctl_target FROM milestones WHERE user_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 3`, [req.user.id], async (err, milestones) => {
+
+            const msText = milestones && milestones.length > 0
+                ? milestones.map(m => `- ${m.name} on ${m.date} (Target CTL: ${m.ctl_target})`).join('\n')
+                : "No upcoming races logged.";
+
+            const prompt = `Write a 2-3 sentence "Coach Highlight" for ${user.username}. 
+Context about them: ${user.athlete_context}
+Upcoming Races/Goals: 
+${msText}
+
+Write this from the perspective of their coach (Tone: ${user.coach_tone}). Highlight their upcoming goals and encourage them. Keep it brief, dynamic, and highly personalized! Do not include any markdown bolding or headers.`;
+
+            try {
+                const highlight = await generateWithFallback("Generate profile highlight", prompt, []);
+                res.json({ highlight });
+            } catch (e) {
+                res.json({ highlight: "Keep pushing! You're doing great, but I need to analyze more data to give you a personalized highlight." });
+            }
         });
     });
 });
@@ -1071,13 +1098,13 @@ app.post('/api/user/strava-opt-out', authenticateToken, (req, res) => {
         return res.status(400).json({ error: "optOutActivities must be an array" });
     }
     const val = JSON.stringify(optOutActivities);
-    
+
     db.run(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, 'strava_opt_out_activities', ?) 
-            ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`, 
-            [req.user.id, val], (err) => {
-        if (err) return res.status(500).json({ error: "Failed to update preferences." });
-        res.json({ success: true });
-    });
+            ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`,
+        [req.user.id, val], (err) => {
+            if (err) return res.status(500).json({ error: "Failed to update preferences." });
+            res.json({ success: true });
+        });
 });
 
 app.post('/api/user/settings/garmin', authenticateToken, (req, res) => {
@@ -1195,10 +1222,10 @@ app.get('/api/activity/:id', authenticateToken, (req, res) => {
             }
 
             const activityData = await actRes.json();
-            
+
             // Extract sets or best efforts for the AI Coach
             let extractedSets = [];
-            
+
             if (activityData.best_efforts && activityData.best_efforts.length > 0) {
                 extractedSets = activityData.best_efforts.map(be => ({
                     name: be.name,
@@ -1208,10 +1235,10 @@ app.get('/api/activity/:id', authenticateToken, (req, res) => {
             }
             // Strava strength training structure (defensive parsing)
             if (activityData.sport_type === 'WeightTraining') {
-                 // Try to pull from sets, exercises, or laps (depending on how partner apps sync)
-                 if (activityData.sets) extractedSets = activityData.sets;
-                 else if (activityData.exercises) extractedSets = activityData.exercises;
-                 else if (activityData.laps) extractedSets = activityData.laps; // sometimes sets are stored as laps
+                // Try to pull from sets, exercises, or laps (depending on how partner apps sync)
+                if (activityData.sets) extractedSets = activityData.sets;
+                else if (activityData.exercises) extractedSets = activityData.exercises;
+                else if (activityData.laps) extractedSets = activityData.laps; // sometimes sets are stored as laps
             }
 
             if (extractedSets.length > 0) {
@@ -1434,12 +1461,12 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
         \`\`\`
         *Note: Ensure "steps_json" is formatted as a stringified JSON array as shown in the examples. Exercises MUST go in steps_json, NOT details!*`;
 
-            const ctl = user.current_ctl || 0;
-            const atl = user.current_atl || 0;
-            const tsb = ctl - atl;
-            const phase = user.training_phase || 'Base';
+                const ctl = user.current_ctl || 0;
+                const atl = user.current_atl || 0;
+                const tsb = ctl - atl;
+                const phase = user.training_phase || 'Base';
 
-            const userPrompt = `Please generate a 7-day training plan for me starting on ${targetDate}. 
+                const userPrompt = `Please generate a 7-day training plan for me starting on ${targetDate}. 
         
         Here are my current physiological metrics to govern the volume and intensity of this block:
         - Training Phase: ${phase}
@@ -1449,57 +1476,57 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
         Analyze my Form (TSB). If I am highly fatigued (negative TSB), prioritize recovery. If I am fresh (positive TSB), you can push the intensity. Give me a quick encouraging summary of the week's focus based on these metrics, and then provide the JSON block.`;
 
-            try {
-                let aiReply = await generateWithFallback(userPrompt, systemPrompt);
-                let planUpdated = false;
+                try {
+                    let aiReply = await generateWithFallback(userPrompt, systemPrompt);
+                    let planUpdated = false;
 
-                const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
-                if (jsonMatch) {
-                    try {
-                        const planData = JSON.parse(jsonMatch[1]);
-                        const affectedDates = [...new Set(planData.map(day => day.date))];
+                    const jsonMatch = aiReply.match(/```json([\s\S]*?)```/);
+                    if (jsonMatch) {
+                        try {
+                            const planData = JSON.parse(jsonMatch[1]);
+                            const affectedDates = [...new Set(planData.map(day => day.date))];
 
-                        if (affectedDates.length > 0) {
-                            const placeholders = affectedDates.map(() => '?').join(',');
+                            if (affectedDates.length > 0) {
+                                const placeholders = affectedDates.map(() => '?').join(',');
 
-                            db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
-                                if (err) console.error("Failed to clear old plan data:", err);
+                                db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                    if (err) console.error("Failed to clear old plan data:", err);
 
-                                const stmt = db.prepare(`
+                                    const stmt = db.prepare(`
                                 INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?)
                             `);
 
-                                planData.forEach(day => {
-                                    stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
+                                    planData.forEach(day => {
+                                        stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
+                                    });
+                                    stmt.finalize();
                                 });
-                                stmt.finalize();
-                            });
+                            }
+
+                            planUpdated = true;
+                            aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim();
+                        } catch (e) {
+                            console.error("Failed to parse AI JSON block", e);
                         }
-
-                        planUpdated = true;
-                        aiReply = aiReply.replace(/```json[\s\S]*?```/, '').trim();
-                    } catch (e) {
-                        console.error("Failed to parse AI JSON block", e);
                     }
+
+                    let mood = 'default';
+                    const lowerReply = aiReply.toLowerCase();
+                    if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
+                    if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+
+                    const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
+                    const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
+
+                    db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
+                    db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, coachAcknowledgement, mood]);
+                    res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
+                } catch (e) {
+                    console.error("AI Generation Error:", e);
+                    res.status(500).json({ error: "AI failed to respond." });
                 }
-
-                let mood = 'default';
-                const lowerReply = aiReply.toLowerCase();
-                if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
-                if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
-
-                const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
-                const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
-
-                db.run(`INSERT INTO chat_history (user_id, role, content) VALUES (?, 'user', ?)`, [req.user.id, simulatedUserMessage]);
-                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, coachAcknowledgement, mood]);
-                res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
-            } catch (e) {
-                console.error("AI Generation Error:", e);
-                res.status(500).json({ error: "AI failed to respond." });
-            }
-        }); // End activities fetch
+            }); // End activities fetch
         }); // End metrics fetch
     });
 });
@@ -1804,13 +1831,13 @@ app.get('/api/images/chat/:filename', authenticateToken, (req, res) => {
 app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), async (req, res) => {
     const { date, weight_kg, sleep_quality, fatigue_level, notes } = req.body;
     const photoUrl = req.file ? `/api/images/physique/${req.file.filename}` : null;
-    
+
     db.run(
         `INSERT INTO physique_logs (user_id, date, weight_kg, sleep_quality, fatigue_level, notes, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [req.user.id, date, weight_kg || null, sleep_quality || null, fatigue_level || null, notes || null, photoUrl],
         async function (err) {
             if (err) return res.status(500).json({ error: "Failed to save physique log." });
-            
+
             // Also insert weight into biometrics for charting
             if (weight_kg) {
                 db.run(`INSERT INTO biometrics (user_id, date, weight_kg) VALUES (?, ?, ?) ON CONFLICT(user_id, date) DO UPDATE SET weight_kg=excluded.weight_kg`, [req.user.id, date, weight_kg]);
@@ -1825,36 +1852,36 @@ app.post('/api/physique', authenticateToken, uploadPhysique.single('photo'), asy
                 if (sleep_quality) prompt += `Sleep Quality (1-5): ${sleep_quality}\\n`;
                 if (fatigue_level) prompt += `Fatigue Level (1-5): ${fatigue_level}\\n`;
                 if (notes) prompt += `Notes: ${notes}\\n`;
-                
+
                 let imageBase64 = null;
                 if (req.file) {
                     prompt += `They also uploaded a progress photo (attached).\\n`;
                     const imageBytes = fs.readFileSync(req.file.path);
                     imageBase64 = imageBytes.toString('base64');
                 }
-                
+
                 db.all(`SELECT sport, description, target_spark FROM micro_plan WHERE user_id = ? AND date = ?`, [req.user.id, date], (err, planRows) => {
                     if (planRows && planRows.length > 0) {
                         prompt += `Their planned workouts for today are: ` + planRows.map(r => `${r.sport} (${r.description})`).join(', ') + `.\\n`;
                     } else {
                         prompt += `They have a Rest day planned for today.\\n`;
                     }
-                    
+
                     prompt += `Review their status. Keep it under 2 sentences, act as their friendly elite endurance coach, and give them a short piece of advice or encouragement based on their numbers (and the photo if attached).`;
-                
-                db.get("SELECT coach_tone FROM users WHERE id = ?", [req.user.id], async (err, row) => {
-                    const tone = row ? row.coach_tone : 'Friendly';
-                    const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
-                    try {
-                        const aiReply = await generateWithFallback(prompt, systemPrompt, null, imageBase64);
-                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`, [req.user.id, aiReply]);
-                        sendSSEEvent(req.user.id, 'unread_message', { message: aiReply, mood: 'support' });
-                    } catch (e) {
-                        console.error("Proactive AI generation for physique failed:", e);
-                    }
+
+                    db.get("SELECT coach_tone FROM users WHERE id = ?", [req.user.id], async (err, row) => {
+                        const tone = row ? row.coach_tone : 'Friendly';
+                        const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
+                        try {
+                            const aiReply = await generateWithFallback(prompt, systemPrompt, null, imageBase64);
+                            db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`, [req.user.id, aiReply]);
+                            sendSSEEvent(req.user.id, 'unread_message', { message: aiReply, mood: 'support' });
+                        } catch (e) {
+                            console.error("Proactive AI generation for physique failed:", e);
+                        }
+                    });
                 });
-                });
-                
+
             } catch (e) {
                 console.error("Proactive AI generation for physique failed:", e);
             }
@@ -1866,14 +1893,14 @@ app.delete('/api/physique/:id', authenticateToken, (req, res) => {
     // First find the date so we can optionally remove the biometric weight log for that day
     db.get(`SELECT date FROM physique_logs WHERE id = ? AND user_id = ?`, [req.params.id, req.user.id], (err, row) => {
         if (!row) return res.status(404).json({ error: "Log not found." });
-        
+
         db.run(`DELETE FROM physique_logs WHERE id = ? AND user_id = ?`, [req.params.id, req.user.id], (err) => {
             if (err) return res.status(500).json({ error: "Failed to delete log." });
-            
+
             // Also nullify/remove weight from biometrics for this date if we are deleting the physique log
             // (Assuming weight_kg was the primary entry method for that date)
             db.run(`DELETE FROM biometrics WHERE user_id = ? AND date = ?`, [req.user.id, row.date]);
-            
+
             res.json({ success: true });
         });
     });
@@ -1894,7 +1921,7 @@ app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
         db.get(`SELECT weight_kg FROM biometrics WHERE user_id = ? ORDER BY date DESC LIMIT 1`, [req.user.id], async (err, weightRow) => {
             const weight = weightRow ? weightRow.weight_kg : 75; // Default to 75kg if unknown
             const phase = await getUserMacroPhase(req.user.id);
-            
+
             // Fetch today's completed activities (if any)
             db.all(`SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`, [req.user.id, todayStr], (err, actualAct) => {
                 const actualSpark = actualAct && actualAct.length > 0 && actualAct[0].total_score ? actualAct[0].total_score : 0;
@@ -1902,7 +1929,7 @@ app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
                 db.all(`SELECT date, target_spark, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`, [req.user.id, todayStr], async (err, todayPlan) => {
                     let todaySpark = todayPlan && todayPlan.length > 0 ? todayPlan[0].target_spark : 0;
                     let todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
-                    
+
                     // If they already trained harder than planned (or trained on a rest day), update the prompt
                     if (actualSpark > todaySpark || (actualSpark > 0 && todayDesc === 'Rest day')) {
                         todaySpark = actualSpark;
@@ -1927,34 +1954,34 @@ You MUST respond with ONLY a raw JSON object containing exactly these keys:
   "fat": Number (grams)
 }`;
 
-                try {
-                    let aiReply = await generateWithFallback("Generate the macro protocol.", systemPrompt, []);
-                    // Extract JSON between the first { and last } to avoid markdown formatting issues
-                    const firstBrace = aiReply.indexOf('{');
-                    const lastBrace = aiReply.lastIndexOf('}');
-                    if (firstBrace !== -1 && lastBrace !== -1) {
-                        aiReply = aiReply.substring(firstBrace, lastBrace + 1);
+                    try {
+                        let aiReply = await generateWithFallback("Generate the macro protocol.", systemPrompt, []);
+                        // Extract JSON between the first { and last } to avoid markdown formatting issues
+                        const firstBrace = aiReply.indexOf('{');
+                        const lastBrace = aiReply.lastIndexOf('}');
+                        if (firstBrace !== -1 && lastBrace !== -1) {
+                            aiReply = aiReply.substring(firstBrace, lastBrace + 1);
+                        }
+
+                        const protocol = JSON.parse(aiReply);
+
+                        // Cache the result
+                        db.run(`INSERT OR REPLACE INTO nutrition_protocols (user_id, date, protocol_json) VALUES (?, ?, ?)`,
+                            [req.user.id, todayStr, JSON.stringify(protocol)]);
+
+                        res.json(protocol);
+                    } catch (e) {
+                        console.error("Nutrition AI failed:", e);
+                        // Fallback to a safe baseline if AI fails to parse
+                        res.json({
+                            title: "Balanced Maintenance",
+                            rationale: "AI is currently resting. Here is a balanced baseline protocol for your weight.",
+                            carbs: Math.round(weight * 4),
+                            protein: Math.round(weight * 1.8),
+                            fat: Math.round(weight * 1)
+                        });
                     }
-
-                    const protocol = JSON.parse(aiReply);
-                    
-                    // Cache the result
-                    db.run(`INSERT OR REPLACE INTO nutrition_protocols (user_id, date, protocol_json) VALUES (?, ?, ?)`, 
-                        [req.user.id, todayStr, JSON.stringify(protocol)]);
-
-                    res.json(protocol);
-                } catch (e) {
-                    console.error("Nutrition AI failed:", e);
-                    // Fallback to a safe baseline if AI fails to parse
-                    res.json({
-                        title: "Balanced Maintenance",
-                        rationale: "AI is currently resting. Here is a balanced baseline protocol for your weight.",
-                        carbs: Math.round(weight * 4),
-                        protein: Math.round(weight * 1.8),
-                        fat: Math.round(weight * 1)
-                    });
-                }
-            });
+                });
             });
         });
     });
@@ -2036,14 +2063,14 @@ function calculateSparkScore(movingTimeMin, avgHr) {
     if (!movingTimeMin) return 0;
     let baseScore = movingTimeMin;
     let bonus = 0;
-    
+
     if (avgHr) {
         if (avgHr >= 180) bonus = 0.40;
         else if (avgHr >= 160) bonus = 0.30;
         else if (avgHr >= 140) bonus = 0.20;
         else if (avgHr >= 120) bonus = 0.10;
     }
-    
+
     return baseScore + (baseScore * bonus);
 }
 
@@ -2068,7 +2095,7 @@ function formatStepsForStrava(stepsJson) {
                 if (s.steps) {
                     s.steps.forEach(sub => {
                         let dur = sub.condition_value + (sub.condition_type === 'time' ? ' min' : (sub.condition_type === 'distance' ? 'm' : ' reps'));
-                        let tgt = sub.target_value ? sub.target_value : (sub.zone ? `Zone ${sub.zone}` : (sub.target_type === 'no.target' ? 'Open' : sub.target_type.replace('.zone','')));
+                        let tgt = sub.target_value ? sub.target_value : (sub.zone ? `Zone ${sub.zone}` : (sub.target_type === 'no.target' ? 'Open' : sub.target_type.replace('.zone', '')));
                         let extra = sub.weight ? ` @ ${sub.weight}kg` : (sub.target_type !== 'no.target' ? ` @ ${tgt}` : '');
                         let name = sub.exerciseName || sub.type;
                         output += `    * ${name}: ${dur}${extra}\n`;
@@ -2076,7 +2103,7 @@ function formatStepsForStrava(stepsJson) {
                 }
             } else {
                 let dur = s.condition_value + (s.condition_type === 'time' ? ' min' : (s.condition_type === 'distance' ? 'm' : ' reps'));
-                let tgt = s.target_value ? s.target_value : (s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone','')));
+                let tgt = s.target_value ? s.target_value : (s.zone ? `Zone ${s.zone}` : (s.target_type === 'no.target' ? 'Open' : s.target_type.replace('.zone', '')));
                 let extra = s.weight ? ` @ ${s.weight}kg` : (s.target_type !== 'no.target' ? ` @ ${tgt}` : '');
                 let name = s.exerciseName || s.type;
                 output += `- ${name}: ${dur}${extra}\n`;
@@ -2094,7 +2121,7 @@ async function tagStravaActivity(userId, activity, token) {
     db.get("SELECT value FROM athlete_metrics WHERE user_id = ? AND metric = 'strava_opt_out_activities'", [userId], (err, optOutRow) => {
         let optOutList = [];
         if (optOutRow && optOutRow.value) {
-            try { optOutList = JSON.parse(optOutRow.value); } catch(e) {}
+            try { optOutList = JSON.parse(optOutRow.value); } catch (e) { }
         }
 
         const activityType = activity.sport_type || activity.type;
@@ -2103,33 +2130,33 @@ async function tagStravaActivity(userId, activity, token) {
             return;
         }
 
-    const tss = activity.suffer_score || Math.round((activity.moving_time / 3600) * 50);
-    const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
-    const sparkSport = mapStravaSportToSpark(activity.sport_type || activity.type);
+        const tss = activity.suffer_score || Math.round((activity.moving_time / 3600) * 50);
+        const activityDate = activity.start_date_local ? activity.start_date_local.split('T')[0] : activity.start_date.split('T')[0];
+        const sparkSport = mapStravaSportToSpark(activity.sport_type || activity.type);
 
-    db.get("SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
-        [userId, activityDate, sparkSport], async (err, plan) => {
+        db.get("SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+            [userId, activityDate, sparkSport], async (err, plan) => {
 
-            if (err || !plan) return;
+                if (err || !plan) return;
 
-            let stepsContent = formatStepsForStrava(plan.steps_json);
-            const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
+                let stepsContent = formatStepsForStrava(plan.steps_json);
+                const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
 
-            const newDescription = `Spark Target: ${plan.target_spark} Spark\nActual: ${Math.round(tss)} Spark\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
+                const newDescription = `Spark Target: ${plan.target_spark} Spark\nActual: ${Math.round(tss)} Spark\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
 
-            const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
+                const finalDescription = activity.description ? `${activity.description}\n\n---\n${newDescription}` : newDescription;
 
-            try {
-                const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ description: finalDescription })
-                });
-                if (updateRes.ok) console.log(`✅ Strava description updated for ${sparkSport} on ${activityDate}`);
-            } catch (e) {
-                console.error("Failed to tag Strava activity:", e);
-            }
-        });
+                try {
+                    const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description: finalDescription })
+                    });
+                    if (updateRes.ok) console.log(`✅ Strava description updated for ${sparkSport} on ${activityDate}`);
+                } catch (e) {
+                    console.error("Failed to tag Strava activity:", e);
+                }
+            });
     });
 }
 
@@ -2168,7 +2195,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
             [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || null, data.start_date, tss, sparkScore], (err) => {
                 if (!err) {
                     sendSSEEvent(internalUserId, 'sync_complete', { provider: 'strava', activityId: data.id });
-                    
+
                     // Invalidate today's nutrition cache so it incorporates the new workout
                     const activityDateStr = data.start_date_local ? data.start_date_local.split('T')[0] : data.start_date.split('T')[0];
                     const todayStr = new Date().toISOString().split('T')[0];
@@ -2184,7 +2211,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         db.get("SELECT value FROM athlete_metrics WHERE user_id = ? AND metric = 'strava_opt_out_activities'", [internalUserId], (err, optOutRow) => {
             let optOutList = [];
             if (optOutRow && optOutRow.value) {
-                try { optOutList = JSON.parse(optOutRow.value); } catch(e) {}
+                try { optOutList = JSON.parse(optOutRow.value); } catch (e) { }
             }
 
             if (optOutList.includes(data.sport_type)) {
@@ -2195,54 +2222,54 @@ async function getStravaActivity(stravaAthleteId, activityId) {
             db.get("SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
                 [internalUserId, activityDate, sparkSport], async (err, plan) => {
 
-                // Fetch the coach tone
-                db.get("SELECT coach_tone FROM users WHERE id = ?", [internalUserId], async (err, userRow) => {
-                    const tone = userRow ? userRow.coach_tone : 'Friendly and motivating';
+                    // Fetch the coach tone
+                    db.get("SELECT coach_tone FROM users WHERE id = ?", [internalUserId], async (err, userRow) => {
+                        const tone = userRow ? userRow.coach_tone : 'Friendly and motivating';
 
-                    let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance / 1000).toFixed(1)}km in ${Math.round(data.moving_time / 60)} minutes, generating ${Math.round(sparkScore)} Spark. `;
-                    let newDescription = null;
+                        let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance / 1000).toFixed(1)}km in ${Math.round(data.moving_time / 60)} minutes, generating ${Math.round(sparkScore)} Spark. `;
+                        let newDescription = null;
 
-                    if (plan) {
-                        let stepsContent = formatStepsForStrava(plan.steps_json);
-                        const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
-                        newDescription = `Spark Target: ${plan.target_spark} Spark\nActual: ${Math.round(sparkScore)} Spark\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
-                        prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_spark} Spark. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
-                    } else {
-                        console.log(`⚠️ No matching ${sparkSport} plan found on ${activityDate}. Generating unplanned reaction.`);
-                        prompt += `This was an unplanned activity. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}).`;
-                    }
-
-                    // 1. Generate AI Coach Response
-                    try {
-                        const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
-                        const aiReply = await generateWithFallback(prompt, systemPrompt);
-                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [internalUserId, aiReply]);
-                        sendSSEEvent(internalUserId, 'unread_message', { message: aiReply, mood: 'hype' });
-                        console.log(`🤖 Sent proactive coach update for activity ${activityId}`);
-                    } catch (e) {
-                        console.error("Proactive coach activity update failed:", e);
-                    }
-
-                    // 2. Update Strava Description (only if there was a plan)
-                    if (newDescription) {
-                        const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `Bearer ${accessToken}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ description: newDescription })
-                        });
-
-                        if (updateRes.ok) {
-                            console.log(`✅ Strava description updated for activity ${activityId}!`);
+                        if (plan) {
+                            let stepsContent = formatStepsForStrava(plan.steps_json);
+                            const workoutContent = stepsContent ? stepsContent : ((plan.details && plan.details.trim().length > 0) ? plan.details : plan.description);
+                            newDescription = `Spark Target: ${plan.target_spark} Spark\nActual: ${Math.round(sparkScore)} Spark\n\nPlanned Workout:\n${workoutContent}\n\nGenerated by Spark: spark.amsterdamtriathlonassociation.uk`;
+                            prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_spark} Spark. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
                         } else {
-                            const errorData = await updateRes.json();
-                            console.error(`❌ Strava Description Update Failed:`, errorData);
+                            console.log(`⚠️ No matching ${sparkSport} plan found on ${activityDate}. Generating unplanned reaction.`);
+                            prompt += `This was an unplanned activity. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}).`;
                         }
-                    }
+
+                        // 1. Generate AI Coach Response
+                        try {
+                            const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
+                            const aiReply = await generateWithFallback(prompt, systemPrompt);
+                            db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [internalUserId, aiReply]);
+                            sendSSEEvent(internalUserId, 'unread_message', { message: aiReply, mood: 'hype' });
+                            console.log(`🤖 Sent proactive coach update for activity ${activityId}`);
+                        } catch (e) {
+                            console.error("Proactive coach activity update failed:", e);
+                        }
+
+                        // 2. Update Strava Description (only if there was a plan)
+                        if (newDescription) {
+                            const updateRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Authorization': `Bearer ${accessToken}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ description: newDescription })
+                            });
+
+                            if (updateRes.ok) {
+                                console.log(`✅ Strava description updated for activity ${activityId}!`);
+                            } else {
+                                const errorData = await updateRes.json();
+                                console.error(`❌ Strava Description Update Failed:`, errorData);
+                            }
+                        }
+                    });
                 });
-            });
         });
 
     } catch (e) {
@@ -2288,7 +2315,7 @@ async function syncAllStravaUsersOnStartup() {
 
 app.post('/api/settings/privacy', authenticateToken, (req, res) => {
     const { searchPrivacy } = req.body;
-    db.run(`UPDATE users SET search_privacy = ? WHERE id = ?`, [searchPrivacy ? 1 : 0, req.user.id], function(err) {
+    db.run(`UPDATE users SET search_privacy = ? WHERE id = ?`, [searchPrivacy ? 1 : 0, req.user.id], function (err) {
         if (err) return res.status(500).json({ error: 'DB_ERROR' });
         res.json({ success: true });
     });
@@ -2296,10 +2323,10 @@ app.post('/api/settings/privacy', authenticateToken, (req, res) => {
 
 app.post('/api/settings/profile-picture', authenticateToken, uploadProfile.single('photo'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    
+
     const url = `/uploads/profiles/${req.file.filename}`;
-    
-    db.run(`UPDATE users SET profile_picture_url = ? WHERE id = ?`, [url, req.user.id], function(err) {
+
+    db.run(`UPDATE users SET profile_picture_url = ? WHERE id = ?`, [url, req.user.id], function (err) {
         if (err) {
             console.error(err);
             return res.status(500).json({ error: 'DB_ERROR' });
@@ -2320,8 +2347,8 @@ app.post('/api/social/search', authenticateToken, (req, res) => {
 
 app.post('/api/social/connect', authenticateToken, (req, res) => {
     const { friendId } = req.body;
-    db.run(`INSERT OR IGNORE INTO connections (user_id, friend_id, status) VALUES (?, ?, 'pending')`, [req.user.id, friendId], function(err) {
-        db.run(`INSERT OR IGNORE INTO connections (user_id, friend_id, status) VALUES (?, ?, 'pending_received')`, [friendId, req.user.id], function(err2) {
+    db.run(`INSERT OR IGNORE INTO connections (user_id, friend_id, status) VALUES (?, ?, 'pending')`, [req.user.id, friendId], function (err) {
+        db.run(`INSERT OR IGNORE INTO connections (user_id, friend_id, status) VALUES (?, ?, 'pending_received')`, [friendId, req.user.id], function (err2) {
             sendSSEEvent(friendId, 'connection_request', { fromUserId: req.user.id, username: req.user.username });
             res.json({ success: true });
         });
@@ -2330,10 +2357,10 @@ app.post('/api/social/connect', authenticateToken, (req, res) => {
 
 app.post('/api/social/accept', authenticateToken, (req, res) => {
     const { friendId } = req.body;
-    db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [req.user.id, friendId], function(err) {
-        db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [friendId, req.user.id], function(err2) {
+    db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [req.user.id, friendId], function (err) {
+        db.run(`UPDATE connections SET status = 'accepted' WHERE user_id = ? AND friend_id = ?`, [friendId, req.user.id], function (err2) {
             sendSSEEvent(friendId, 'connection_accepted', { fromUserId: req.user.id, username: req.user.username });
-            
+
             db.get(`SELECT coach_tone FROM users WHERE id = ?`, [friendId], async (err, friendUser) => {
                 if (friendUser) {
                     const prompt = `The athlete just connected with their friend ${req.user.username} on the app. Send a very short 1-sentence message to the athlete welcoming the new connection and telling them to use the competition as motivation.`;
@@ -2345,7 +2372,7 @@ app.post('/api/social/accept', authenticateToken, (req, res) => {
                     } catch (e) { console.error(e); }
                 }
             });
-            
+
             res.json({ success: true });
         });
     });
@@ -2401,7 +2428,7 @@ app.post('/api/social/kudos', authenticateToken, (req, res) => {
                 db.get(`SELECT user_id, name FROM activities WHERE id = ?`, [activityId], (err, act) => {
                     if (act && act.user_id !== req.user.id) {
                         sendSSEEvent(act.user_id, 'kudos_received', { activityName: act.name, fromUsername: req.user.username || 'Someone' });
-                        
+
                         db.get(`SELECT coach_tone FROM users WHERE id = ?`, [act.user_id], async (err, coachUser) => {
                             if (coachUser) {
                                 const prompt = `The athlete just received Kudos (a like) from their friend ${req.user.username || 'Someone'} on their activity "${act.name}". Send a very short 1-sentence message to the athlete acknowledging this and hyping them up.`;
@@ -2423,16 +2450,16 @@ app.post('/api/social/kudos', authenticateToken, (req, res) => {
 
 async function triggerBackgroundSummary(userId) {
     console.log(`🤖 Triggering background rolling summary for user ${userId}...`);
-    
+
     db.get(`SELECT long_term_memory, coach_tone FROM users WHERE id = ?`, [userId], async (err, user) => {
         if (err || !user) return;
-        
+
         db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 10) ORDER BY id ASC`, [userId], async (err, historyRows) => {
             if (err || !historyRows || historyRows.length === 0) return;
-            
+
             const historyText = historyRows.map(r => `${r.role.toUpperCase()}: ${r.content}`).join('\n');
             const currentSummary = user.long_term_memory || 'No summary yet.';
-            
+
             const prompt = `You are a background AI assistant for an endurance coach app. Your job is to update the athlete's long-term memory summary based on recent chat history.
             
 CURRENT LONG-TERM MEMORY:
