@@ -3823,7 +3823,7 @@ async function openPublicProfile(userId) {
             actContainer.innerHTML = '<p class="text-xs text-theme-muted italic">No recent activities.</p>';
         } else {
             actContainer.innerHTML = data.activities.map(act => `
-                <div class="flex justify-between items-center bg-theme-bg p-3 rounded border border-theme-border/50">
+                <div class="flex justify-between items-center bg-theme-bg p-3 rounded border border-theme-border/50 cursor-pointer hover:bg-theme-bg-hover transition" onclick="openActivityModal(${act.id})">
                     <div>
                         <div class="text-xs font-bold text-theme-text flex items-center gap-2">
                             ${getSportBadge(act.sport_type)}
@@ -3832,8 +3832,8 @@ async function openPublicProfile(userId) {
                         <div class="text-[10px] text-theme-muted mt-1">${new Date(act.start_date).toLocaleDateString()}</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-xs font-bold text-theme-text">${act.distance_km ? parseFloat(act.distance_km).toFixed(2) + ' km' : '-'}</div>
-                        <div class="text-[10px] text-theme-muted">Dist</div>
+                        <div class="text-xs font-bold text-theme-text">${act.spark_score ? Math.round(act.spark_score) : '-'}</div>
+                        <div class="text-[10px] text-theme-muted">Spark</div>
                     </div>
                 </div>
             `).join('');

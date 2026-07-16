@@ -1538,107 +1538,158 @@ app.get('/api/social/feed', authenticateToken, async (req, res) => {
     });
 });
 
-app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
-    const targetUserId = req.params.id;
-    
-    db.get(`SELECT username, athlete_context, profile_picture_url FROM users WHERE id = ?`, [targetUserId], (err, user) => {
-        if (err || !user) return res.status(404).json({ error: "User not found" });
-        
-        db.all(`SELECT name, distance_km, moving_time_min, start_date, sport_type, tss as spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
+// Function to generate the public profile data
+function generatePublicProfile(targetUserId, globalMaxCtl) {
+    return new Promise((resolve, reject) => {
+        db.get(`SELECT username, athlete_context, profile_picture_url FROM users WHERE id = ?`, [targetUserId], (err, user) => {
+            if (err || !user) return resolve(null);
             
-            // Generate 30 days of trends by fetching the last 90 days of activities for EWMA
-            db.all(`SELECT start_date, substr(start_date, 1, 10) as date, tss, sport_type, distance_km, elevation_m, moving_time_min FROM activities WHERE user_id = ? AND start_date >= datetime('now', '-90 days') ORDER BY start_date ASC`, [targetUserId], async (err, rows) => {
+            db.all(`SELECT id, name, distance_km, moving_time_min, start_date, sport_type, tss as spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
                 
-                db.all(`SELECT date, weight_kg FROM biometrics WHERE user_id = ? AND date >= date('now', '-30 days') ORDER BY date ASC`, [targetUserId], async (err, weights) => {
+                db.all(`SELECT start_date, substr(start_date, 1, 10) as date, tss, sport_type, distance_km, elevation_m, moving_time_min FROM activities WHERE user_id = ? AND start_date >= datetime('now', '-90 days') ORDER BY start_date ASC`, [targetUserId], async (err, rows) => {
                     
-                    const trends = { dates: [], tsb: [], ctl: [], atl: [], weight: [] };
-                    
-                    let currentCtl = 0;
-                    let currentAtl = 0;
-                    
-                    // Aggregate TSS per day
-                    const tssMap = {};
-                    if (rows) {
-                        rows.forEach(r => {
-                            if (!tssMap[r.date]) tssMap[r.date] = 0;
-                            tssMap[r.date] += (r.tss || 0);
-                        });
-                    }
-                    
-                    const weightMap = {};
-                    if (weights) weights.forEach(w => weightMap[w.date] = w.weight_kg || null);
-
-                    let ctl = 0; let atl = 0;
-                    for (let i = 89; i >= 0; i--) {
-                        const d = new Date();
-                        d.setDate(d.getDate() - i);
-                        const dateStr = d.toISOString().split('T')[0];
+                    db.all(`SELECT date, weight_kg FROM biometrics WHERE user_id = ? AND date >= date('now', '-30 days') ORDER BY date ASC`, [targetUserId], async (err, weights) => {
                         
-                        const dailyTss = tssMap[dateStr] || 0;
-                        ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
-                        atl = atl + (dailyTss - atl) * (1 - Math.exp(-1/7));
+                        const trends = { dates: [], tsb: [], ctl: [], atl: [], weight: [] };
                         
-                        if (i < 30) {
-                            trends.dates.push(dateStr);
-                            trends.ctl.push(ctl);
-                            trends.atl.push(atl);
-                            trends.tsb.push(ctl - atl);
-                            trends.weight.push(weightMap[dateStr] || null);
+                        const tssMap = {};
+                        if (rows) {
+                            rows.forEach(r => {
+                                if (!tssMap[r.date]) tssMap[r.date] = 0;
+                                tssMap[r.date] += (r.tss || 0);
+                            });
                         }
-                    }
+                        const weightMap = {};
+                        if (weights) weights.forEach(w => weightMap[w.date] = w.weight_kg || null);
 
-                    // --- CALCULATE RADAR METRICS ---
-                    // 1. Endurance (based on max CTL reached in last 90 days or current CTL)
-                    let endurance = Math.min(100, Math.round((ctl / 150) * 100));
+                        let ctl = 0; let atl = 0;
+                        for (let i = 89; i >= 0; i--) {
+                            const d = new Date();
+                            d.setDate(d.getDate() - i);
+                            const dateStr = d.toISOString().split('T')[0];
+                            
+                            const dailyTss = tssMap[dateStr] || 0;
+                            ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+                            atl = atl + (dailyTss - atl) * (1 - Math.exp(-1/7));
+                            
+                            if (i < 30) {
+                                trends.dates.push(dateStr);
+                                trends.ctl.push(ctl);
+                                trends.atl.push(atl);
+                                trends.tsb.push(ctl - atl);
+                                trends.weight.push(weightMap[dateStr] || null);
+                            }
+                        }
 
-                    // 2. Strength (Proxy: WeightTraining frequency + Steep climbing proxy)
-                    let weightTrainingCount = rows ? rows.filter(r => r.sport_type === 'WeightTraining').length : 0;
-                    let totalElevation = rows ? rows.reduce((sum, r) => sum + (r.elevation_m || 0), 0) : 0;
-                    let strengthScore = (weightTrainingCount * 5) + (totalElevation / 1000); // 5 points per gym session + 1 pt per 1000m climbed
-                    let strength = Math.min(100, Math.round(strengthScore * 3)); // scale to 100
+                        let endurance = Math.min(100, Math.round((ctl / globalMaxCtl) * 100));
+                        let weightTrainingCount = rows ? rows.filter(r => r.sport_type === 'WeightTraining').length : 0;
+                        let totalElevation = rows ? rows.reduce((sum, r) => sum + (r.elevation_m || 0), 0) : 0;
+                        let strengthScore = (weightTrainingCount * 5) + (totalElevation / 1000); 
+                        let strength = Math.min(100, Math.round(strengthScore * 3));
+                        const uniqueSports = new Set(rows ? rows.map(r => r.sport_type) : []).size;
+                        let versatility = Math.min(100, Math.round((uniqueSports / 5) * 100));
+                        let explosiveSessions = rows ? rows.filter(r => (r.tss / (r.moving_time_min || 1)) > 1.2).length : 0;
+                        let explosiveness = Math.min(100, Math.round((explosiveSessions / 10) * 100));
 
-                    // 3. Versatility (Unique sport types)
-                    const uniqueSports = new Set(rows ? rows.map(r => r.sport_type) : []).size;
-                    let versatility = Math.min(100, Math.round((uniqueSports / 5) * 100));
+                        const radar = { endurance: endurance || 10, strength: strength || 10, versatility: versatility || 10, explosiveness: explosiveness || 10 };
 
-                    // 4. Explosiveness (Proxy: High intensity TSS per minute)
-                    let explosiveSessions = rows ? rows.filter(r => (r.tss / (r.moving_time_min || 1)) > 1.2).length : 0;
-                    let explosiveness = Math.min(100, Math.round((explosiveSessions / 10) * 100));
-
-                    const radar = {
-                        endurance: endurance || 10,
-                        strength: strength || 10,
-                        versatility: versatility || 10,
-                        explosiveness: explosiveness || 10
-                    };
-
-                    const genericCoachTone = "Empathetic but demanding elite endurance coach.";
-                    const currentTsb = trends.tsb.length > 0 ? Math.round(trends.tsb[trends.tsb.length - 1]) : 0;
-                    const prompt = `Write a 2-3 sentence "Coach Highlight" for ${user.username}. 
+                        const genericCoachTone = "Empathetic but demanding elite endurance coach.";
+                        const currentTsb = trends.tsb.length > 0 ? Math.round(trends.tsb[trends.tsb.length - 1]) : 0;
+                        const prompt = `Write a 2-3 sentence "Coach Highlight" about ${user.username} (refer to them in the third person, e.g., "${user.username} is..."). 
 Recent Activities: ${activities.map(a => a.name).join(', ')}
-Current Fitness (CTL): ${Math.round(ctl)}
-Current Readiness (TSB): ${currentTsb}
+Current Chronic Training Load (Fitness): ${Math.round(ctl)}
+Current Training Stress Balance (Readiness): ${currentTsb}
 
-Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep it brief, dynamic, and highly personalized based on their recent activities and current readiness! Do not mention their hidden background or context. Do not include any markdown bolding or headers.`;
+Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep it brief, dynamic, and highly personalized based on their recent activities and current readiness! Talk about them to an audience. Do not mention their hidden background or context. Do not include any markdown bolding or headers.`;
 
-                    let highlight = "Keep pushing! You're doing great.";
-                    try {
-                        highlight = await generateWithFallback("Generate public profile highlight", prompt, []);
-                    } catch (e) {
-                        console.error("Highlight generation failed", e);
-                    }
+                        let highlight = "Keep pushing! They're doing great.";
+                        try {
+                            highlight = await generateWithFallback("Generate public profile highlight", prompt, []);
+                        } catch (e) {
+                            console.error("Highlight generation failed", e);
+                        }
 
-                    res.json({
-                        username: user.username,
-                        profilePictureUrl: user.profile_picture_url,
-                        highlight: highlight,
-                        activities: activities,
-                        trends: trends,
-                        radar: radar
+                        const profileData = {
+                            username: user.username,
+                            profilePictureUrl: user.profile_picture_url,
+                            highlight: highlight,
+                            activities: activities,
+                            trends: trends,
+                            radar: radar
+                        };
+                        
+                        db.run(`INSERT OR REPLACE INTO public_profile_cache (user_id, data, last_updated) VALUES (?, ?, datetime('now'))`, [targetUserId, JSON.stringify(profileData)]);
+                        resolve(profileData);
                     });
                 });
             });
         });
+    });
+}
+
+async function generateAllPublicProfiles() {
+    console.log("🕒 Running 15:00 / 20:00 Profile Caching Routine...");
+    // 1. Calculate Global Max CTL
+    db.all(`SELECT user_id, substr(start_date, 1, 10) as date, SUM(tss) as daily_tss FROM activities WHERE start_date >= datetime('now', '-90 days') GROUP BY user_id, date ORDER BY date ASC`, [], async (err, rows) => {
+        if (err || !rows) return;
+        
+        const userCtls = {};
+        rows.forEach(r => {
+            if (!userCtls[r.user_id]) userCtls[r.user_id] = { ctl: 0, map: {} };
+            userCtls[r.user_id].map[r.date] = r.daily_tss;
+        });
+
+        let globalMaxCtl = 100; // minimum benchmark
+        Object.keys(userCtls).forEach(uid => {
+            let ctl = 0;
+            for (let i = 89; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const dailyTss = userCtls[uid].map[dateStr] || 0;
+                ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+            }
+            if (ctl > globalMaxCtl) globalMaxCtl = ctl;
+        });
+
+        // 2. Iterate all users and generate profile
+        db.all(`SELECT id FROM users`, [], async (err, users) => {
+            if (err || !users) return;
+            for (const u of users) {
+                await generatePublicProfile(u.id, globalMaxCtl);
+                // sleep 2s to not hammer AI
+                await new Promise(r => setTimeout(r, 2000));
+            }
+        });
+    });
+}
+
+// Background Task for 15:00 and 20:00
+setInterval(() => {
+    const now = new Date();
+    // Run at exactly 15:00 and 20:00
+    if ((now.getHours() === 15 || now.getHours() === 20) && now.getMinutes() === 0) {
+        generateAllPublicProfiles();
+    }
+}, 60000); // Check every minute
+
+// Prime the cache on server startup
+setTimeout(() => {
+    console.log("Starting initial profile caching...");
+    generateAllPublicProfiles();
+}, 5000);
+
+app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
+    const targetUserId = req.params.id;
+    
+    db.get(`SELECT data FROM public_profile_cache WHERE user_id = ?`, [targetUserId], async (err, row) => {
+        if (row && row.data) {
+            return res.json(JSON.parse(row.data));
+        } else {
+            // Fallback generation if missing
+            const profileData = await generatePublicProfile(targetUserId, 150); // fallback 150 max ctl
+            if (profileData) res.json(profileData);
+            else res.status(404).json({ error: "User not found" });
+        }
     });
 });
 
