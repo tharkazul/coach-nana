@@ -3846,6 +3846,51 @@ async function openPublicProfile(userId) {
         renderPublicSparkline('public-sparkline-readiness', d.dates, d.tsb, '#10b981');
         renderPublicSparkline('public-sparkline-weight', d.dates, d.weight, '#f59e0b');
 
+        // Render Radar Chart
+        if (window.public_profile_radar) window.public_profile_radar.destroy();
+        const radarCtx = document.getElementById('public-profile-radar').getContext('2d');
+        window.public_profile_radar = new Chart(radarCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Endurance', 'Strength', 'Versatility', 'Explosiveness'],
+                datasets: [{
+                    label: 'Athlete Archetype',
+                    data: [
+                        data.radar.endurance,
+                        data.radar.strength,
+                        data.radar.versatility,
+                        data.radar.explosiveness
+                    ],
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: '#3b82f6',
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#3b82f6',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: {
+                            color: '#9ca3af',
+                            font: { size: 10, weight: 'bold', family: 'Inter' }
+                        },
+                        ticks: { display: false, min: 0, max: 100 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+
     } catch (e) {
         document.getElementById('public-profile-username').innerText = 'Error loading profile';
         document.getElementById('public-profile-highlight').innerHTML = '<p class="text-xs text-theme-muted">Failed to load data.</p>';

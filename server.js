@@ -1546,37 +1546,96 @@ app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
         
         db.all(`SELECT name, distance_km, moving_time_min, start_date, sport_type, tss as spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
             
-            db.all(`SELECT date, tsb, ctl, atl, weight FROM log WHERE user_id = ? ORDER BY date DESC LIMIT 30`, [targetUserId], async (err, logs) => {
-                const recentLogs = logs || [];
+            // Generate 30 days of trends by fetching the last 90 days of activities for EWMA
+            db.all(`SELECT start_date, substr(start_date, 1, 10) as date, tss, sport_type, distance_km, elevation_m, moving_time_min FROM activities WHERE user_id = ? AND start_date >= datetime('now', '-90 days') ORDER BY start_date ASC`, [targetUserId], async (err, rows) => {
                 
-                // Construct sparklines data arrays
-                const dates = recentLogs.map(l => l.date).reverse();
-                const tsb = recentLogs.map(l => l.tsb).reverse();
-                const ctl = recentLogs.map(l => l.ctl).reverse();
-                const atl = recentLogs.map(l => l.atl).reverse();
-                const weight = recentLogs.map(l => l.weight).reverse();
+                db.all(`SELECT date, weight_kg FROM biometrics WHERE user_id = ? AND date >= date('now', '-30 days') ORDER BY date ASC`, [targetUserId], async (err, weights) => {
+                    
+                    const trends = { dates: [], tsb: [], ctl: [], atl: [], weight: [] };
+                    
+                    let currentCtl = 0;
+                    let currentAtl = 0;
+                    
+                    // Aggregate TSS per day
+                    const tssMap = {};
+                    if (rows) {
+                        rows.forEach(r => {
+                            if (!tssMap[r.date]) tssMap[r.date] = 0;
+                            tssMap[r.date] += (r.tss || 0);
+                        });
+                    }
+                    
+                    const weightMap = {};
+                    if (weights) weights.forEach(w => weightMap[w.date] = w.weight_kg || null);
 
-                // Generate AI Highlight using a generic coach persona
-                const genericCoachTone = "Empathetic but demanding elite endurance coach.";
-                const prompt = `Write a 2-3 sentence "Coach Highlight" for ${user.username}. 
-Context about them: ${user.athlete_context}
+                    let ctl = 0; let atl = 0;
+                    for (let i = 89; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(d.getDate() - i);
+                        const dateStr = d.toISOString().split('T')[0];
+                        
+                        const dailyTss = tssMap[dateStr] || 0;
+                        ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+                        atl = atl + (dailyTss - atl) * (1 - Math.exp(-1/7));
+                        
+                        if (i < 30) {
+                            trends.dates.push(dateStr);
+                            trends.ctl.push(ctl);
+                            trends.atl.push(atl);
+                            trends.tsb.push(ctl - atl);
+                            trends.weight.push(weightMap[dateStr] || null);
+                        }
+                    }
+
+                    // --- CALCULATE RADAR METRICS ---
+                    // 1. Endurance (based on max CTL reached in last 90 days or current CTL)
+                    let endurance = Math.min(100, Math.round((ctl / 150) * 100));
+
+                    // 2. Strength (Proxy: WeightTraining frequency + Steep climbing proxy)
+                    let weightTrainingCount = rows ? rows.filter(r => r.sport_type === 'WeightTraining').length : 0;
+                    let totalElevation = rows ? rows.reduce((sum, r) => sum + (r.elevation_m || 0), 0) : 0;
+                    let strengthScore = (weightTrainingCount * 5) + (totalElevation / 1000); // 5 points per gym session + 1 pt per 1000m climbed
+                    let strength = Math.min(100, Math.round(strengthScore * 3)); // scale to 100
+
+                    // 3. Versatility (Unique sport types)
+                    const uniqueSports = new Set(rows ? rows.map(r => r.sport_type) : []).size;
+                    let versatility = Math.min(100, Math.round((uniqueSports / 5) * 100));
+
+                    // 4. Explosiveness (Proxy: High intensity TSS per minute)
+                    let explosiveSessions = rows ? rows.filter(r => (r.tss / (r.moving_time_min || 1)) > 1.2).length : 0;
+                    let explosiveness = Math.min(100, Math.round((explosiveSessions / 10) * 100));
+
+                    const radar = {
+                        endurance: endurance || 10,
+                        strength: strength || 10,
+                        versatility: versatility || 10,
+                        explosiveness: explosiveness || 10
+                    };
+
+                    const genericCoachTone = "Empathetic but demanding elite endurance coach.";
+                    const currentTsb = trends.tsb.length > 0 ? Math.round(trends.tsb[trends.tsb.length - 1]) : 0;
+                    const prompt = `Write a 2-3 sentence "Coach Highlight" for ${user.username}. 
 Recent Activities: ${activities.map(a => a.name).join(', ')}
+Current Fitness (CTL): ${Math.round(ctl)}
+Current Readiness (TSB): ${currentTsb}
 
-Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep it brief, dynamic, and highly personalized! Do not include any markdown bolding or headers.`;
+Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep it brief, dynamic, and highly personalized based on their recent activities and current readiness! Do not mention their hidden background or context. Do not include any markdown bolding or headers.`;
 
-                let highlight = "Keep pushing! You're doing great.";
-                try {
-                    highlight = await generateWithFallback("Generate public profile highlight", prompt, []);
-                } catch (e) {
-                    console.error("Highlight generation failed", e);
-                }
+                    let highlight = "Keep pushing! You're doing great.";
+                    try {
+                        highlight = await generateWithFallback("Generate public profile highlight", prompt, []);
+                    } catch (e) {
+                        console.error("Highlight generation failed", e);
+                    }
 
-                res.json({
-                    username: user.username,
-                    profilePictureUrl: user.profile_picture_url,
-                    highlight: highlight,
-                    activities: activities,
-                    trends: { dates, tsb, ctl, atl, weight }
+                    res.json({
+                        username: user.username,
+                        profilePictureUrl: user.profile_picture_url,
+                        highlight: highlight,
+                        activities: activities,
+                        trends: trends,
+                        radar: radar
+                    });
                 });
             });
         });
