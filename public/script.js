@@ -837,6 +837,12 @@ function switchTab(t) {
     if (t === 'physique') {
         loadPhysiqueLogs();
         loadNutritionProtocol();
+        setTimeout(() => {
+            if (window.progress_radar) window.progress_radar.resize();
+            ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
+                if (window[`public_sparkline_${metric}`]) window[`public_sparkline_${metric}`].resize();
+            });
+        }, 50);
     }
     if (t === 'coach') {
         loadChatHistory();
@@ -982,12 +988,12 @@ function getWeatherEmoji(code) {
 // --- CORE DATA FUNCTIONS ---
 async function buildDashboard() {
     try {
-        // 1. Fetch Spark, Weight, Milestones, Briefing, and Physique
-        const [sparkRes, weightRes, msRes, briefRes, physRes] = await Promise.all([
+        // 1. Fetch Spark, Weight, Milestones, and Profile Highlights
+        const [sparkRes, weightRes, msRes, profileRes, physRes] = await Promise.all([
             fetch('/api/dashboard-data', { headers: getAuthHeaders(), cache: 'no-store' }),
             fetch('/api/weight', { headers: getAuthHeaders(), cache: 'no-store' }),
             fetch('/api/milestones', { headers: getAuthHeaders(), cache: 'no-store' }),
-            fetch('/api/chat/briefing', { headers: getAuthHeaders(), cache: 'no-store' }),
+            fetch('/api/my-profile', { headers: getAuthHeaders(), cache: 'no-store' }),
             fetch('/api/physique', { headers: getAuthHeaders(), cache: 'no-store' })
         ]);
 
@@ -1000,24 +1006,78 @@ async function buildDashboard() {
         globalMilestones = msRes.ok ? await msRes.json() : [];
         renderMilestoneEditor(); // Populate the settings tab
 
-        // 2.5 Process Daily Briefing
+        // 2.5 Process Coach Highlights and Progress Charts
         const deskReflection = document.getElementById('daily-reflection');
         const deskAvatar = document.getElementById('desk-coach-avatar');
-        if (briefRes && briefRes.ok) {
-            const briefData = await briefRes.json();
-            if (briefData && briefData.briefing && briefData.briefing.content) {
-                if (deskAvatar) deskAvatar.src = getCoachAvatar(briefData.briefing.mood || 'default');
+        if (profileRes && profileRes.ok) {
+            const profileData = await profileRes.json();
+            if (profileData && profileData.highlight) {
+                if (deskAvatar) deskAvatar.src = getCoachAvatar('proud'); // Highlighting achievement
                 if (deskReflection) {
-                    let formattedContent = briefData.briefing.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                    formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
+                    let formattedContent = profileData.highlight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                     deskReflection.innerHTML = formattedContent;
                 }
             } else {
-                if (deskReflection) deskReflection.innerHTML = "<span class='text-theme-muted italic'>Checking in with Coach...</span>";
+                if (deskReflection) deskReflection.innerHTML = "<span class='text-theme-muted italic'>Your highlights will appear here after enough training data is collected.</span>";
                 if (deskAvatar) deskAvatar.src = getCoachAvatar('default');
-                // No briefing today, trigger one
-                triggerProactiveCheckin();
             }
+            
+            // Render Progress Charts if data is available
+            if (profileData && profileData.trends && profileData.radar) {
+                const d = profileData.trends;
+                renderPublicSparkline('progress-sparkline-fitness', d.dates, d.ctl, '#3b82f6');
+                renderPublicSparkline('progress-sparkline-fatigue', d.dates, d.atl, '#ef4444');
+                renderPublicSparkline('progress-sparkline-readiness', d.dates, d.tsb, '#10b981');
+                renderPublicSparkline('progress-sparkline-weight', d.dates, d.weight, '#f59e0b');
+
+                if (window.progress_radar) window.progress_radar.destroy();
+                const radarCtx = document.getElementById('progress-radar').getContext('2d');
+                window.progress_radar = new Chart(radarCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Endurance', 'Strength', 'Versatility', 'Explosiveness'],
+                        datasets: [{
+                            label: 'Athlete Archetype',
+                            data: [
+                                profileData.radar.endurance,
+                                profileData.radar.strength,
+                                profileData.radar.versatility,
+                                profileData.radar.explosiveness
+                            ],
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: '#3b82f6',
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#3b82f6',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                pointLabels: {
+                                    color: '#9ca3af',
+                                    font: { size: 10, weight: 'bold', family: 'Inter' }
+                                },
+                                ticks: { display: false },
+                                min: 0,
+                                max: 100
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        }
+                    }
+                });
+            }
+        } else {
+            if (deskReflection) deskReflection.innerHTML = "<span class='text-theme-muted italic'>Failed to load highlights.</span>";
         }
 
         // 3. Process Weight & Biometrics Table
@@ -1147,13 +1207,13 @@ async function buildDashboard() {
         if (readinessEl) {
             readinessEl.innerText = readiness;
             if (readiness < 40) {
-                readinessEl.className = "text-2xl md:text-4xl font-semibold text-red-500 tracking-tight";
+                readinessEl.className = "text-2xl md:text-4xl font-semibold text-red-500 tracking-tight font-barlow";
                 if (readinessSub) { readinessSub.innerText = "Need Recovery"; readinessSub.className = "text-[10px] text-red-500/70 mt-1 uppercase tracking-wider h-3"; }
             } else if (readiness < 70) {
-                readinessEl.className = "text-2xl md:text-4xl font-semibold text-amber-500 tracking-tight";
+                readinessEl.className = "text-2xl md:text-4xl font-semibold text-amber-500 tracking-tight font-barlow";
                 if (readinessSub) { readinessSub.innerText = "Adequate"; readinessSub.className = "text-[10px] text-amber-500/70 mt-1 uppercase tracking-wider h-3"; }
             } else {
-                readinessEl.className = "text-2xl md:text-4xl font-semibold text-green-500 tracking-tight";
+                readinessEl.className = "text-2xl md:text-4xl font-semibold text-green-500 tracking-tight font-barlow";
                 if (readinessSub) { readinessSub.innerText = "Prime Condition"; readinessSub.className = "text-[10px] text-green-500/70 mt-1 uppercase tracking-wider h-3"; }
             }
 
@@ -1483,6 +1543,9 @@ async function loadMicroPlan() {
                             ${p.sport !== 'Rest' && dateStr >= todayStr ? `
                             <button onclick="event.stopPropagation(); syncSingleToGarmin(${p.id || null}, '${dateStr}', '${p.sport}')" class="p-1 rounded hover:bg-black/10 transition" title="Send to Garmin">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            </button>
+                            <button onclick="event.stopPropagation(); openLifeHappensMenu('${dateStr}', '${p.sport}')" class="p-1 rounded hover:bg-black/10 transition" title="Modify Workout">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
                             </button>` : ''}
                         </div>
                     </div>
@@ -2034,37 +2097,43 @@ async function openActivityModal(id) {
         let pwrStr = data.average_watts ? `${Math.round(data.average_watts)} W` : '--';
 
         document.getElementById('modal-stats').innerHTML = `
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Distance</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${distStr}</div>
+                <!-- Primary Metrics -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    <div class="bg-theme-bg px-4 py-4 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-1">Distance</div>
+                        <div class="text-xl md:text-2xl font-light text-theme-text font-barlow">${distStr}</div>
+                    </div>
+                    <div class="bg-theme-bg px-4 py-4 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-1">Moving Time</div>
+                        <div class="text-xl md:text-2xl font-light text-theme-text font-barlow">${movingTimeStr}</div>
+                    </div>
+                    <div class="bg-theme-bg px-4 py-4 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-1">${paceSpeedLabel}</div>
+                        <div class="text-xl md:text-2xl font-light text-theme-text font-barlow">${paceSpeedStr}</div>
+                    </div>
+                    <div class="bg-theme-bg px-4 py-4 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-1">Avg HR</div>
+                        <div class="text-xl md:text-2xl font-light text-theme-text font-barlow">${hrStr}</div>
+                    </div>
                 </div>
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Moving Time</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${movingTimeStr}</div>
-                </div>
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">${paceSpeedLabel}</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${paceSpeedStr}</div>
-                </div>
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Elevation</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${elevStr}</div>
-                </div>
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg HR</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${hrStr}</div>
-                </div>
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Avg Power</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${pwrStr}</div>
-                </div>
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Cadence</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${cadenceStr}</div>
-                </div>
-                <div class="bg-theme-bg px-4 py-3 border border-theme-border rounded-sm shadow-sm">
-                    <div class="text-[9px] md:text-[10px] text-theme-muted uppercase font-bold tracking-wider">Suffer Score</div>
-                    <div class="text-lg md:text-xl font-light text-theme-text">${sufferStr}</div>
+                <!-- Secondary Metrics -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    <div class="bg-theme-bg px-3 py-2 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[8px] md:text-[9px] text-theme-muted uppercase font-bold tracking-wider mb-1">Elevation</div>
+                        <div class="text-sm md:text-base font-medium text-theme-text font-barlow">${elevStr}</div>
+                    </div>
+                    <div class="bg-theme-bg px-3 py-2 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[8px] md:text-[9px] text-theme-muted uppercase font-bold tracking-wider mb-1">Avg Power</div>
+                        <div class="text-sm md:text-base font-medium text-theme-text font-barlow">${pwrStr}</div>
+                    </div>
+                    <div class="bg-theme-bg px-3 py-2 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[8px] md:text-[9px] text-theme-muted uppercase font-bold tracking-wider mb-1">Cadence</div>
+                        <div class="text-sm md:text-base font-medium text-theme-text font-barlow">${cadenceStr}</div>
+                    </div>
+                    <div class="bg-theme-bg px-3 py-2 border border-theme-border rounded-sm shadow-sm text-center">
+                        <div class="text-[8px] md:text-[9px] text-theme-muted uppercase font-bold tracking-wider mb-1">Suffer Score</div>
+                        <div class="text-sm md:text-base font-medium text-theme-text font-barlow">${sufferStr}</div>
+                    </div>
                 </div>`;
 
         if (data.laps && data.laps.length > 0) {
@@ -2108,11 +2177,11 @@ async function openActivityModal(id) {
                 let lapName = lap.name ? `<span class="text-theme-muted font-normal block text-[9px] truncate max-w-[120px]">${lap.name}</span>` : '';
 
                 return `
-                    <tr class="hover:bg-theme-bg transition">
-                        <td class="px-3 py-2 font-medium">${lap.lap_index || ''} ${lapName}</td>
+                    <tr class="hover:bg-theme-bg transition tabular-nums text-right">
+                        <td class="px-3 py-2 font-medium text-left">${lap.lap_index || ''} ${lapName}</td>
                         <td class="px-3 py-2">${dist}</td>
                         <td class="px-3 py-2">${time}</td>
-                        <td class="px-3 py-2 font-mono">${paceSpd}</td>
+                        <td class="px-3 py-2">${paceSpd}</td>
                         <td class="px-3 py-2">${hr}</td>
                         <td class="px-3 py-2">${pwr}</td>
                     </tr>
@@ -2224,11 +2293,16 @@ async function loadHistory() {
                                 <h3 class="text-sm md:text-base font-bold text-theme-text truncate pr-4 group-hover:text-theme-accent transition">${x.name || 'Untitled Activity'}</h3>
                                 <span class="text-[10px] md:text-xs text-theme-muted whitespace-nowrap font-medium">${dateStr}</span>
                             </div>
-                            <div class="flex items-center gap-3">
-                                ${sportBadge}
-                                <div class="text-[10px] md:text-xs text-theme-muted flex items-center gap-1 font-mono">
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                                <div class="flex items-center gap-1.5">
+                                    ${sportBadge}
+                                </div>
+                                ${x.distance_km > 0 ? `<div class="text-[10px] md:text-xs text-theme-muted font-medium">${parseFloat(x.distance_km).toFixed(1)} km</div>` : ''}
+                                ${x.moving_time_min > 0 ? `<div class="text-[10px] md:text-xs text-theme-muted font-medium">${Math.floor(x.moving_time_min / 60) > 0 ? Math.floor(x.moving_time_min / 60) + 'h ' : ''}${Math.floor(x.moving_time_min % 60)}m</div>` : ''}
+                                ${x.average_heartrate > 0 ? `<div class="text-[10px] md:text-xs text-theme-muted font-medium flex items-center gap-1"><span class="text-red-500">♥</span> ${Math.round(x.average_heartrate)} bpm</div>` : ''}
+                                <div class="text-[10px] md:text-xs text-theme-muted flex items-center gap-1 font-mono ml-auto">
                                     <span class="uppercase tracking-wider font-semibold">Spark:</span>
-                                    <span class="text-theme-text">${x.spark_score ? Math.round(x.spark_score) : '--'}</span>
+                                    <span class="text-theme-text font-bold">${x.spark_score ? Math.round(x.spark_score) : '--'}</span>
                                 </div>
                             </div>
                         </div>
@@ -2332,10 +2406,13 @@ function getCoachAvatar(mood) {
     return fallbackUrl;
 }
 
+let chatHistoryLoaded = false;
 async function loadChatHistory() {
+    if (chatHistoryLoaded) return;
     try {
         const res = await fetch('/api/chat/history', { headers: getAuthHeaders() });
         if (!res.ok) return;
+        chatHistoryLoaded = true;
         const history = await res.json();
         const chatWindow = document.getElementById('chat-window');
         if (!chatWindow) return;
@@ -2658,9 +2735,9 @@ function renderQuickActions(planMap, sparkMap) {
         actions.push({ text: "📉 Felt Terrible", msg: "That workout felt terrible today, I really struggled." });
     } else if (!isRestDay) {
         // Workout scheduled but not completed yet
+        actions.push({ text: "⏱️ Time Crunch", msg: "I only have 30 minutes to train today. Strip down today's workout to the essentials, keeping the intensity high to maintain my Spark target." });
+        actions.push({ text: "🛑 Skip Today", msg: "I cannot train today. Cancel today's session and safely redistribute the necessary training load across the rest of the week." });
         actions.push({ text: "🏃‍♂️ Warmup Routine", msg: "Give me a quick warmup routine for my workout today." });
-        actions.push({ text: "🥱 Too Tired", msg: "I am feeling extremely tired today, can we modify or skip the plan?" });
-        actions.push({ text: "🍽️ Nutrition Focus", msg: "What should I eat before this workout?" });
     } else {
         // Rest day, no workout completed
         actions.push({ text: "🧘‍♂️ Stretching Routine", msg: "Recommend a light stretching or yoga routine for my rest day." });
@@ -3885,13 +3962,11 @@ async function openPublicProfile(userId) {
                         data.radar.versatility,
                         data.radar.explosiveness
                     ],
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    borderColor: '#3b82f6',
-                    pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#3b82f6',
-                    borderWidth: 2
+                    backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                    borderColor: 'rgba(56, 189, 248, 1)',
+                    pointBackgroundColor: 'rgba(56, 189, 248, 1)',
+                    borderWidth: 2,
+                    pointRadius: 3
                 }]
             },
             options: {
@@ -3916,7 +3991,6 @@ async function openPublicProfile(userId) {
                 }
             }
         });
-
     } catch (e) {
         document.getElementById('public-profile-username').innerText = 'Error loading profile';
         document.getElementById('public-profile-highlight').innerHTML = '<p class="text-xs text-theme-muted">Failed to load data.</p>';
@@ -3974,4 +4048,50 @@ function renderPublicSparkline(canvasId, labels, dataPoints, color) {
             animation: false
         }
     });
+}
+
+// --- LIFE HAPPENS MODAL LOGIC ---
+function openLifeHappensMenu(dateStr, sport) {
+    window.currentLifeHappensDate = dateStr;
+    const modal = document.getElementById('life-happens-modal');
+    const content = document.getElementById('life-happens-modal-content');
+    if (!modal || !content) return;
+    
+    modal.classList.remove('hidden');
+    // slight delay to allow display block to render before opacity transition
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        content.classList.remove('translate-y-full', 'md:scale-95');
+    }, 10);
+}
+
+function closeLifeHappensMenu() {
+    const modal = document.getElementById('life-happens-modal');
+    const content = document.getElementById('life-happens-modal-content');
+    if (!modal || !content) return;
+
+    modal.classList.add('opacity-0');
+    content.classList.add('translate-y-full', 'md:scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+function triggerLifeHappensAction(actionType) {
+    closeLifeHappensMenu();
+    
+    let dateStr = window.currentLifeHappensDate || new Date().toISOString().split('T')[0];
+    let msg = '';
+    
+    if (actionType === 'time_crunch') {
+        msg = `I only have 30 minutes to train on ${dateStr}. Strip down the scheduled workout on ${dateStr} to the essentials, keeping the intensity high to maintain my Spark target.`;
+    } else if (actionType === 'skip') {
+        msg = `I cannot train on ${dateStr}. Cancel the session scheduled for ${dateStr} and safely redistribute the necessary training load across the rest of the week.`;
+    } else if (actionType === 'indoors') {
+        msg = `I need to train indoors on ${dateStr}. Swap the scheduled outdoor workout on ${dateStr} for an equivalent indoor session (e.g., trainer ride, treadmill, or bodyweight strength).`;
+    } else {
+        msg = actionType;
+    }
+    
+    sendQuickAction(msg);
 }

@@ -49,6 +49,16 @@ const geminiConfigs = [
         name: "Tertiary",
         model: "gemini-3.1-flash-lite",
         apiKey: process.env.GEMINI_API_KEY_TERTIARY || process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY
+    },
+    {
+        name: "Quaternary",
+        model: "gemini-3-flash",
+        apiKey: process.env.GEMINI_API_KEY_QUATERNARY || process.env.GEMINI_API_KEY_TERTIARY || process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY
+    },
+    {
+        name: "Quinary",
+        model: "gemini-2.5-flash-lite",
+        apiKey: process.env.GEMINI_API_KEY_QUINARY || process.env.GEMINI_API_KEY_QUATERNARY || process.env.GEMINI_API_KEY_TERTIARY || process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY
     }
 ];
 
@@ -709,38 +719,38 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                     : 'No upcoming events/milestones.';
 
                                 db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
-                            try {
-                                let cleanHistory = [];
+                                    try {
+                                        let cleanHistory = [];
 
-                                (historyRows || []).forEach(row => {
-                                    let currentRole = row.role === 'coach' ? 'model' : 'user';
+                                        (historyRows || []).forEach(row => {
+                                            let currentRole = row.role === 'coach' ? 'model' : 'user';
 
-                                    if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === currentRole) {
-                                        cleanHistory[cleanHistory.length - 1].parts[0].text += "\n\n" + row.content;
-                                    } else {
-                                        cleanHistory.push({
-                                            role: currentRole,
-                                            parts: [{ text: row.content }]
+                                            if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === currentRole) {
+                                                cleanHistory[cleanHistory.length - 1].parts[0].text += "\n\n" + row.content;
+                                            } else {
+                                                cleanHistory.push({
+                                                    role: currentRole,
+                                                    parts: [{ text: row.content }]
+                                                });
+                                            }
                                         });
-                                    }
-                                });
 
-                                if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
-                                    cleanHistory.shift();
-                                }
-                                if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
-                                    cleanHistory.pop();
-                                }
+                                        if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
+                                            cleanHistory.shift();
+                                        }
+                                        if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
+                                            cleanHistory.pop();
+                                        }
 
-                                const todayStr = getAMSDateString();
-                                const next7Days = Array.from({ length: 7 }, (_, i) => {
-                                    const d = new Date();
-                                    d.setDate(d.getDate() + i);
-                                    return `${getAMSWeekday(d)}: ${getAMSDateString(d)}`;
-                                }).join(', ');
+                                        const todayStr = getAMSDateString();
+                                        const next7Days = Array.from({ length: 7 }, (_, i) => {
+                                            const d = new Date();
+                                            d.setDate(d.getDate() + i);
+                                            return `${getAMSWeekday(d)}: ${getAMSDateString(d)}`;
+                                        }).join(', ');
 
-                                const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
-                    Name: Spark
+                                        const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
+                    Name coach: Spark
                     Tone: ${user.coach_tone}
                     Current Training Phase: ${phase || user.training_phase || 'Base/General'}
                     
@@ -789,6 +799,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
+                    - To CANCEL or CLEAR a workout for a day, you MUST include that date in the JSON array and set "sport": "Rest". Otherwise, the old workout will remain in the database!
                     The JSON must be a valid Array of objects. Format it EXACTLY like this inside triple backticks:
                     \`\`\`json
                     [
@@ -799,6 +810,14 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         "target_spark": 80,
                         "details": "Push hard on the intervals, recover fully on the rests.",
                         "steps_json": "[{\\"type\\": \\"warmup\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 15, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}, {\\"type\\": \\"repeat\\", \\"iterations\\": 8, \\"steps\\": [{\\"type\\": \\"interval\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 3, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 4}, {\\"type\\": \\"rest\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 1, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]}, {\\"type\\": \\"cooldown\\", \\"condition_type\\": \\"time\\", \\"condition_value\\": 10, \\"target_type\\": \\"heart.rate.zone\\", \\"zone\\": 1}]"
+                      },
+                      {
+                        "date": "YYYY-MM-DD",
+                        "sport": "Rest", 
+                        "description": "Active Recovery",
+                        "target_spark": 0,
+                        "details": "Take the day off.",
+                        "steps_json": "[]"
                       }
                     ]
                     \`\`\`
@@ -836,111 +855,111 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     }
                     \`\`\``;
 
-                                let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data, req.user.id);
-                                let planUpdated = false;
+                                        let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data, req.user.id);
+                                        let planUpdated = false;
 
-                                const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
-                                for (const match of jsonMatches) {
-                                    try {
-                                        const parsedData = JSON.parse(match[1]);
+                                        const jsonMatches = [...aiReply.matchAll(/```json\n?([\s\S]*?)```/gi)];
+                                        for (const match of jsonMatches) {
+                                            try {
+                                                const parsedData = JSON.parse(match[1]);
 
-                                        if (Array.isArray(parsedData)) {
-                                            const planData = parsedData;
-                                            const affectedDates = [...new Set(planData.map(day => day.date))];
+                                                if (Array.isArray(parsedData)) {
+                                                    const planData = parsedData;
+                                                    const affectedDates = [...new Set(planData.map(day => day.date))];
 
-                                            if (affectedDates.length > 0) {
-                                                const placeholders = affectedDates.map(() => '?').join(',');
+                                                    if (affectedDates.length > 0) {
+                                                        const placeholders = affectedDates.map(() => '?').join(',');
 
-                                                db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
-                                                    if (err) console.error("Failed to clear old plan data:", err);
+                                                        db.run(`DELETE FROM micro_plan WHERE user_id = ? AND date IN (${placeholders})`, [req.user.id, ...affectedDates], (err) => {
+                                                            if (err) console.error("Failed to clear old plan data:", err);
 
-                                                    const stmt = db.prepare(`
+                                                            const stmt = db.prepare(`
                                         INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?)
                                     `);
 
-                                                    planData.forEach(day => {
-                                                        stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
-                                                    });
-                                                    stmt.finalize();
-                                                });
-                                            }
-                                            planUpdated = true;
-                                        } else if (parsedData && parsedData.type === 'metrics' && parsedData.data) {
-                                            const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?) ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`);
-                                            for (const [key, val] of Object.entries(parsedData.data)) {
-                                                stmt.run(req.user.id, key, String(val));
-                                            }
-                                            stmt.finalize();
-                                        } else if (parsedData && parsedData.type === 'log_activity' && parsedData.data) {
-                                            const act = parsedData.data;
-                                            // Use negative ID to avoid collision with real Strava IDs
-                                            const manualId = -Date.now();
-                                            const startDate = new Date().toISOString();
-
-                                            db.run(
-                                                `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                                                [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.spark_score || 0],
-                                                (err) => {
-                                                    if (err) console.error("Failed to insert manual activity:", err);
-                                                    else {
-                                                        // Invalidate today's nutrition cache so it incorporates the new workout
-                                                        const todayStr = startDate.split('T')[0];
-                                                        db.run(`DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [req.user.id, todayStr]);
+                                                            planData.forEach(day => {
+                                                                stmt.run(req.user.id, day.date, day.sport, day.description, day.target_spark, day.details, day.steps_json || '[]');
+                                                            });
+                                                            stmt.finalize();
+                                                        });
                                                     }
+                                                    planUpdated = true;
+                                                } else if (parsedData && parsedData.type === 'metrics' && parsedData.data) {
+                                                    const stmt = db.prepare(`INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?) ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`);
+                                                    for (const [key, val] of Object.entries(parsedData.data)) {
+                                                        stmt.run(req.user.id, key, String(val));
+                                                    }
+                                                    stmt.finalize();
+                                                } else if (parsedData && parsedData.type === 'log_activity' && parsedData.data) {
+                                                    const act = parsedData.data;
+                                                    // Use negative ID to avoid collision with real Strava IDs
+                                                    const manualId = -Date.now();
+                                                    const startDate = new Date().toISOString();
+
+                                                    db.run(
+                                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.spark_score || 0],
+                                                        (err) => {
+                                                            if (err) console.error("Failed to insert manual activity:", err);
+                                                            else {
+                                                                // Invalidate today's nutrition cache so it incorporates the new workout
+                                                                const todayStr = startDate.split('T')[0];
+                                                                db.run(`DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [req.user.id, todayStr]);
+                                                            }
+                                                        }
+                                                    );
+                                                    planUpdated = true; // Signal frontend to reload data/charts
                                                 }
-                                            );
-                                            planUpdated = true; // Signal frontend to reload data/charts
+                                            } catch (e) {
+                                                console.error("Failed to parse an AI JSON block", e);
+                                            }
                                         }
-                                    } catch (e) {
-                                        console.error("Failed to parse an AI JSON block", e);
-                                    }
-                                }
 
-                                aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
+                                        aiReply = aiReply.replace(/```json[\s\S]*?```/gi, '').trim();
 
-                                let mood = 'default';
-                                const lowerReply = aiReply.toLowerCase();
+                                        let mood = 'default';
+                                        const lowerReply = aiReply.toLowerCase();
 
-                                // if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
-                                // if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
+                                        // if (lowerReply.includes('crush') || lowerReply.includes('!')) mood = 'hype';
+                                        // if (lowerReply.includes('disappoint') || lowerReply.includes('skip')) mood = 'disappointed';
 
-                                // Define your keyword arrays here
-                                const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
-                                const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
-                                const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust', 'dream', 'hot'];
-                                // .some() acts as a giant OR statement across the whole array
-                                if (hypeKeywords.some(word => lowerReply.includes(word))) {
-                                    mood = 'hype';
-                                } else if (hornyKeywords.some(word => lowerReply.includes(word))) {
-                                    mood = 'horny';
-                                } else if (disappointedKeywords.some(word => lowerReply.includes(word))) {
-                                    mood = 'disappointed';
-                                }
+                                        // Define your keyword arrays here
+                                        const hypeKeywords = ['crush', '!', 'epic', 'beast', 'machine', 'proud', 'smash', 'nailed', 'unstoppable', 'fire', 'stellar'];
+                                        const disappointedKeywords = ['disappoint', 'skip', 'excuse', 'slack', 'shortcut', 'off track', 'slipping', 'warning'];
+                                        const hornyKeywords = ['horny', 'sexy', 'flirt', 'desire', 'attractive', 'love', 'passion', 'lust', 'dream', 'hot'];
+                                        // .some() acts as a giant OR statement across the whole array
+                                        if (hypeKeywords.some(word => lowerReply.includes(word))) {
+                                            mood = 'hype';
+                                        } else if (hornyKeywords.some(word => lowerReply.includes(word))) {
+                                            mood = 'horny';
+                                        } else if (disappointedKeywords.some(word => lowerReply.includes(word))) {
+                                            mood = 'disappointed';
+                                        }
 
 
-                                const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
-                                const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
+                                        const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
+                                        const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
 
-                                db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
-                                db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
+                                        db.run(`INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`, [req.user.id, message, imagePathDB]);
+                                        db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`, [req.user.id, aiReply, mood]);
 
-                                db.get(`SELECT COUNT(*) as count FROM chat_history WHERE user_id = ?`, [req.user.id], (err, row) => {
-                                    if (row && row.count > 0 && row.count % 6 === 0) {
-                                        triggerBackgroundSummary(req.user.id);
+                                        db.get(`SELECT COUNT(*) as count FROM chat_history WHERE user_id = ?`, [req.user.id], (err, row) => {
+                                            if (row && row.count > 0 && row.count % 6 === 0) {
+                                                triggerBackgroundSummary(req.user.id);
+                                            }
+                                        });
+
+                                        res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
+                                    } catch (innerErr) {
+                                        console.error("Async Error in chat history callback:", innerErr);
+                                        if (!res.headersSent) {
+                                            res.status(500).json({ error: "Internal chat processing error" });
+                                        }
                                     }
                                 });
-
-                                res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
-                            } catch (innerErr) {
-                                console.error("Async Error in chat history callback:", innerErr);
-                                if (!res.headersSent) {
-                                    res.status(500).json({ error: "Internal chat processing error" });
-                                }
-                            }
+                            });
                         });
-                    });
-                    });
                     });
                 });
             } catch (e) {
@@ -1335,8 +1354,15 @@ app.get('/api/dashboard-data', authenticateToken, (req, res) => {
     });
 });
 
+app.get('/api/my-profile', authenticateToken, (req, res) => {
+    db.get('SELECT data FROM public_profile_cache WHERE user_id = ?', [req.user.id], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: 'Profile not generated yet' });
+        res.json(JSON.parse(row.data));
+    });
+});
+
 app.get('/api/history', authenticateToken, (req, res) => {
-    db.all(`SELECT id, name, sport_type, start_date, spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 50`, [req.user.id], (err, rows) => {
+    db.all(`SELECT id, name, sport_type, start_date, spark_score, distance_km, moving_time_min, average_heartrate FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 50`, [req.user.id], (err, rows) => {
         res.json(rows || []);
     });
 });
@@ -1556,32 +1582,20 @@ app.get('/api/admin/usage', authenticateToken, (req, res) => {
     });
 });
 
-app.get('/api/social/feed', authenticateToken, async (req, res) => {
-    db.all(`
-        SELECT a.id, a.user_id, a.name, a.distance_km, a.moving_time_min, a.start_date, a.sport_type, a.tss as spark_score, u.username, u.profile_picture_url
-        FROM activities a
-        JOIN users u ON a.user_id = u.id
-        ORDER BY a.start_date DESC LIMIT 50
-    `, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: "DB Error" });
-        res.json({ activities: rows });
-    });
-});
-
 // Function to generate the public profile data
 function generatePublicProfile(targetUserId, globalMaxStats) {
     return new Promise((resolve, reject) => {
         db.get(`SELECT username, athlete_context, profile_picture_url FROM users WHERE id = ?`, [targetUserId], (err, user) => {
             if (err || !user) return resolve(null);
-            
+
             db.all(`SELECT id, name, distance_km, moving_time_min, start_date, sport_type, tss as spark_score FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [targetUserId], async (err, activities) => {
-                
+
                 db.all(`SELECT start_date, substr(start_date, 1, 10) as date, tss, sport_type, distance_km, elevation_m, moving_time_min FROM activities WHERE user_id = ? ORDER BY start_date ASC`, [targetUserId], async (err, rows) => {
-                    
+
                     db.all(`SELECT date, weight_kg FROM biometrics WHERE user_id = ? AND date >= date('now', '-30 days') ORDER BY date ASC`, [targetUserId], async (err, weights) => {
-                        
+
                         const trends = { dates: [], tsb: [], ctl: [], atl: [], weight: [] };
-                        
+
                         const tssMap = {};
                         let earliestDateStr = null;
                         if (rows && rows.length > 0) {
@@ -1598,21 +1612,21 @@ function generatePublicProfile(targetUserId, globalMaxStats) {
                         if (earliestDateStr) {
                             let currentDate = new Date(earliestDateStr);
                             const today = new Date();
-                            currentDate.setUTCHours(0,0,0,0);
-                            today.setUTCHours(0,0,0,0);
-                            
+                            currentDate.setUTCHours(0, 0, 0, 0);
+                            today.setUTCHours(0, 0, 0, 0);
+
                             // Calculate how many days to push to trends
                             const totalDays = Math.round((today - currentDate) / (1000 * 60 * 60 * 24));
                             const trendStartIdx = totalDays - 29; // We only want the last 30 days
-                            
+
                             let currentDayIdx = 0;
                             while (currentDate <= today) {
                                 const dateStr = currentDate.toISOString().split('T')[0];
-                                
+
                                 const dailyTss = tssMap[dateStr] || 0;
-                                ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
-                                atl = atl + (dailyTss - atl) * (1 - Math.exp(-1/7));
-                                
+                                ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1 / 42));
+                                atl = atl + (dailyTss - atl) * (1 - Math.exp(-1 / 7));
+
                                 if (currentDayIdx >= trendStartIdx) {
                                     trends.dates.push(dateStr);
                                     trends.ctl.push(ctl);
@@ -1620,7 +1634,7 @@ function generatePublicProfile(targetUserId, globalMaxStats) {
                                     trends.tsb.push(ctl - atl);
                                     trends.weight.push(weightMap[dateStr] || null);
                                 }
-                                
+
                                 currentDate.setUTCDate(currentDate.getUTCDate() + 1);
                                 currentDayIdx++;
                             }
@@ -1629,7 +1643,7 @@ function generatePublicProfile(targetUserId, globalMaxStats) {
                         let endurance = Math.min(100, Math.round((ctl / globalMaxStats.ctl) * 100));
                         let weightTrainingCount = rows ? rows.filter(r => r.sport_type === 'WeightTraining').length : 0;
                         let totalElevation = rows ? rows.reduce((sum, r) => sum + (r.elevation_m || 0), 0) : 0;
-                        let strengthScore = (weightTrainingCount * 5) + (totalElevation / 1000); 
+                        let strengthScore = (weightTrainingCount * 5) + (totalElevation / 1000);
                         let strength = Math.min(100, Math.round((strengthScore / globalMaxStats.strength) * 100));
                         const uniqueSports = new Set(rows ? rows.map(r => r.sport_type) : []).size;
                         let versatility = Math.min(100, Math.round((uniqueSports / globalMaxStats.versatility) * 100));
@@ -1662,7 +1676,7 @@ Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep
                             trends: trends,
                             radar: radar
                         };
-                        
+
                         db.run(`INSERT OR REPLACE INTO public_profile_cache (user_id, data, last_updated) VALUES (?, ?, datetime('now'))`, [targetUserId, JSON.stringify(profileData)]);
                         resolve(profileData);
                     });
@@ -1676,21 +1690,21 @@ async function calculateGlobalMaxStats() {
     return new Promise((resolve) => {
         db.all(`SELECT user_id, start_date, substr(start_date, 1, 10) as date, tss, sport_type, elevation_m, moving_time_min FROM activities ORDER BY start_date ASC`, [], (err, rows) => {
             if (err || !rows) return resolve({ ctl: 1, strength: 1, versatility: 1, explosiveness: 1 });
-            
+
             const userStats = {};
             rows.forEach(r => {
                 if (!userStats[r.user_id]) {
-                    userStats[r.user_id] = { 
-                        ctlMap: {}, earliest: r.date, 
-                        weightTrainingCount: 0, totalElevation: 0, 
-                        uniqueSports: new Set(), explosiveSessions: 0 
+                    userStats[r.user_id] = {
+                        ctlMap: {}, earliest: r.date,
+                        weightTrainingCount: 0, totalElevation: 0,
+                        uniqueSports: new Set(), explosiveSessions: 0
                     };
                 }
                 const stats = userStats[r.user_id];
                 if (!stats.earliest) stats.earliest = r.date;
-                
+
                 stats.ctlMap[r.date] = (stats.ctlMap[r.date] || 0) + (r.tss || 0);
-                
+
                 if (r.sport_type === 'WeightTraining') stats.weightTrainingCount++;
                 stats.totalElevation += (r.elevation_m || 0);
                 if (r.sport_type) stats.uniqueSports.add(r.sport_type);
@@ -1698,24 +1712,24 @@ async function calculateGlobalMaxStats() {
             });
 
             let globalMax = { ctl: 1, strength: 1, versatility: 1, explosiveness: 1 };
-            
+
             Object.keys(userStats).forEach(uid => {
                 const stats = userStats[uid];
-                
+
                 let ctl = 0;
                 if (stats.earliest) {
                     let currentDate = new Date(stats.earliest);
                     const today = new Date();
-                    currentDate.setUTCHours(0,0,0,0);
-                    today.setUTCHours(0,0,0,0);
+                    currentDate.setUTCHours(0, 0, 0, 0);
+                    today.setUTCHours(0, 0, 0, 0);
                     while (currentDate <= today) {
                         const dateStr = currentDate.toISOString().split('T')[0];
                         const dailyTss = stats.ctlMap[dateStr] || 0;
-                        ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1/42));
+                        ctl = ctl + (dailyTss - ctl) * (1 - Math.exp(-1 / 42));
                         currentDate.setUTCDate(currentDate.getUTCDate() + 1);
                     }
                 }
-                
+
                 let strengthScore = (stats.weightTrainingCount * 5) + (stats.totalElevation / 1000);
                 let versatilityScore = stats.uniqueSports.size;
                 let explosivenessScore = stats.explosiveSessions;
@@ -1737,15 +1751,15 @@ async function generateAllPublicProfiles() {
     console.log(`[Cache] Global Max Stats calculated as:`, globalMaxStats);
 
     // 2. Iterate all users and generate profile
-        db.all(`SELECT id FROM users`, [], async (err, users) => {
-            if (err || !users) return;
-            for (const u of users) {
-                await generatePublicProfile(u.id, globalMaxStats);
-                // sleep 2s to not hammer AI
-                await new Promise(r => setTimeout(r, 2000));
-            }
-            console.log("✅ All public profiles (Radar Charts & AI Highlights) have been successfully generated and cached!");
-        });
+    db.all(`SELECT id FROM users`, [], async (err, users) => {
+        if (err || !users) return;
+        for (const u of users) {
+            await generatePublicProfile(u.id, globalMaxStats);
+            // sleep 2s to not hammer AI
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        console.log("✅ All public profiles (Radar Charts & AI Highlights) have been successfully generated and cached!");
+    });
 }
 
 // Background Task for 15:00 and 20:00
@@ -1765,7 +1779,7 @@ setTimeout(() => {
 
 app.get('/api/social/profile/:id', authenticateToken, (req, res) => {
     const targetUserId = req.params.id;
-    
+
     db.get(`SELECT data FROM public_profile_cache WHERE user_id = ?`, [targetUserId], async (err, row) => {
         if (row && row.data) {
             return res.json(JSON.parse(row.data));
@@ -2504,7 +2518,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
 
 async function syncAllStravaUsersOnStartup() {
     const SYNC_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour cooldown
-    
+
     db.get(`SELECT value FROM system_state WHERE key = 'last_strava_sync_time'`, [], (err, row) => {
         if (!err && row && row.value) {
             const lastSync = parseInt(row.value, 10);
@@ -2513,47 +2527,47 @@ async function syncAllStravaUsersOnStartup() {
                 return;
             }
         }
-        
+
         db.run(`INSERT OR REPLACE INTO system_state (key, value, last_updated) VALUES ('last_strava_sync_time', ?, datetime('now'))`, [Date.now().toString()]);
-        
+
         console.log('🔄 Running initial Strava sync for all connected users...');
         db.all('SELECT id FROM users WHERE strava_refresh_token IS NOT NULL', [], async (err, users) => {
             if (err || !users) return;
 
-        for (const user of users) {
-            try {
-                const result = await getStravaTokenForUser(user.id);
-                const token = result.accessToken;
+            for (const user of users) {
+                try {
+                    const result = await getStravaTokenForUser(user.id);
+                    const token = result.accessToken;
 
-                const actRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=50', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!actRes.ok) {
-                    console.error(`❌ Strava Sync API Error ${actRes.status} for user ${user.id}`);
-                    continue;
-                }
-
-                const activities = await actRes.json();
-
-                if (Array.isArray(activities)) {
-                    activities.forEach(act => {
-                        const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50);
-                        db.run(
-                            `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
-                        );
+                    const actRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=50', {
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
-                    console.log(`✅ Startup sync complete for user ${user.id}`);
-                } else {
-                    console.error(`❌ Startup sync failed for user ${user.id}: Response is not an array`);
+
+                    if (!actRes.ok) {
+                        console.error(`❌ Strava Sync API Error ${actRes.status} for user ${user.id}`);
+                        continue;
+                    }
+
+                    const activities = await actRes.json();
+
+                    if (Array.isArray(activities)) {
+                        activities.forEach(act => {
+                            const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50);
+                            db.run(
+                                `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                [act.id, user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
+                            );
+                        });
+                        console.log(`✅ Startup sync complete for user ${user.id}`);
+                    } else {
+                        console.error(`❌ Startup sync failed for user ${user.id}: Response is not an array`);
+                    }
+                } catch (err) {
+                    console.error(`❌ Startup sync failed for user ${user.id}:`, err);
                 }
-            } catch (err) {
-                console.error(`❌ Startup sync failed for user ${user.id}:`, err);
             }
-        }
-    });
+        });
     });
 }
 
