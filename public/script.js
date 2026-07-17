@@ -2558,14 +2558,16 @@ async function triggerProactiveCheckin() {
         function typeStep() {
             if (!document.getElementById(msgId)) return; // tab switch safety
             if (wordIndex < spans.length) {
+                // Check if user is at the bottom BEFORE we add height
+                const wasAtBottom = (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight) < 150;
+                
                 const el = spans[wordIndex];
                 el.style.display = ''; // restore normal display
                 void el.offsetWidth; // force layout reflow
                 el.style.opacity = '1'; 
                 wordIndex++;
                 
-                // only scroll if the user is already near the bottom — don't hijack their scroll position
-                if (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight < 100) {
+                if (wasAtBottom) {
                     chatWindow.scrollTop = chatWindow.scrollHeight;
                 }
                 setTimeout(typeStep, 40);
