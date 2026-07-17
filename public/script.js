@@ -1520,7 +1520,7 @@ async function loadMicroPlan() {
         const [planRes, sparkRes, weatherRes] = await Promise.all([
             fetch('/api/micro-plan', { headers: getAuthHeaders(), cache: 'no-store' }),
             fetch('/api/dashboard-data', { headers: getAuthHeaders(), cache: 'no-store' }),
-            fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&current=temperature_2m,weather_code&hourly=temperature_2m,precipitation_probability,weather_code&timezone=Europe%2FBerlin')
+            fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&current=temperature_2m,weather_code&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,precipitation_sum&timezone=Europe%2FBerlin')
         ]);
         if (!planRes.ok || !sparkRes.ok) return;
 
@@ -1584,13 +1584,27 @@ async function loadMicroPlan() {
 
             // Header for the day
             html += `<div class="bg-theme-bg/50 px-3 py-2 border-b border-theme-border flex justify-between items-center">`;
+            
+            // Left side: Date + Weather
+            html += `<div class="flex items-center gap-3">`;
             html += `<div class="flex flex-col"><span class="text-[10px] uppercase font-bold text-theme-muted tracking-wider">${dayName}</span><span class="text-xs font-medium text-theme-text">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>`;
-
+            
             // Weather
             if (weatherMap[dateStr]) {
                 const w = weatherMap[dateStr];
-                html += `<div class="text-right flex flex-col items-end leading-none"><span class="text-sm" title="${w.temp}°C">${w.emoji}</span><span class="text-[9px] font-mono text-theme-muted mt-1">${w.temp}°C</span></div>`;
+                html += `<div class="flex items-center gap-1 leading-none bg-theme-bg px-2 py-1 rounded-md border border-theme-border"><span class="text-sm" title="${w.temp}°C">${w.emoji}</span><span class="text-[9px] font-mono text-theme-muted mt-1">${w.temp}°C</span></div>`;
             }
+            html += `</div>`; // End Left side
+
+            // Right side: Life Happens Button (only if date >= today)
+            if (dateStr >= todayStr) {
+                html += `<button onclick="openLifeHappensMenu('${dateStr}')" class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-theme-accent bg-theme-accent-soft hover:bg-theme-accent-soft/80 border border-theme-accent-border px-2 py-1 rounded transition shadow-sm" title="Adapt Plan">
+                    <span>⚡️ ADAPT</span>
+                </button>`;
+            } else {
+                html += `<div></div>`;
+            }
+            
             html += `</div>`; // End Header
 
             // Body for workouts
@@ -1618,9 +1632,6 @@ async function loadMicroPlan() {
                             ${p.sport !== 'Rest' && dateStr >= todayStr ? `
                             <button onclick="event.stopPropagation(); syncSingleToGarmin(${p.id || null}, '${dateStr}', '${p.sport}')" class="p-1 rounded hover:bg-black/10 transition" title="Send to Garmin">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                            </button>
-                            <button onclick="event.stopPropagation(); openLifeHappensMenu('${dateStr}', '${p.sport}')" class="p-1 rounded hover:bg-black/10 transition" title="Modify Workout">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
                             </button>` : ''}
                         </div>
                     </div>
@@ -4126,7 +4137,7 @@ function renderPublicSparkline(canvasId, labels, dataPoints, color) {
 }
 
 // --- LIFE HAPPENS MODAL LOGIC ---
-function openLifeHappensMenu(dateStr, sport) {
+function openLifeHappensMenu(dateStr) {
     window.currentLifeHappensDate = dateStr;
     const modal = document.getElementById('life-happens-modal');
     const content = document.getElementById('life-happens-modal-content');
