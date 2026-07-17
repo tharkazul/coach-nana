@@ -1031,6 +1031,66 @@
                         </div>
                     </div>
 
+                    <!-- Niggles / Body Map Section -->
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Injury Tracker
+                            </h3>
+                            <p class="text-xs text-theme-muted mt-1">Tap a body part to log an issue or mark it as resolved.</p>
+                        </div>
+                        <div class="p-6 flex justify-center bg-theme-bg/30">
+                            <svg id="niggles-body-map" viewBox="0 0 200 400" width="200" height="400" class="cursor-pointer">
+                                <style>
+                                    .body-part { fill: var(--theme-bg); stroke: var(--theme-border); stroke-width: 2; transition: all 0.2s ease; cursor: pointer; }
+                                    .body-part:hover { fill: var(--theme-accent); opacity: 0.5; }
+                                    .severity-1, .severity-2 { fill: #facc15 !important; stroke: #ca8a04 !important; opacity: 0.8; }
+                                    .severity-3, .severity-4, .severity-5 { fill: #ef4444 !important; stroke: #b91c1c !important; opacity: 0.8; }
+                                </style>
+                                <!-- Head & Neck -->
+                                <circle id="head" class="body-part" cx="100" cy="40" r="20" />
+                                <rect id="neck" class="body-part" x="90" y="60" width="20" height="15" rx="5" />
+                                
+                                <!-- Torso (Chest & Back/Hips) -->
+                                <rect id="chest" class="body-part" x="70" y="75" width="60" height="45" rx="10" />
+                                <rect id="lower_back" class="body-part" x="75" y="120" width="50" height="40" rx="8" />
+                                <rect id="hips" class="body-part" x="65" y="160" width="70" height="30" rx="15" />
+                                
+                                <!-- Shoulders -->
+                                <circle id="shoulder_left" class="body-part" cx="55" cy="85" r="15" />
+                                <circle id="shoulder_right" class="body-part" cx="145" cy="85" r="15" />
+                                
+                                <!-- Arms -->
+                                <rect id="arm_left" class="body-part" x="45" y="100" width="20" height="50" rx="10" />
+                                <rect id="arm_right" class="body-part" x="135" y="100" width="20" height="50" rx="10" />
+                                
+                                <!-- Hands -->
+                                <circle id="hand_left" class="body-part" cx="55" cy="165" r="12" />
+                                <circle id="hand_right" class="body-part" cx="145" cy="165" r="12" />
+                                
+                                <!-- Legs (Thighs) -->
+                                <rect id="leg_left" class="body-part" x="65" y="190" width="30" height="70" rx="15" />
+                                <rect id="leg_right" class="body-part" x="105" y="190" width="30" height="70" rx="15" />
+                                
+                                <!-- Knees -->
+                                <circle id="knee_left" class="body-part" cx="80" cy="275" r="12" />
+                                <circle id="knee_right" class="body-part" cx="120" cy="275" r="12" />
+                                
+                                <!-- Calves -->
+                                <rect id="calf_left" class="body-part" x="70" y="290" width="20" height="60" rx="10" />
+                                <rect id="calf_right" class="body-part" x="110" y="290" width="20" height="60" rx="10" />
+                                
+                                <!-- Achilles/Ankles -->
+                                <rect id="achilles_left" class="body-part" x="75" y="350" width="10" height="20" rx="5" />
+                                <rect id="achilles_right" class="body-part" x="115" y="350" width="10" height="20" rx="5" />
+                                
+                                <!-- Feet -->
+                                <ellipse id="foot_left" class="body-part" cx="80" cy="380" rx="15" ry="10" />
+                                <ellipse id="foot_right" class="body-part" cx="120" cy="380" rx="15" ry="10" />
+                            </svg>
+                        </div>
+                    </div>
+
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
                             <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
@@ -1881,6 +1941,43 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- Niggle Modal -->
+    <div id="niggle-modal" class="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-theme-card w-full md:w-96 rounded-t-2xl md:rounded-2xl shadow-xl transform translate-y-full md:translate-y-4 md:scale-95 transition-all duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/50">
+                <h3 id="niggle-modal-title" class="font-bold text-theme-text text-lg capitalize">Log Issue</h3>
+                <button onclick="closeNiggleModal()" class="text-theme-muted hover:text-theme-text transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <input type="hidden" id="niggle-body-part">
+                <input type="hidden" id="niggle-id">
+                
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-3">Severity</label>
+                    <input type="range" id="niggle-severity" min="1" max="5" value="1" oninput="document.getElementById('niggle-severity-display').innerText = 'Severity: ' + this.value" class="w-full h-2 bg-theme-border rounded-lg appearance-none cursor-pointer accent-theme-accent">
+                    <div class="flex justify-between text-[10px] text-theme-muted mt-2 px-1">
+                        <span>1: Twinge</span>
+                        <span>3: Modifies Gait</span>
+                        <span>5: Cannot Bear Weight</span>
+                    </div>
+                    <div id="niggle-severity-display" class="text-center font-bold text-theme-text mt-2 text-sm">Severity: 1</div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Context / Notes</label>
+                    <textarea id="niggle-notes" rows="3" placeholder="e.g. Sharp pain when stepping off curb..." class="w-full text-sm bg-theme-bg border border-theme-border rounded-lg px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent transition-colors resize-none"></textarea>
+                </div>
+                
+                <div class="flex flex-col gap-3">
+                    <button onclick="saveNiggle()" class="w-full py-3 bg-theme-accent text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transform transition-all active:scale-95">Save Issue</button>
+                    <button id="niggle-resolve-btn" onclick="resolveNiggle()" class="hidden w-full py-3 bg-green-500 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transform transition-all active:scale-95">Mark as Resolved</button>
+                </div>
             </div>
         </div>
     </div>

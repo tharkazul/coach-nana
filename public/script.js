@@ -912,6 +912,7 @@ function switchTab(t) {
     if (t === 'physique') {
         loadPhysiqueLogs();
         loadNutritionProtocol();
+        if (typeof loadActiveNiggles === 'function') loadActiveNiggles();
         setTimeout(() => {
             if (window.progress_radar) window.progress_radar.resize();
             ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
@@ -4209,3 +4210,129 @@ function triggerLifeHappensAction(actionType) {
     
     sendQuickAction(msg);
 }
+
+// --- NIGGLE TRACKER LOGIC ---
+let activeNiggles = [];
+
+async function loadActiveNiggles() {
+    try {
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch('/api/niggles/active', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        activeNiggles = await res.json();
+        
+        // Reset all colors
+        document.querySelectorAll('.body-part').forEach(part => {
+            part.classList.remove('severity-1', 'severity-2', 'severity-3', 'severity-4', 'severity-5');
+        });
+        
+        // Apply colors to active parts
+        activeNiggles.forEach(niggle => {
+            const el = document.getElementById(niggle.body_part);
+            if (el) {
+                el.classList.add(`severity-${niggle.severity}`);
+            }
+        });
+    } catch (e) {
+        console.error("Failed to load active niggles:", e);
+    }
+}
+
+function openNiggleModal(bodyPartId) {
+    const existing = activeNiggles.find(n => n.body_part === bodyPartId);
+    
+    document.getElementById('niggle-body-part').value = bodyPartId;
+    document.getElementById('niggle-modal-title').innerText = `Log Issue: ${bodyPartId.replace('_', ' ')}`;
+    
+    if (existing) {
+        document.getElementById('niggle-id').value = existing.id;
+        document.getElementById('niggle-severity').value = existing.severity;
+        document.getElementById('niggle-severity-display').innerText = `Severity: ${existing.severity}`;
+        document.getElementById('niggle-notes').value = existing.notes || '';
+        document.getElementById('niggle-resolve-btn').classList.remove('hidden');
+    } else {
+        document.getElementById('niggle-id').value = '';
+        document.getElementById('niggle-severity').value = 1;
+        document.getElementById('niggle-severity-display').innerText = `Severity: 1`;
+        document.getElementById('niggle-notes').value = '';
+        document.getElementById('niggle-resolve-btn').classList.add('hidden');
+    }
+    
+    const modal = document.getElementById('niggle-modal');
+    modal.classList.remove('hidden');
+    // slight delay to allow display:block to apply before animating opacity
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.children[0].classList.remove('translate-y-full', 'md:translate-y-4', 'md:scale-95');
+    }, 10);
+}
+
+function closeNiggleModal() {
+    const modal = document.getElementById('niggle-modal');
+    modal.classList.add('opacity-0');
+    modal.children[0].classList.add('translate-y-full', 'md:translate-y-4', 'md:scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+async function saveNiggle() {
+    const bodyPart = document.getElementById('niggle-body-part').value;
+    const severity = document.getElementById('niggle-severity').value;
+    const notes = document.getElementById('niggle-notes').value;
+    
+    try {
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch('/api/niggles', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ body_part: bodyPart, severity, notes })
+        });
+        
+        if (res.ok) {
+            closeNiggleModal();
+            loadActiveNiggles();
+            showToast("Issue logged successfully");
+        } else {
+            showToast("Failed to log issue", "error");
+        }
+    } catch (e) {
+        showToast("Error connecting to server", "error");
+    }
+}
+
+async function resolveNiggle() {
+    const id = document.getElementById('niggle-id').value;
+    if (!id) return;
+    
+    try {
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch(`/api/niggles/${id}/resolve`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            closeNiggleModal();
+            loadActiveNiggles();
+            showToast("Issue marked as resolved");
+        } else {
+            showToast("Failed to resolve issue", "error");
+        }
+    } catch (e) {
+        showToast("Error connecting to server", "error");
+    }
+}
+
+// Add event listeners to SVG body parts once DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.body-part').forEach(part => {
+        part.addEventListener('click', (e) => {
+            openNiggleModal(e.target.id);
+        });
+    });
+});

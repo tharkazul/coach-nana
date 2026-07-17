@@ -201,6 +201,31 @@ app.post('/api/admin/simulate-24h', authenticateToken, async (req, res) => {
     });
 });
 
+async function getWeatherContext() {
+    try {
+        const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&current=temperature_2m,weather_code,wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,precipitation_sum,wind_speed_10m_max&timezone=Europe%2FBerlin');
+        if (!weatherRes.ok) return '';
+        const data = await weatherRes.json();
+        
+        const currentTemp = data.current.temperature_2m;
+        const currentWind = data.current.wind_speed_10m;
+        const currentPrecip = data.current.precipitation;
+        const dailyPrecip = data.daily.precipitation_sum[0] || 0;
+        
+        let weatherContext = `\nWEATHER CONTEXT:\nCurrent Weather: ${currentTemp}°C, Wind: ${currentWind} km/h, Precipitation: ${currentPrecip} mm/h (Daily total: ${dailyPrecip} mm).\n`;
+        
+        // Define miserable conditions (e.g. heavy rain or high wind)
+        if (currentPrecip > 1.0 || dailyPrecip > 5.0 || currentWind > 25) {
+            weatherContext += `WEATHER ALERT: It is currently very miserable outside (heavy rain or high winds).\n`;
+        }
+        
+        return weatherContext;
+    } catch (e) {
+        console.error("Failed to fetch weather context:", e);
+        return '';
+    }
+}
+
 async function generateWithFallback(prompt, systemInstruction = null, chatHistory = null, imageBase64 = null, userId = null) {
     let lastError = null;
 
@@ -439,6 +464,17 @@ db.serialize(() => {
         key TEXT PRIMARY KEY,
         value TEXT,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS athlete_niggles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        body_part TEXT,
+        severity INTEGER,
+        notes TEXT,
+        status TEXT,
+        reported_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
 });
 
@@ -760,6 +796,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     The upcoming week mapping is:
                     ${next7Days}
                     
+                    ${await getWeatherContext()}
+                    
                     ATHLETE CONTEXT:
                     ${user.athlete_context}
                     
@@ -788,6 +826,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     - If phase is TAPER: Focus heavily on recovery and shedding fatigue. Ensure they rest up for the race.
 
                     CRITICAL RULES:
+                    0. ACTIVITY TYPE (SPORT): The 'sport' field is REQUIRED for every workout in the JSON and MUST be exactly one of: 'Run', 'Bike', 'Swim', 'Strength', 'Rest'. Never leave it blank. For Strength workouts, you MUST include an "exerciseName" in each step.
                     1. Act like a real human in a continuous text message thread: keep your responses concise, focused, and natural.
                     2. NEVER repeat your previous greetings, praises, or paragraphs verbatim. Do not bring up old topics unless the athlete explicitly mentions them.
                     3. Always use metric measurements exclusively (meters for distance, km/h for speed, min/km for pace). Never use imperial units.
@@ -797,6 +836,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
                     8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
                     9. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
+                    10. PREDICTIVE LOGISTICS: If the WEATHER ALERT is active and the user agrees to move an outdoor workout (Bike/Run) indoors, use the JSON block to update their microplan (e.g. changing 'Bike' to 'Zwift' or 'Run' to 'Treadmill').
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -1006,6 +1046,7 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
 
                     const phase = await getUserMacroPhase(req.user.id);
                     const todayStr = getAMSDateString();
+                    const weatherContext = await getWeatherContext();
                     let systemPrompt = `You are Spark, an elite Ironman Triathlon and endurance coach.
 Today is ${todayStr}.
 Athlete Context: ${user.athlete_context || 'General endurance athlete'}
@@ -1018,6 +1059,8 @@ Upcoming Workouts (Next 2 days):
 ${upcomingText}
 Your Tone & Persona: ${user.coach_tone || 'empathetic'}
 
+${weatherContext}
+
 MACRO BLOCK FOCUS RULES:
 - If phase is BASE: Focus intensely on keeping their volume high and heart rate low (Zone 2). Discourage speedwork.
 - If phase is BUILD: Focus on progressing their threshold and VO2max intervals. Tell them it's time to push.
@@ -1028,7 +1071,8 @@ CRITICAL RULES:
 1. Generate a single, highly personalized, proactive 1-2 sentence greeting for the athlete who just opened the app.
 2. Analyze their fitness (CTL), fatigue (ATL), and readiness (TSB) from their Key Physiological Metrics. Reference these trends to steer the user towards action (e.g., prioritize recovery if TSB is very negative, or push hard if TSB is positive). You can also reference a recent/upcoming workout.
 3. Keep it brief, extremely human, and supportive. 
-4. DO NOT generate any JSON or workout plan updates. Just the greeting.`;
+4. DO NOT generate any JSON or workout plan updates. Just the greeting.
+5. PREDICTIVE LOGISTICS: If the WEATHER ALERT is present and the athlete has an outdoor workout (e.g. Bike or Run) scheduled for today, you MUST proactively ask if they want to convert today's outdoor session into an indoor Zwift/treadmill session due to the miserable weather. For example: "Looks miserable out there today. Do you want me to convert today's ride into an indoor Zwift session?"`;
 
                     try {
                         let aiReply = await generateWithFallback("Generate the proactive greeting.", systemPrompt, []);
@@ -1490,22 +1534,36 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                     } catch(e) {}
                 }
 
-                const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
-            Tone: ${user.coach_tone || 'empathetic'}
-            Athlete Context: ${user.athlete_context || 'General endurance athlete'}
-            Schedule Boundaries:
-            ${availabilityText}
-            Key Physiological Metrics: ${metricsText}
-            Recent Strength & PB History:
-            ${recentSetsText}
-        
-        CRITICAL RULES:
-        1. You are generating a 7-day training plan starting exactly on ${targetDate}.
-        2. SCHEDULE BOUNDARIES: You MUST adhere to the daily time constraints listed in "Schedule Boundaries". If a day is marked 'blocked' or max_minutes is 0, you are strictly forbidden from scheduling any active training on that day (you may only schedule 'Rest'). Do not spike the ATL excessively on a single day to compensate; distribute the load safely across the 'Available' and 'Time-Capped' days.
-        3. You must append a JSON code block at the very end of your response containing the schedule.
-        4. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
-        4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
-        5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and push for progressive overload.
+                db.all(`SELECT body_part, severity, notes FROM athlete_niggles WHERE user_id = ? AND status = 'active'`, [req.user.id], async (err, niggleRows) => {
+                    let nigglesText = "No active injuries or niggles reported.";
+                    if (niggleRows && niggleRows.length > 0) {
+                        nigglesText = JSON.stringify(niggleRows);
+                    }
+
+                    const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
+                Tone: ${user.coach_tone || 'empathetic'}
+                Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+                Schedule Boundaries:
+                ${availabilityText}
+                Key Physiological Metrics: ${metricsText}
+                Recent Strength & PB History:
+                ${recentSetsText}
+                ACTIVE INJURIES/NIGGLES:
+                ${nigglesText}
+            
+            CRITICAL RULES:
+            0. ACTIVITY TYPE (SPORT): The 'sport' field is REQUIRED for every workout in the JSON and MUST be exactly one of: 'Run', 'Bike', 'Swim', 'Strength', 'Rest'. Never leave it blank. For Strength workouts, you MUST include an "exerciseName" in each step.
+            1. You are generating a 7-day training plan starting exactly on ${targetDate}.
+            2. SCHEDULE BOUNDARIES: You MUST adhere to the daily time constraints listed in "Schedule Boundaries". If a day is marked 'blocked' or max_minutes is 0, you are strictly forbidden from scheduling any active training on that day (you may only schedule 'Rest'). Do not spike the ATL excessively on a single day to compensate; distribute the load safely across the 'Available' and 'Time-Capped' days.
+            3. INJURY GUARDRAILS: The athlete has active injuries listed above. You MUST alter the training plan based on this data to prevent further injury.
+               - If an injury is Lower Body (Severity 3+): Strictly avoid high-impact running. Substitute required aerobic load with swimming or indoor cycling.
+               - If an injury affects Grip/Hands: Substitute swimming or heavy upper-body strength with running or indoor cycling.
+               - If Severity is 5: Schedule complete rest for the affected area.
+               - Whenever you modify a template due to an active injury, you must add a brief note in the 'description' explaining the substitution (e.g., 'Swapped today's run for a ride to protect your Achilles').
+            4. You must append a JSON code block at the very end of your response containing the schedule.
+            5. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
+            6. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
+            7. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and push for progressive overload.
         6. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
         7. SPARK TARGETS: Calculate "target_spark" for your plan. 1 minute of activity = 1 Spark (add +20% for high intensity). For Strength Training, assume each set takes 1 minute of work, plus the rest time between sets, to estimate the total duration and resulting target_spark.
 
@@ -1599,6 +1657,7 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                     console.error("AI Generation Error:", e);
                     res.status(500).json({ error: "AI failed to respond." });
                 }
+                }); // End niggles fetch
             }); // End activities fetch
         }); // End metrics fetch
     });
@@ -2084,6 +2143,54 @@ app.post('/api/weight', authenticateToken, (req, res) => {
         }
     );
 });
+
+// --- NIGGLES / INJURIES ---
+app.get('/api/niggles/active', authenticateToken, (req, res) => {
+    db.all(`SELECT * FROM athlete_niggles WHERE user_id = ? AND status = 'active'`, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Failed to fetch active niggles." });
+        res.json(rows);
+    });
+});
+
+app.post('/api/niggles', authenticateToken, (req, res) => {
+    const { body_part, severity, notes } = req.body;
+    if (!body_part || !severity) return res.status(400).json({ error: "Body part and severity are required." });
+
+    db.get(`SELECT id FROM athlete_niggles WHERE user_id = ? AND body_part = ? AND status = 'active'`, [req.user.id, body_part], (err, row) => {
+        if (err) return res.status(500).json({ error: "Database error." });
+        
+        if (row) {
+            // Update existing active niggle
+            db.run(`UPDATE athlete_niggles SET severity = ?, notes = ? WHERE id = ?`, [severity, notes || '', row.id], (updateErr) => {
+                if (updateErr) return res.status(500).json({ error: "Failed to update niggle." });
+                res.json({ success: true });
+            });
+        } else {
+            // Insert new niggle
+            db.run(
+                `INSERT INTO athlete_niggles (user_id, body_part, severity, notes, status) VALUES (?, ?, ?, ?, 'active')`,
+                [req.user.id, body_part, severity, notes || ''],
+                (insertErr) => {
+                    if (insertErr) return res.status(500).json({ error: "Failed to log niggle." });
+                    res.json({ success: true });
+                }
+            );
+        }
+    });
+});
+
+app.put('/api/niggles/:id/resolve', authenticateToken, (req, res) => {
+    const niggleId = req.params.id;
+    db.run(
+        `UPDATE athlete_niggles SET status = 'resolved' WHERE id = ? AND user_id = ?`,
+        [niggleId, req.user.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: "Failed to resolve niggle." });
+            res.json({ success: true });
+        }
+    );
+});
+
 app.get('/api/physique', authenticateToken, (req, res) => {
     db.all(`SELECT * FROM physique_logs WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 50`, [req.user.id], (err, rows) => {
         if (err) return res.status(500).json({ error: "Failed to fetch physique logs." });
