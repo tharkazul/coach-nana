@@ -5,6 +5,74 @@ let activityMap = null;
 let globalHistoryData = [];
 let currentCoachTone = "Empathetic but demanding elite endurance coach."; // NEW Tracker
 
+// --- SCHEDULE BOUNDARIES LOGIC ---
+let trainingAvailability = {
+    monday: { status: 'available', max_minutes: 120 },
+    tuesday: { status: 'available', max_minutes: 120 },
+    wednesday: { status: 'available', max_minutes: 120 },
+    thursday: { status: 'available', max_minutes: 120 },
+    friday: { status: 'available', max_minutes: 120 },
+    saturday: { status: 'available', max_minutes: 240 },
+    sunday: { status: 'available', max_minutes: 240 }
+};
+
+function renderScheduleBoundaries() {
+    const container = document.getElementById('schedule-boundaries-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    days.forEach(day => {
+        const data = trainingAvailability[day] || { status: 'available', max_minutes: 120 };
+        trainingAvailability[day] = data; // ensure it exists
+
+        const dayEl = document.createElement('div');
+        dayEl.className = 'p-3 bg-theme-bg border border-theme-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-theme-bg/80 transition select-none';
+        
+        let icon = '🟢';
+        let statusText = 'Open';
+        let minutesHtml = `<div class="text-[10px] text-theme-muted mt-1 h-5">&nbsp;</div>`;
+        
+        if (data.status === 'time_capped') {
+            icon = '🟡';
+            statusText = 'Capped';
+            minutesHtml = `<input type="number" min="15" max="300" step="15" value="${data.max_minutes}" onclick="event.stopPropagation()" onchange="updateAvailabilityMinutes('${day}', this.value)" class="w-12 text-center text-[10px] bg-theme-card border border-theme-border rounded px-1 py-0.5 mt-1 focus:outline-none focus:border-theme-accent"> <span class="text-[9px] text-theme-muted">m</span>`;
+        } else if (data.status === 'blocked') {
+            icon = '🔴';
+            statusText = 'Blocked';
+        }
+
+        dayEl.innerHTML = `
+            <div class="text-xs font-bold text-theme-text capitalize mb-2">${day.slice(0, 3)}</div>
+            <div class="text-xl mb-1">${icon}</div>
+            <div class="text-[10px] font-bold text-theme-muted">${statusText}</div>
+            <div class="flex items-center gap-1">${minutesHtml}</div>
+        `;
+
+        dayEl.onclick = () => cycleAvailability(day);
+        container.appendChild(dayEl);
+    });
+}
+
+function cycleAvailability(day) {
+    const current = trainingAvailability[day].status;
+    if (current === 'available') {
+        trainingAvailability[day].status = 'time_capped';
+        trainingAvailability[day].max_minutes = 60;
+    } else if (current === 'time_capped') {
+        trainingAvailability[day].status = 'blocked';
+        trainingAvailability[day].max_minutes = 0;
+    } else {
+        trainingAvailability[day].status = 'available';
+        trainingAvailability[day].max_minutes = day === 'saturday' || day === 'sunday' ? 240 : 120;
+    }
+    renderScheduleBoundaries();
+}
+
+function updateAvailabilityMinutes(day, minutes) {
+    trainingAvailability[day].max_minutes = parseInt(minutes, 10) || 60;
+}
+
 // Simple toast notification function
 function showToast(message, type = 'info') {
     let toastContainer = document.getElementById('toast-container');
@@ -567,6 +635,12 @@ async function loadSettings() {
                 avatarPreview.innerHTML = data.username ? data.username.charAt(0).toUpperCase() : '?';
             }
         }
+        
+        if (data.trainingAvailability && Object.keys(data.trainingAvailability).length > 0) {
+            trainingAvailability = { ...trainingAvailability, ...data.trainingAvailability };
+        }
+        renderScheduleBoundaries();
+
         // --- ONBOARDING TRIGGER ---
         // In server.js, new users default to 'New athlete.'
         if (data.athleteContext === 'New athlete.') {
@@ -670,7 +744,8 @@ async function saveSettings(type) {
     if (type === 'coach') {
         payload = {
             coachTone: document.getElementById('set-coach-tone').value,
-            athleteContext: document.getElementById('set-athlete-context').value
+            athleteContext: document.getElementById('set-athlete-context').value,
+            trainingAvailability: trainingAvailability
         };
     } else if (type === 'garmin') {
         payload = {
@@ -4083,6 +4158,34 @@ function triggerLifeHappensAction(actionType) {
     let dateStr = window.currentLifeHappensDate || new Date().toISOString().split('T')[0];
     let msg = '';
     
+    if (actionType === 'push') {
+        const aiLoader = document.getElementById('ai-loading');
+        if (aiLoader) aiLoader.classList.remove('hidden');
+
+        fetch('/api/micro-plan/push-forward', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ date: dateStr })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (aiLoader) aiLoader.classList.add('hidden');
+            if (data.success) {
+                showToast("Schedule shifted +1 day successfully!", "success");
+                loadMicroPlan();
+                loadChatHistory();
+            } else {
+                showToast("Failed to shift schedule.", "error");
+            }
+        })
+        .catch(err => {
+            if (aiLoader) aiLoader.classList.add('hidden');
+            console.error(err);
+            showToast("Error shifting schedule.", "error");
+        });
+        return;
+    }
+
     if (actionType === 'time_crunch') {
         msg = `I only have 30 minutes to train on ${dateStr}. Strip down the scheduled workout on ${dateStr} to the essentials, keeping the intensity high to maintain my Spark target.`;
     } else if (actionType === 'skip') {

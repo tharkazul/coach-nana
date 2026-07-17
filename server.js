@@ -308,6 +308,7 @@ db.serialize(() => {
     db.run(`ALTER TABLE users ADD COLUMN last_token_reset_date TEXT`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN search_privacy INTEGER DEFAULT 0`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN training_availability TEXT`, (err) => { });
     db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -1046,10 +1047,14 @@ CRITICAL RULES:
 });
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
-        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy, profile_picture_url FROM users WHERE id = ?`,
+        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy, profile_picture_url, training_availability FROM users WHERE id = ?`,
         [req.user.id],
         (err, row) => {
             if (err || !row) return res.status(500).json({ error: "DB Error" });
+            let availability = {};
+            if (row.training_availability) {
+                try { availability = JSON.parse(row.training_availability); } catch(e){}
+            }
             res.json({
                 id: row.id,
                 username: row.username,
@@ -1059,18 +1064,20 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
                 coachTone: row.coach_tone,
                 athleteContext: row.athlete_context,
                 searchPrivacy: row.search_privacy === 1,
-                profilePictureUrl: row.profile_picture_url
+                profilePictureUrl: row.profile_picture_url,
+                trainingAvailability: availability
             });
         }
     );
 });
 
 app.post('/api/user/settings/coach', authenticateToken, (req, res) => {
-    const { coachTone, athleteContext } = req.body;
+    const { coachTone, athleteContext, trainingAvailability } = req.body;
+    const availabilityStr = trainingAvailability ? JSON.stringify(trainingAvailability) : '{}';
 
     db.run(
-        `UPDATE users SET coach_tone = ?, athlete_context = ? WHERE id = ?`,
-        [coachTone, athleteContext, req.user.id],
+        `UPDATE users SET coach_tone = ?, athlete_context = ?, training_availability = ? WHERE id = ?`,
+        [coachTone, athleteContext, availabilityStr, req.user.id],
         function (err) {
             if (err) return res.status(500).json({ error: "Failed to update coach settings." });
             res.json({ message: "Coach updated successfully!" });
@@ -1382,6 +1389,31 @@ app.post('/api/micro-plan', authenticateToken, (req, res) => {
     );
 });
 
+app.post('/api/micro-plan/push-forward', authenticateToken, (req, res) => {
+    const { date } = req.body;
+    if (!date) return res.status(400).json({ error: "date is required" });
+
+    const userId = req.user.id;
+
+    // Shift everything from `date` up to `date + 6 days` forward by 1 day
+    db.run(
+        `UPDATE micro_plan SET date = DATE(date, '+1 day') WHERE user_id = ? AND date >= ? AND date <= DATE(?, '+6 days')`,
+        [userId, date, date],
+        function(err) {
+            if (err) return res.status(500).json({ error: "Failed to update micro plan." });
+
+            const msg = `I've shifted your schedule starting from ${date} forward by one day. Take it easy and recover!`;
+            db.run(
+                `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'assistant', ?, 'empathetic')`,
+                [userId, msg],
+                (err2) => {
+                    res.json({ success: true, message: msg });
+                }
+            );
+        }
+    );
+});
+
 app.post('/api/micro-plan/day', authenticateToken, (req, res) => {
     const { date, workouts } = req.body;
     if (!date || !Array.isArray(workouts)) return res.status(400).json({ error: "Invalid data format" });
@@ -1428,7 +1460,7 @@ app.delete('/api/micro-plan/:id', authenticateToken, (req, res) => {
 app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     const { targetDate } = req.body;
 
-    db.get(`SELECT coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    db.get(`SELECT coach_tone, athlete_context, training_availability FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err) {
             console.error("DB Error fetching user context for plan generation:", err);
             return res.status(500).json({ error: "Failed to load athlete context." });
@@ -1448,17 +1480,30 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                     recentSetsText = recentSetsRows.map(row => `Date: ${row.start_date}, Sport: ${row.sport_type}, Details: ${row.sets_json}`).join('\n');
                 }
 
+                let availabilityText = 'No specific schedule boundaries set.';
+                if (user.training_availability) {
+                    try {
+                        const availObj = JSON.parse(user.training_availability);
+                        availabilityText = Object.entries(availObj).map(([day, data]) => {
+                            return `- ${day.charAt(0).toUpperCase() + day.slice(1)}: ${data.status} (Max minutes: ${data.max_minutes})`;
+                        }).join('\n            ');
+                    } catch(e) {}
+                }
+
                 const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
             Tone: ${user.coach_tone || 'empathetic'}
             Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+            Schedule Boundaries:
+            ${availabilityText}
             Key Physiological Metrics: ${metricsText}
             Recent Strength & PB History:
             ${recentSetsText}
         
         CRITICAL RULES:
         1. You are generating a 7-day training plan starting exactly on ${targetDate}.
-        2. You must append a JSON code block at the very end of your response containing the schedule.
-        3. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
+        2. SCHEDULE BOUNDARIES: You MUST adhere to the daily time constraints listed in "Schedule Boundaries". If a day is marked 'blocked' or max_minutes is 0, you are strictly forbidden from scheduling any active training on that day (you may only schedule 'Rest'). Do not spike the ATL excessively on a single day to compensate; distribute the load safely across the 'Available' and 'Time-Capped' days.
+        3. You must append a JSON code block at the very end of your response containing the schedule.
+        4. Use metric measurements exclusively (km, kg, km/h). DO NOT repeat greetings, filler words, or preamble.
         4. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout, create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
         5. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and push for progressive overload.
         6. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
