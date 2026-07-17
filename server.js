@@ -698,9 +698,9 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                             recentSetsText = recentSetsRows.map(row => `Date: ${row.start_date}, Sport: ${row.sport_type}, Details: ${row.sets_json}`).join('\n');
                         }
 
-                        db.all(`SELECT date, sport, description, target_spark FROM micro_plan WHERE user_id = ? AND date >= date('now', 'localtime') ORDER BY date ASC LIMIT 14`, [req.user.id], async (err, planRows) => {
+                        db.all(`SELECT * FROM micro_plan WHERE user_id = ? AND date >= date('now', 'localtime') ORDER BY date ASC LIMIT 14`, [req.user.id], async (err, planRows) => {
                             const planText = (planRows && planRows.length > 0)
-                                ? planRows.map(p => `- ${p.date}: ${p.sport} - ${p.description} (${p.target_spark} Spark)`).join('\n                    ')
+                                ? planRows.map(p => `- ${p.date}: ${p.sport} - ${p.description} (${p.target_spark || p.target_tss || 0} Spark)`).join('\n                    ')
                                 : 'No upcoming workouts scheduled.';
 
                             db.all(`SELECT name, date, target_ctl FROM milestones WHERE user_id = ? AND date >= date('now', 'localtime') ORDER BY date ASC LIMIT 3`, [req.user.id], async (err, milestoneRows) => {
