@@ -2821,7 +2821,7 @@ app.get('/api/social/feed', authenticateToken, (req, res) => {
 
 app.get('/api/social/leaderboard', authenticateToken, (req, res) => {
     db.all(`
-        SELECT u.id, u.username, u.profile_picture_url, SUM(a.tss) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
+        SELECT u.id, u.username, u.profile_picture_url, SUM(a.spark_score) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
         FROM activities a
         JOIN users u ON a.user_id = u.id
         WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))

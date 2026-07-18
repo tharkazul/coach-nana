@@ -1,6 +1,6 @@
 require('dotenv').config();
 const sqlite3 = require('sqlite3').verbose();
-const dbPath = './nana_staging.db'; // Hardcoded to staging to fix env issue
+const dbPath = process.env.DB_PATH || './nana_multi.db';
 const db = new sqlite3.Database(dbPath);
 
 console.log(`Connecting to ${dbPath} to fix spark scores...`);
