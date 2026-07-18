@@ -17,40 +17,42 @@ let trainingAvailability = {
 };
 
 function renderScheduleBoundaries() {
-    const container = document.getElementById('schedule-boundaries-container');
-    if (!container) return;
-    container.innerHTML = '';
+    ['schedule-boundaries-container', 'onboard-schedule-boundaries-container'].forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
 
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    days.forEach(day => {
-        const data = trainingAvailability[day] || { status: 'available', max_minutes: 120 };
-        trainingAvailability[day] = data; // ensure it exists
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        days.forEach(day => {
+            const data = trainingAvailability[day] || { status: 'available', max_minutes: 120 };
+            trainingAvailability[day] = data; // ensure it exists
 
-        const dayEl = document.createElement('div');
-        dayEl.className = 'p-3 bg-theme-bg border border-theme-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-theme-bg/80 transition select-none';
-        
-        let icon = '🟢';
-        let statusText = 'Open';
-        let minutesHtml = `<div class="text-[10px] text-theme-muted mt-1 h-5">&nbsp;</div>`;
-        
-        if (data.status === 'time_capped') {
-            icon = '🟡';
-            statusText = 'Capped';
-            minutesHtml = `<input type="number" min="15" max="300" step="15" value="${data.max_minutes}" onclick="event.stopPropagation()" onchange="updateAvailabilityMinutes('${day}', this.value)" class="w-12 text-center text-[10px] bg-theme-card border border-theme-border rounded px-1 py-0.5 mt-1 focus:outline-none focus:border-theme-accent"> <span class="text-[9px] text-theme-muted">m</span>`;
-        } else if (data.status === 'blocked') {
-            icon = '🔴';
-            statusText = 'Blocked';
-        }
+            const dayEl = document.createElement('div');
+            dayEl.className = 'p-3 bg-theme-bg border border-theme-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-theme-bg/80 transition select-none';
+            
+            let icon = '🟢';
+            let statusText = 'Open';
+            let minutesHtml = `<div class="text-[10px] text-theme-muted mt-1 h-5">&nbsp;</div>`;
+            
+            if (data.status === 'time_capped') {
+                icon = '🟡';
+                statusText = 'Capped';
+                minutesHtml = `<input type="number" min="15" max="300" step="15" value="${data.max_minutes}" onclick="event.stopPropagation()" onchange="updateAvailabilityMinutes('${day}', this.value)" class="w-12 text-center text-[10px] bg-theme-card border border-theme-border rounded px-1 py-0.5 mt-1 focus:outline-none focus:border-theme-accent"> <span class="text-[9px] text-theme-muted">m</span>`;
+            } else if (data.status === 'blocked') {
+                icon = '🔴';
+                statusText = 'Blocked';
+            }
 
-        dayEl.innerHTML = `
-            <div class="text-xs font-bold text-theme-text capitalize mb-2">${day.slice(0, 3)}</div>
-            <div class="text-xl mb-1">${icon}</div>
-            <div class="text-[10px] font-bold text-theme-muted">${statusText}</div>
-            <div class="flex items-center gap-1">${minutesHtml}</div>
-        `;
+            dayEl.innerHTML = `
+                <div class="text-xs font-bold text-theme-text capitalize mb-2">${day.slice(0, 3)}</div>
+                <div class="text-xl mb-1">${icon}</div>
+                <div class="text-[10px] font-bold text-theme-muted">${statusText}</div>
+                <div class="flex items-center gap-1">${minutesHtml}</div>
+            `;
 
-        dayEl.onclick = () => cycleAvailability(day);
-        container.appendChild(dayEl);
+            dayEl.onclick = () => cycleAvailability(day);
+            container.appendChild(dayEl);
+        });
     });
 }
 
@@ -643,11 +645,37 @@ async function loadSettings() {
 
         // --- ONBOARDING TRIGGER ---
         // In server.js, new users default to 'New athlete.'
-        if (data.athleteContext === 'New athlete.') {
+        if (data.athleteContext === 'New athlete.' || localStorage.getItem('resumeOnboardingStep')) {
             const overlay = document.getElementById('onboarding-overlay');
             if (overlay) {
                 overlay.classList.remove('hidden');
                 overlay.classList.add('flex');
+                
+                // Resume state if coming back from Strava auth
+                if (localStorage.getItem('resumeOnboardingStep')) {
+                    const step = parseInt(localStorage.getItem('resumeOnboardingStep'), 10);
+                    if (step) {
+                        currentOnboardingStep = step;
+                        updateOnboardingStep();
+                    }
+                    if (localStorage.getItem('onboardContext')) {
+                        document.getElementById('onboard-context').value = localStorage.getItem('onboardContext');
+                    }
+                    if (localStorage.getItem('onboardTone')) {
+                        const savedTone = localStorage.getItem('onboardTone');
+                        document.getElementById('onboard-tone').value = savedTone;
+                        // highlight the right card (rough approximation, selects by onclick text)
+                        document.querySelectorAll('.tone-card').forEach(c => {
+                            if (c.getAttribute('onclick').includes(savedTone.substring(0, 20))) {
+                                selectTone(c, savedTone);
+                            }
+                        });
+                    }
+                    // clear them
+                    localStorage.removeItem('resumeOnboardingStep');
+                    localStorage.removeItem('onboardContext');
+                    localStorage.removeItem('onboardTone');
+                }
             }
         }
         if (data.hasGarmin) {
@@ -676,6 +704,13 @@ async function loadSettings() {
             if (btn) btn.classList.remove('hidden');
             const cbtn = document.getElementById('strava-connect-btn');
             if (cbtn) cbtn.classList.add('hidden');
+            
+            const onboardBtn = document.getElementById('btn-strava-onboard-connect');
+            if (onboardBtn) {
+                onboardBtn.innerText = "Connected";
+                onboardBtn.className = "bg-green-500 text-white text-[10px] font-bold px-3 py-1.5 rounded cursor-default pointer-events-none";
+                onboardBtn.onclick = null;
+            }
         } else {
             const b = document.getElementById('strava-status');
             b.innerText = "Disconnected";
@@ -3176,6 +3211,51 @@ function selectTone(element, tone) {
     element.classList.add('border-theme-accent', 'bg-theme-accent-soft');
 }
 
+let currentOnboardingStep = 1;
+const totalOnboardingSteps = 4;
+
+function updateOnboardingStep() {
+    // Hide all steps
+    document.querySelectorAll('.onboarding-step').forEach(step => step.classList.add('hidden'));
+    
+    // Show current step
+    const currentEl = document.querySelector(`.onboarding-step[data-step="${currentOnboardingStep}"]`);
+    if (currentEl) currentEl.classList.remove('hidden');
+
+    // Update buttons
+    const btnBack = document.getElementById('btn-onboard-back');
+    const btnNext = document.getElementById('btn-onboard-next');
+    const btnComplete = document.getElementById('btn-complete-setup');
+
+    if (currentOnboardingStep === 1) {
+        btnBack.classList.add('hidden');
+    } else {
+        btnBack.classList.remove('hidden');
+    }
+
+    if (currentOnboardingStep === totalOnboardingSteps) {
+        btnNext.classList.add('hidden');
+        btnComplete.classList.remove('hidden');
+    } else {
+        btnNext.classList.remove('hidden');
+        btnComplete.classList.add('hidden');
+    }
+}
+
+function nextOnboardingStep() {
+    if (currentOnboardingStep < totalOnboardingSteps) {
+        currentOnboardingStep++;
+        updateOnboardingStep();
+    }
+}
+
+function prevOnboardingStep() {
+    if (currentOnboardingStep > 1) {
+        currentOnboardingStep--;
+        updateOnboardingStep();
+    }
+}
+
 async function completeOnboarding(redirectUrl = null) {
     const btn = document.getElementById('btn-complete-setup');
     if (btn) btn.innerText = "Saving profile...";
@@ -3206,10 +3286,14 @@ async function completeOnboarding(redirectUrl = null) {
     const raceCtl = document.getElementById('onboard-race-ctl').value;
 
     try {
-        // 1. Save Coach Settings
+        // 1. Save Coach Settings (including availability)
         await fetch('/api/user/settings/coach', {
             method: 'POST', headers: getAuthHeaders(),
-            body: JSON.stringify({ coachTone: tone, athleteContext: context || 'Endurance Athlete' })
+            body: JSON.stringify({ 
+                coachTone: tone, 
+                athleteContext: context || 'Endurance Athlete',
+                trainingAvailability: trainingAvailability 
+            })
         });
 
         // 2. Save Garmin (if provided)
@@ -3242,12 +3326,16 @@ async function completeOnboarding(redirectUrl = null) {
 }
 
 function saveAndConnectStrava() {
-    // If the user clicks Strava, we save their inputs FIRST, then redirect them to the OAuth page.
+    // If the user clicks Strava, we save their inputs locally FIRST, then redirect them to the OAuth page.
+    localStorage.setItem('resumeOnboardingStep', '4');
+    localStorage.setItem('onboardContext', document.getElementById('onboard-context').value || '');
+    localStorage.setItem('onboardTone', document.getElementById('onboard-tone').value || '');
+
     const clientId = '208765'; // Your Strava Client ID
     const redirectUri = encodeURIComponent(window.location.origin);
     const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=activity:read_all,activity:write`;
 
-    completeOnboarding(authUrl);
+    window.location.href = authUrl;
 }
 // --- VOICE COACHING FEATURE ---
 let isVoiceEnabled = false;

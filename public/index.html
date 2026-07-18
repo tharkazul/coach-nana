@@ -290,12 +290,10 @@
             <p class="text-sm text-theme-muted mb-6 text-center">Let's get your AI Coach set up and ready to train.
             </p>
 
-            <div class="space-y-6">
-                <!-- Tone of Voice -->
-                <div>
-                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">1.
-                        Choose
-                        Coach Persona</label>
+            <div id="onboarding-steps-container" class="space-y-6">
+                <!-- STEP 1: Persona -->
+                <div class="onboarding-step" data-step="1">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">1. Choose Coach Persona</label>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div onclick="selectTone(this, 'Empathetic but demanding elite endurance coach.')"
                             class="tone-card border-2 border-theme-accent bg-theme-accent-soft p-4 rounded-lg cursor-pointer text-center transition">
@@ -328,20 +326,42 @@
                     <input type="hidden" id="onboard-tone" value="Empathetic but demanding elite endurance coach.">
                 </div>
 
-                <!-- Connect Devices -->
-                <div>
-                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">2.
-                        Connect
-                        Devices</label>
-                    <div class="space-y-3">
+                <!-- STEP 2: Athlete Context -->
+                <div class="onboarding-step hidden" data-step="2">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">2. Tell us about yourself</label>
+                    <textarea id="onboard-context"
+                        class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[80px]"
+                        placeholder="e.g. Amateur enthusiast, dad of a 1.5 year old, prefers to exercise during lunch..."></textarea>
+
+                    <div class="mt-3 bg-theme-bg border border-theme-border rounded-lg p-3">
+                        <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Key Physiological Metrics (Optional)</label>
+                        <div id="onboard-metrics-container" class="space-y-2 mb-2">
+                            <p class="text-[10px] text-theme-muted italic">No metrics added yet. Add something like "5K PB" or "FTP" to help Spark profile you better.</p>
+                        </div>
+                        <button onclick="addOnboardMetricRow()"
+                            class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1.5 rounded hover:opacity-80 transition">+ Add Metric</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Availability -->
+                <div class="onboarding-step hidden" data-step="3">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">3. Schedule Boundaries</label>
+                    <p class="text-[10px] text-theme-muted mb-4">Set your availability matrix. The AI will intelligently distribute your required weekly training load across these constraints.</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2" id="onboard-schedule-boundaries-container">
+                        <!-- JS will render the 7 days here -->
+                    </div>
+                </div>
+
+                <!-- STEP 4: Connect Devices & Goal -->
+                <div class="onboarding-step hidden" data-step="4">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">4. Connect Devices</label>
+                    <div class="space-y-3 mb-6">
                         <div class="border border-theme-border rounded-lg p-3 bg-theme-bg">
                             <button
                                 onclick="document.getElementById('onboard-garmin-fields').classList.toggle('hidden')"
                                 class="w-full flex justify-between items-center text-sm font-bold text-theme-text hover:text-theme-accent transition">
                                 <span>Set up Garmin <span
-                                        class="text-[10px] font-normal text-theme-muted ml-2 hidden md:inline">(To
-                                        push
-                                        workouts)</span></span>
+                                        class="text-[10px] font-normal text-theme-muted ml-2 hidden md:inline">(To push workouts)</span></span>
                                 <span>+</span>
                             </button>
                             <div id="onboard-garmin-fields" class="hidden mt-3 pt-3 border-t border-theme-border">
@@ -356,42 +376,13 @@
                         <div
                             class="border border-theme-border rounded-lg p-3 bg-theme-bg flex justify-between items-center">
                             <span class="text-sm font-bold text-theme-text">Set up Strava <span
-                                    class="text-[10px] font-normal text-theme-muted ml-2 hidden md:inline">(To pull
-                                    activities)</span></span>
-                            <button onclick="saveAndConnectStrava()"
+                                    class="text-[10px] font-normal text-theme-muted ml-2 hidden md:inline">(To pull activities)</span></span>
+                            <button id="btn-strava-onboard-connect" onclick="saveAndConnectStrava()"
                                 class="bg-[#fc4c02] hover:bg-orange-600 text-white text-[10px] font-bold px-3 py-1.5 rounded transition">Connect</button>
                         </div>
                     </div>
-                </div>
 
-                <!-- Athlete Context -->
-                <div>
-                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">3.
-                        Tell us
-                        about yourself</label>
-                    <textarea id="onboard-context"
-                        class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[80px]"
-                        placeholder="e.g. Amateur enthusiast, dad of a 1.5 year old, prefers to exercise during lunch..."></textarea>
-
-                    <div class="mt-3 bg-theme-bg border border-theme-border rounded-lg p-3">
-                        <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Key
-                            Physiological Metrics (Optional)</label>
-                        <div id="onboard-metrics-container" class="space-y-2 mb-2">
-                            <p class="text-[10px] text-theme-muted italic">No metrics added yet. Add something like
-                                "5K
-                                PB" or "FTP" to help Spark profile you better.</p>
-                        </div>
-                        <button onclick="addOnboardMetricRow()"
-                            class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1.5 rounded hover:opacity-80 transition">+
-                            Add Metric</button>
-                    </div>
-                </div>
-
-                <!-- Race Planner -->
-                <div>
-                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">4.
-                        Main
-                        Goal Event</label>
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Main Goal Event</label>
                     <div class="flex flex-col md:flex-row gap-2 bg-theme-bg p-3 rounded-lg border border-theme-border">
                         <input type="date" id="onboard-race-date"
                             class="p-2 border border-theme-border rounded text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none">
@@ -404,9 +395,14 @@
                     </div>
                 </div>
 
-                <button onclick="completeOnboarding()"
-                    class="w-full bg-theme-accent hover:bg-theme-accent-hover text-white font-bold p-3 rounded-lg transition shadow-sm mt-4"
-                    id="btn-complete-setup">Complete Setup</button>
+                <!-- Navigation Controls -->
+                <div class="flex justify-between items-center pt-4 border-t border-theme-border mt-4">
+                    <button onclick="prevOnboardingStep()" id="btn-onboard-back" class="text-theme-muted hover:text-theme-text font-bold text-xs px-4 py-2 hidden transition">Back</button>
+                    <div class="flex-1"></div>
+                    <button onclick="nextOnboardingStep()" id="btn-onboard-next" class="bg-theme-accent hover:bg-theme-accent-hover text-white font-bold px-6 py-2 rounded-lg transition shadow-sm">Next</button>
+                    <button onclick="completeOnboarding()" id="btn-complete-setup" class="bg-theme-accent hover:bg-theme-accent-hover text-white font-bold px-6 py-2 rounded-lg transition shadow-sm hidden">Complete Setup</button>
+                </div>
+
                 <button onclick="logout()"
                     class="w-full text-red-500/70 hover:text-red-500 text-xs font-semibold p-2 mt-2 transition text-center">
                     Log out
