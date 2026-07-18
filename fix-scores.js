@@ -1,3 +1,4 @@
+require('dotenv').config();
 const sqlite3 = require('sqlite3').verbose();
 const dbPath = process.env.DB_PATH || './nana_multi.db'; // Adjust if you're using staging
 const db = new sqlite3.Database(dbPath);
