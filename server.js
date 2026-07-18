@@ -937,10 +937,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                                     // Use negative ID to avoid collision with real Strava IDs
                                                     const manualId = -Date.now();
                                                     const startDate = new Date().toISOString();
+                                                    const sparkScore = act.spark_score || calculateSparkScore(act.moving_time_min, act.average_heartrate);
 
                                                     db.run(
-                                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, act.spark_score || 0],
+                                                        `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score, sets_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                                        [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, sparkScore, JSON.stringify(act.sets || [])],
                                                         (err) => {
                                                             if (err) console.error("Failed to insert manual activity:", err);
                                                             else {
@@ -1244,10 +1245,12 @@ app.post('/api/sync-strava', authenticateToken, async (req, res) => {
 
             activities.forEach(act => {
                 const tss = act.suffer_score || Math.round((act.moving_time / 3600) * 50);
+                const sparkScore = calculateSparkScore(act.moving_time / 60, act.average_heartrate);
                 db.run(
-                    `INSERT OR IGNORE INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [act.id, req.user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss]
+                    `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
+                    [act.id, req.user.id, act.name, act.sport_type, act.distance / 1000, act.total_elevation_gain, act.moving_time / 60, act.average_heartrate || 0, act.start_date, tss, sparkScore]
                 );
                 tagStravaActivity(req.user.id, act, tokenData.access_token);
             });
