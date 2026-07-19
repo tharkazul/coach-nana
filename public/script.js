@@ -3764,7 +3764,10 @@ async function loadLeaderboard() {
                 : u.username.charAt(0).toUpperCase()}
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
+                        <div class="flex items-center">
+                            <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
+                            <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded ml-1.5">Lvl ${u.spark_level || 1}</span>
+                        </div>
                         <span class="text-[10px] text-theme-muted">${u.total_activities || 0} activities • ${Math.round((u.total_minutes || 0) / 60 * 2) / 2}h</span>
                     </div>
                 </div>
