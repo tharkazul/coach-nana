@@ -343,18 +343,41 @@
                     </div>
                 </div>
 
-                <!-- STEP 3: Availability -->
+                <!-- STEP 3: Sparkpoints & Levels -->
                 <div class="onboarding-step hidden" data-step="3">
-                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">3. Schedule Boundaries</label>
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">3. Spark & Leveling</label>
+                    <div class="bg-theme-card border border-theme-border rounded-xl p-4 shadow-sm mb-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-full bg-theme-accent/20 flex items-center justify-center text-theme-accent font-bold">⚡️</div>
+                            <div>
+                                <h3 class="text-sm font-bold text-theme-text">What is Spark?</h3>
+                                <p class="text-[10px] text-theme-muted">Spark is the core currency of the platform. Every workout you log, every mile you run, and every session you complete earns you Spark points.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-theme-card border border-theme-border rounded-xl p-4 shadow-sm">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-full bg-theme-accent/20 flex items-center justify-center text-theme-accent font-bold text-lg">📈</div>
+                            <div>
+                                <h3 class="text-sm font-bold text-theme-text">Leveling Up</h3>
+                                <p class="text-[10px] text-theme-muted">As you earn Spark, you'll level up. The curve gets steeper the higher you go, giving you ultimate bragging rights on the social feed. Your coach will track your progress and hype you up when you hit new milestones!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: Availability -->
+                <div class="onboarding-step hidden" data-step="4">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">4. Schedule Boundaries</label>
                     <p class="text-[10px] text-theme-muted mb-4">Set your availability matrix. The AI will intelligently distribute your required weekly training load across these constraints.</p>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2" id="onboard-schedule-boundaries-container">
                         <!-- JS will render the 7 days here -->
                     </div>
                 </div>
 
-                <!-- STEP 4: Connect Devices & Goal -->
-                <div class="onboarding-step hidden" data-step="4">
-                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">4. Connect Devices</label>
+                <!-- STEP 5: Connect Devices & Goal -->
+                <div class="onboarding-step hidden" data-step="5">
+                    <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">5. Connect Devices</label>
                     <div class="space-y-3 mb-6">
                         <div class="border border-theme-border rounded-lg p-3 bg-theme-bg">
                             <button
@@ -929,6 +952,18 @@
                         <h2 class="text-xl font-bold text-theme-text font-barlow">Progress & Recovery</h2>
                         <p class="text-xs text-theme-muted mt-1">Track your fitness, fatigue, and physical readiness.
                         </p>
+                    </div>
+
+                    <!-- Spark Level Progress -->
+                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 p-6">
+                        <div class="flex justify-between items-end mb-2">
+                            <h4 class="text-sm font-bold text-theme-text uppercase tracking-wider">Spark Level <span id="spark-level-display" class="text-theme-accent">1</span></h4>
+                            <span id="spark-level-details" class="text-xs font-bold text-theme-muted">0 / 250</span>
+                        </div>
+                        <div class="w-full bg-theme-bg rounded-full h-2.5 overflow-hidden">
+                            <div id="spark-level-bar" class="bg-theme-accent h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p class="text-[10px] text-theme-muted mt-2 text-right">Progress to next level</p>
                     </div>
 
                     <!-- Athlete Radar -->

@@ -459,7 +459,7 @@ function initSSE() {
         // Show notification bubble if not currently on the coach tab
         const coachTabHidden = document.getElementById('view-coach')?.classList.contains('hidden');
         if (coachTabHidden) {
-            const badge = document.getElementById('unread-badge');
+            const badge = document.getElementById('coach-badge');
             if (badge) badge.classList.remove('hidden');
             // update lastMsgTime so reload keeps the badge
             localStorage.setItem('lastMsgTimestamp', Date.now());
@@ -642,6 +642,16 @@ async function loadSettings() {
             trainingAvailability = { ...trainingAvailability, ...data.trainingAvailability };
         }
         renderScheduleBoundaries();
+
+        // --- SPARK LEVEL PROGRESS ---
+        if (data.sparkLevel) {
+            const levelDisplay = document.getElementById('spark-level-display');
+            const levelDetails = document.getElementById('spark-level-details');
+            const levelBar = document.getElementById('spark-level-bar');
+            if (levelDisplay) levelDisplay.innerText = data.sparkLevel.level;
+            if (levelDetails) levelDetails.innerText = `${Math.round(data.sparkLevel.currentLevelThreshold)} / ${Math.round(data.sparkLevel.nextLevelThreshold)}`;
+            if (levelBar) levelBar.style.width = `${data.sparkLevel.progressPercent}%`;
+        }
 
         // --- ONBOARDING TRIGGER ---
         // In server.js, new users default to 'New athlete.'
@@ -884,7 +894,7 @@ async function forceStravaSync() {
 // --- UI NAVIGATION ---
 function updateUnreadBadge(latestMsgTime) {
     const lastViewed = parseInt(localStorage.getItem('lastChatViewTimestamp') || '0');
-    const badge = document.getElementById('unread-badge');
+    const badge = document.getElementById('coach-badge');
     const coachTabHidden = document.getElementById('view-coach')?.classList.contains('hidden');
 
     if (latestMsgTime > lastViewed && coachTabHidden && badge) {
@@ -921,7 +931,7 @@ function switchTab(t) {
 
     if (t === 'coach') {
         localStorage.setItem('lastChatViewTimestamp', Date.now());
-        const badge = document.getElementById('unread-badge');
+        const badge = document.getElementById('coach-badge');
         if (badge) badge.classList.add('hidden');
     }
 
@@ -3212,7 +3222,7 @@ function selectTone(element, tone) {
 }
 
 let currentOnboardingStep = 1;
-const totalOnboardingSteps = 4;
+const totalOnboardingSteps = 5;
 
 function updateOnboardingStep() {
     // Hide all steps
@@ -3699,7 +3709,10 @@ async function loadSocialFeed() {
                 : act.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${act.user_id})">${act.username}</p>
+                            <p class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${act.user_id})">
+                                ${act.username} 
+                                <span class="bg-theme-accent/20 text-theme-accent text-[9px] px-1.5 py-0.5 rounded ml-1 uppercase font-bold tracking-wider">Lvl ${act.spark_level || 1}</span>
+                            </p>
                             <p class="text-[10px] text-theme-muted">${new Date(act.start_date).toLocaleString()}</p>
                         </div>
                     </div>

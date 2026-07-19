@@ -334,6 +334,18 @@ db.serialize(() => {
     db.run(`ALTER TABLE users ADD COLUMN search_privacy INTEGER DEFAULT 0`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN training_availability TEXT`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {
+        if (!err) {
+            console.log("Backfilling total_spark for all users...");
+            db.all(`SELECT user_id, SUM(spark_score) as total FROM activities GROUP BY user_id`, (err, rows) => {
+                if (!err && rows) {
+                    const stmt = db.prepare(`UPDATE users SET total_spark = ? WHERE id = ?`);
+                    rows.forEach(r => stmt.run(r.total || 0, r.user_id));
+                    stmt.finalize(() => console.log("total_spark backfill complete."));
+                }
+            });
+        }
+    });
     db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -755,8 +767,14 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                     ? milestoneRows.map(m => `- ${m.date}: ${m.name} (Target CTL: ${m.target_ctl})`).join('\n                    ')
                                     : 'No upcoming events/milestones.';
 
-                                db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
-                                    try {
+                                db.all(`SELECT body_part, severity, notes FROM athlete_niggles WHERE user_id = ? AND status = 'active'`, [req.user.id], async (err, niggleRows) => {
+                                    let nigglesText = "No active injuries or niggles reported.";
+                                    if (niggleRows && niggleRows.length > 0) {
+                                        nigglesText = niggleRows.map(n => `- ${n.body_part}: Severity ${n.severity}/5. ${n.notes || ''}`).join('\n                    ');
+                                    }
+
+                                    db.all(`SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`, [req.user.id], async (err, historyRows) => {
+                                        try {
                                         let cleanHistory = [];
 
                                         (historyRows || []).forEach(row => {
@@ -818,6 +836,9 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
                     RECENT STRENGTH & PB HISTORY:
                     ${recentSetsText}
+                    
+                    ACTIVE INJURIES / NIGGLES:
+                    ${nigglesText}
 
                     PHASE GUIDANCE:
                     - If phase is BASE: Focus on aerobic volume and consistency. Discourage racing or excessive intensity.
@@ -831,6 +852,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     2. NEVER repeat your previous greetings, praises, or paragraphs verbatim. Do not bring up old topics unless the athlete explicitly mentions them.
                     3. Always use metric measurements exclusively (meters for distance, km/h for speed, min/km for pace). Never use imperial units.
                     4. Respond directly with your conversational text. Do not wrap your main reply in JSON.
+                    5. INJURY GUARDRAILS: The athlete has active injuries listed above. You MUST alter the training plan and your advice based on this data to prevent further injury.
+                       - If an injury is Lower Body (Severity 3+): Strictly avoid high-impact running. Substitute required aerobic load with swimming or indoor cycling.
+                       - If an injury affects Grip/Hands: Substitute swimming or heavy upper-body strength with running or indoor cycling.
+                       - If Severity is 5: Schedule complete rest for the affected area.
+                       - Whenever you modify a plan due to an active injury, explain the substitution to the athlete.
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.
@@ -945,6 +971,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                                         (err) => {
                                                             if (err) console.error("Failed to insert manual activity:", err);
                                                             else {
+                                                                updateUserSparkAndCheckLevel(req.user.id);
                                                                 // Invalidate today's nutrition cache so it incorporates the new workout
                                                                 const todayStr = startDate.split('T')[0];
                                                                 db.run(`DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`, [req.user.id, todayStr]);
@@ -993,24 +1020,23 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                         });
 
                                         res.json({ reply: aiReply, mood: mood, planUpdated: planUpdated });
-                                    } catch (innerErr) {
-                                        console.error("Async Error in chat history callback:", innerErr);
-                                        if (!res.headersSent) {
-                                            res.status(500).json({ error: "Internal chat processing error" });
-                                        }
+                                    } catch (err) {
+                                        console.error("Chat parsing error:", err);
+                                        res.status(500).json({ error: "Failed to generate response." });
                                     }
-                                });
-                            });
-                        });
-                    });
-                });
-            } catch (e) {
-                console.error("Chat Server Error:", e);
-                res.status(500).json({ error: "AI failed to respond." });
+                                    }); // End chat history
+                                }); // End niggles fetch
+                            }); // End milestones
+                        }); // End microplan
+                    }); // End recent sets
+                }); // End recent activities
+            } catch (err) {
+                console.error("Error building context:", err);
+                res.status(500).json({ error: "Context building failed." });
             }
-        });
-    });
-});
+        }); // End metrics
+    }); // End user fetch
+}); // End /api/chat
 
 app.get('/api/chat/briefing', authenticateToken, (req, res) => {
     db.get(`SELECT content, mood, timestamp FROM chat_history 
@@ -1092,7 +1118,7 @@ CRITICAL RULES:
 });
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
-        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy, profile_picture_url, training_availability FROM users WHERE id = ?`,
+        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy, profile_picture_url, training_availability, total_spark FROM users WHERE id = ?`,
         [req.user.id],
         (err, row) => {
             if (err || !row) return res.status(500).json({ error: "DB Error" });
@@ -1100,6 +1126,7 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
             if (row.training_availability) {
                 try { availability = JSON.parse(row.training_availability); } catch(e){}
             }
+            const sparkLevelInfo = getSparkLevelInfo(row.total_spark);
             res.json({
                 id: row.id,
                 username: row.username,
@@ -1110,7 +1137,8 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
                 athleteContext: row.athlete_context,
                 searchPrivacy: row.search_privacy === 1,
                 profilePictureUrl: row.profile_picture_url,
-                trainingAvailability: availability
+                trainingAvailability: availability,
+                sparkLevel: sparkLevelInfo
             });
         }
     );
@@ -1254,6 +1282,8 @@ app.post('/api/sync-strava', authenticateToken, async (req, res) => {
                 );
                 tagStravaActivity(req.user.id, act, tokenData.access_token);
             });
+
+            updateUserSparkAndCheckLevel(req.user.id);
 
             res.json({ message: `Successfully synced ${activities.length} activities!` });
         } catch (err) {
@@ -2453,6 +2483,25 @@ async function getStravaTokenForUser(userIdOrStravaId) {
     });
 }
 
+function getSparkLevelInfo(total_spark) {
+    const spark = total_spark || 0;
+    const level = Math.floor(8.5 * Math.log10(spark / 250 + 1)) + 1;
+    const currentLevelThreshold = 250 * (Math.pow(10, (level - 1) / 8.5) - 1);
+    const nextLevelThreshold = 250 * (Math.pow(10, level / 8.5) - 1);
+    
+    let progressPercent = 0;
+    if (nextLevelThreshold > currentLevelThreshold) {
+        progressPercent = ((spark - currentLevelThreshold) / (nextLevelThreshold - currentLevelThreshold)) * 100;
+    }
+    
+    return {
+        level,
+        currentLevelThreshold,
+        nextLevelThreshold,
+        progressPercent: Math.min(Math.max(progressPercent, 0), 100)
+    };
+}
+
 function calculateSparkScore(movingTimeMin, avgHr) {
     if (!movingTimeMin) return 0;
     let baseScore = movingTimeMin;
@@ -2588,6 +2637,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                 ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
             [data.id, internalUserId, data.name, data.sport_type, data.distance / 1000, data.total_elevation_gain, data.moving_time / 60, data.average_heartrate || null, data.start_date, tss, sparkScore], (err) => {
                 if (!err) {
+                    updateUserSparkAndCheckLevel(internalUserId);
                     sendSSEEvent(internalUserId, 'sync_complete', { provider: 'strava', activityId: data.id });
 
                     // Invalidate today's nutrition cache so it incorporates the new workout
@@ -2806,7 +2856,7 @@ app.get('/api/social/connections', authenticateToken, (req, res) => {
 
 app.get('/api/social/feed', authenticateToken, (req, res) => {
     db.all(`
-        SELECT a.*, u.username, u.profile_picture_url, 
+        SELECT a.*, u.username, u.profile_picture_url, u.total_spark,
                (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) as kudos_count,
                (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id AND k.user_id = ?) as has_kudosed
         FROM activities a
@@ -2815,6 +2865,9 @@ app.get('/api/social/feed', authenticateToken, (req, res) => {
         ORDER BY a.start_date DESC
         LIMIT 20
     `, [req.user.id, req.user.id, req.user.id], (err, rows) => {
+        if (rows) {
+            rows.forEach(r => r.spark_level = getSparkLevelInfo(r.total_spark).level);
+        }
         res.json({ activities: rows || [] });
     });
 });
@@ -2902,3 +2955,52 @@ app.listen(process.env.PORT || 3001, () => {
     console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
     syncAllStravaUsersOnStartup();
 });
+
+function updateUserSparkAndCheckLevel(userId) {
+    db.get(`SELECT total_spark FROM users WHERE id = ?`, [userId], (err, userRow) => {
+        if (err || !userRow) return;
+        const oldSpark = userRow.total_spark || 0;
+        const oldLevelInfo = getSparkLevelInfo(oldSpark);
+
+        db.get(`SELECT SUM(spark_score) as new_total FROM activities WHERE user_id = ?`, [userId], (err, row) => {
+            if (err || !row) return;
+            const newSpark = row.new_total || 0;
+            
+            db.run(`UPDATE users SET total_spark = ? WHERE id = ?`, [newSpark, userId], (err) => {
+                if (err) return;
+                
+                const newLevelInfo = getSparkLevelInfo(newSpark);
+                if (newLevelInfo.level > oldLevelInfo.level) {
+                    // Level up!
+                    triggerLevelUpCoachPrompt(userId, newLevelInfo.level);
+                }
+            });
+        });
+    });
+}
+
+function triggerLevelUpCoachPrompt(userId, newLevel) {
+    db.all(`SELECT sport_type, SUM(distance_km) as total_dist, COUNT(id) as count FROM activities WHERE user_id = ? GROUP BY sport_type`, [userId], (err, rows) => {
+        if (err) return;
+        
+        let statsStr = rows.map(r => `${r.sport_type}: ${Math.round(r.total_dist)}km (${r.count} sessions)`).join(', ');
+        if (!statsStr) statsStr = "No recorded stats yet.";
+
+        db.get(`SELECT coach_tone FROM users WHERE id = ?`, [userId], async (err, user) => {
+            if (err || !user) return;
+            
+            const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${user.coach_tone || 'Empathetic but demanding'}. Act like a real human in a continuous text message thread.`;
+            const prompt = `The athlete just leveled up to Spark Level ${newLevel}! Here are their all-time stats so far: ${statsStr}. Write a short, highly motivating congratulatory message (1-3 sentences). Acknowledge their hard work.`;
+            
+            try {
+                const aiReply = await generateWithFallback(prompt, systemPrompt, null, null, userId);
+                if (aiReply) {
+                    db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [userId, aiReply]);
+                    sendSSEEvent(userId, 'chat_update', { role: 'coach', content: aiReply, mood: 'hype' });
+                }
+            } catch (e) {
+                console.error("Failed to generate level up message", e);
+            }
+        });
+    });
+}
