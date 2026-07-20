@@ -618,6 +618,23 @@
                         </div>
                     </div>
 
+                    <!-- Active Quests -->
+                    <div id="active-quests-container" class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden hidden">
+                        <div class="bg-theme-bg/50 p-4 border-b border-theme-border flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🎯</span>
+                                <h3 class="text-sm uppercase tracking-widest font-bold text-theme-text">Active Quests</h3>
+                            </div>
+                            <span id="bonus-points-badge" class="text-xs font-bold text-theme-accent bg-theme-accent/10 px-2 py-1 rounded-full hidden">+0 Bonus</span>
+                        </div>
+                        <div id="quests-list" class="p-4 flex flex-col gap-3">
+                            <div class="animate-pulse space-y-2">
+                                <div class="h-4 bg-theme-border rounded w-3/4"></div>
+                                <div class="h-4 bg-theme-border rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Data Content (Charts) -->
                     <div id="dashboard-content" class="space-y-5 md:space-y-6 hidden">
                         <div
@@ -952,6 +969,33 @@
                         <h2 class="text-xl font-bold text-theme-text font-barlow">Progress & Recovery</h2>
                         <p class="text-xs text-theme-muted mt-1">Track your fitness, fatigue, and physical readiness.
                         </p>
+                    </div>
+
+                    <!-- Cycle Widget (Hidden by default) -->
+                    <div id="cycle-widget-container" class="hidden bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden group mb-6">
+                        <div class="p-5 md:p-6 relative overflow-hidden">
+                            <!-- Background glow -->
+                            <div class="absolute -right-20 -top-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl pointer-events-none transition-colors" id="cycle-glow"></div>
+                            
+                            <div class="flex flex-col md:flex-row gap-6 items-center">
+                                <!-- Circular Indicator -->
+                                <div class="relative w-24 h-24 shrink-0 flex items-center justify-center">
+                                    <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="40" fill="none" class="stroke-theme-border" stroke-width="8" />
+                                        <circle id="cycle-progress-ring" cx="50" cy="50" r="40" fill="none" stroke="#ec4899" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                                    </svg>
+                                    <div class="flex flex-col items-center justify-center text-center z-10">
+                                        <span id="cycle-day-number" class="text-xl md:text-2xl font-bold text-theme-text font-barlow">--</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex-1 flex flex-col justify-center text-center md:text-left z-10">
+                                    <h3 class="text-sm font-bold text-theme-muted uppercase tracking-wider mb-1">Cycle & Readiness</h3>
+                                    <div id="cycle-phase-title" class="text-xl md:text-2xl font-bold text-theme-text mb-2">--</div>
+                                    <p id="cycle-phase-desc" class="text-sm text-theme-muted">--</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Spark Level Progress -->
@@ -1329,6 +1373,12 @@
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
                                 </select>
+                            </div>
+                            <div id="set-cycle-container" class="hidden">
+                                <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Last Cycle Start</label>
+                                <input type="date" id="set-last-cycle-start"
+                                    class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text mb-2">
+                                <p class="text-[10px] text-theme-muted mb-4">Log the start of your last cycle to personalize your training load.</p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">My
@@ -1927,6 +1977,17 @@
                     </div>
                 </div>
 
+                <!-- Title Cupboard -->
+                <div>
+                    <div class="flex justify-between items-end mb-2">
+                        <h4 class="text-xs font-bold text-theme-muted uppercase tracking-wider">Title Cupboard</h4>
+                    </div>
+                    <div id="public-profile-titles" class="flex flex-wrap gap-2">
+                        <!-- Populated by JS -->
+                        <span class="text-xs italic text-theme-muted">No titles earned yet.</span>
+                    </div>
+                </div>
+
                 <!-- Athlete Archetype Radar -->
                 <div>
                     <h4 class="text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Athlete Archetype</h4>
@@ -2029,7 +2090,7 @@
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- App Logic -->
-    <script src="/script.js?v=70"></script>
+    <script src="/script.js?v=72"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

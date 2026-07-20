@@ -626,6 +626,17 @@ async function loadSettings() {
         document.getElementById('set-coach-tone').value = data.coachTone || '';
         document.getElementById('set-athlete-context').value = data.athleteContext || '';
         document.getElementById('set-gender').value = data.gender || 'Prefer not to say';
+        document.getElementById('set-last-cycle-start').value = data.lastCycleStart || '';
+        
+        const toggleCycleContainer = () => {
+            const genderVal = document.getElementById('set-gender').value;
+            const container = document.getElementById('set-cycle-container');
+            if (genderVal === 'Female') container.classList.remove('hidden');
+            else container.classList.add('hidden');
+        };
+        document.getElementById('set-gender').addEventListener('change', toggleCycleContainer);
+        toggleCycleContainer(); // Initialize
+        
         document.getElementById('set-garmin-user').value = data.garminUsername || '';
         const searchPrivacyToggle = document.getElementById('setting-search-privacy');
         if (searchPrivacyToggle) searchPrivacyToggle.checked = !!data.searchPrivacy;
@@ -739,6 +750,7 @@ async function loadSettings() {
             if (banner) banner.classList.add('hidden');
             if (content) content.classList.remove('hidden');
         }
+        updateCycleWidget(data.gender, data.lastCycleStart, data.averageCycleLength);
         await loadMetrics();
         await loadStravaAutomations();
     } catch (e) { console.error("Failed to load settings."); }
@@ -792,6 +804,7 @@ async function saveSettings(type) {
             coachTone: document.getElementById('set-coach-tone').value,
             athleteContext: document.getElementById('set-athlete-context').value,
             gender: document.getElementById('set-gender').value,
+            lastCycleStart: document.getElementById('set-last-cycle-start').value,
             trainingAvailability: trainingAvailability
         };
     } else if (type === 'garmin') {
@@ -1138,6 +1151,7 @@ async function buildDashboard() {
                 if (deskAvatar) deskAvatar.src = getCoachAvatar('proud'); // Highlighting achievement
                 if (deskReflection) {
                     let formattedContent = profileData.highlight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    formattedContent = formattedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
                     deskReflection.innerHTML = formattedContent;
                 }
             } else {
@@ -2591,6 +2605,7 @@ async function loadChatHistory() {
                     let avatarImg = getCoachAvatar(msg.mood || 'default');
                     lastCoachAvatar = avatarImg;
                     let formattedContent = msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    formattedContent = formattedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
                     formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-xl my-1 shadow-sm object-cover">');
                     lastCoachMsg = formattedContent;
                     html += `
@@ -2699,6 +2714,7 @@ async function triggerProactiveCheckin() {
         const data = await res.json();
         let finalAvatar = getCoachAvatar(data.mood || 'default');
         let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedContent = formattedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
         formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-lg my-2 border border-theme-border shadow-sm">');
 
         const msgId = 'reply-content-' + Date.now();
@@ -3009,6 +3025,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
 
         let finalAvatar = getCoachAvatar(data.mood || 'default');
         let formattedContent = data.reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedContent = formattedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
         formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-xl my-1 shadow-sm object-cover animate-pop">');
 
         let replyTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -3029,6 +3046,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
         if (data.planUpdated) {
             loadMicroPlan();
             buildDashboard(); // Refresh graphs if a manual activity was logged
+            loadSettings(); // Reload settings in case cycle tracking was updated
         }
 
         speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
@@ -4458,3 +4476,194 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// ==========================================
+// CYCLE TRACKING LOGIC
+// ==========================================
+
+async function logCycleStart() {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        const res = await fetch('/api/user/cycle/log', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ cycleStartDate: today })
+        });
+        if (res.ok) {
+            loadSettings(); // Reload settings to update widget
+        }
+    } catch(e) { console.error("Failed to log cycle"); }
+}
+
+function updateCycleWidget(gender, lastCycleStart, avgCycleLength) {
+    const container = document.getElementById('cycle-widget-container');
+    if (!container) return;
+    
+    if (gender !== 'Female') {
+        container.classList.add('hidden');
+        return;
+    }
+    
+    container.classList.remove('hidden');
+    
+    const dayNumberEl = document.getElementById('cycle-day-number');
+    const phaseTitleEl = document.getElementById('cycle-phase-title');
+    const phaseDescEl = document.getElementById('cycle-phase-desc');
+    const progressRing = document.getElementById('cycle-progress-ring');
+    const glowEl = document.getElementById('cycle-glow');
+    
+    if (!lastCycleStart) {
+        container.classList.add('hidden');
+        return;
+    }
+    
+    // Calculate days elapsed
+    const start = new Date(lastCycleStart);
+    // Ensure we strip time from 'now' for accurate day diff if start is just YYYY-MM-DD
+    const now = new Date(new Date().toISOString().split('T')[0]);
+    const diffTime = now - start;
+    let cycleDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because day 0 is day 1
+    
+    // If it's over the avg cycle length, wrap it around (or cap it, wrapping makes more sense)
+    if (cycleDay > avgCycleLength) {
+        cycleDay = cycleDay % avgCycleLength;
+        if (cycleDay === 0) cycleDay = avgCycleLength;
+    }
+    
+    dayNumberEl.innerText = `Day ${cycleDay}`;
+    
+    let phase = "";
+    let desc = "";
+    let color = "";
+    
+    if (cycleDay >= 1 && cycleDay <= 5) {
+        phase = "Menstrual Phase";
+        desc = "Your body is working hard. Prioritize recovery, stretching, and low-intensity movement.";
+        color = "#ef4444"; // red
+    } else if (cycleDay >= 6 && cycleDay <= 13) {
+        phase = "Follicular Phase";
+        desc = "Energy is rising. A great time to push hard and focus on high-intensity training.";
+        color = "#3b82f6"; // blue
+    } else if (cycleDay === 14) {
+        phase = "Ovulation Phase";
+        desc = "Peak energy and strength. Push your limits but be mindful of injury risk.";
+        color = "#eab308"; // yellow
+    } else {
+        phase = "Luteal Phase";
+        desc = "Energy may start to taper. Focus on steady-state endurance and maintaining form.";
+        color = "#a855f7"; // purple
+    }
+    
+    phaseTitleEl.innerText = phase;
+    phaseTitleEl.style.color = color;
+    phaseDescEl.innerText = desc;
+    
+    // Update SVG Ring
+    // 251.2 is the circumference (2 * pi * 40)
+    if (progressRing) {
+        const progress = cycleDay / avgCycleLength;
+        // max stroke-dashoffset is 251.2 (0%), min is 0 (100%)
+        const offset = 251.2 - (progress * 251.2);
+        progressRing.style.strokeDashoffset = offset;
+        progressRing.setAttribute('stroke', color);
+    }
+    
+    if (glowEl) glowEl.style.backgroundColor = color + '20'; // 20 hex for 12.5% opacity
+}
+
+// --- GAMIFICATION LOGIC ---
+async function fetchGamificationData() {
+    try {
+        const res = await fetch('/api/gamification', { headers: getAuthHeaders(), cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // Render Quests
+        const questsContainer = document.getElementById('active-quests-container');
+        const questsList = document.getElementById('quests-list');
+        
+        if (questsContainer && questsList) {
+            questsContainer.classList.remove('hidden');
+            if (data.quests && data.quests.length > 0) {
+                const activeQuests = data.quests.filter(q => q.status === 'active');
+                if (activeQuests.length > 0) {
+                    questsList.innerHTML = activeQuests.map(q => `
+                        <div class="flex items-center gap-3 p-3 bg-theme-bg rounded border border-theme-border">
+                            <div class="w-2 h-2 rounded-full bg-theme-accent animate-pulse"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-theme-text">${q.description}</p>
+                                <p class="text-[10px] text-theme-muted">Reward: ${q.reward_points} Spark</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    questsList.innerHTML = '<p class="text-xs text-theme-muted italic">No active quests right now.</p>';
+                }
+            } else {
+                // Generate a quest if they have none
+                questsList.innerHTML = '<button onclick="generateQuest()" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1.5 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition">Ask Coach for a Quest</button>';
+            }
+        }
+
+        // Render Titles
+        const titlesList = document.getElementById('public-profile-titles');
+        if (titlesList) {
+            if (data.titles && data.titles.length > 0) {
+                titlesList.innerHTML = data.titles.map(t => `
+                    <div class="bg-theme-bg border border-theme-border px-2 py-1 rounded text-xs">
+                        <span class="font-bold text-theme-accent">👑 ${t.title}</span>
+                        <p class="text-[9px] text-theme-muted mt-0.5">${t.description}</p>
+                    </div>
+                `).join('');
+            } else {
+                titlesList.innerHTML = '<button onclick="generateTitle()" id="generate-title-btn" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1.5 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition w-full">Generate First Title</button>';
+            }
+        }
+
+        // Calculate and show bonus points badge
+        const bonusBadge = document.getElementById('bonus-points-badge');
+        if (bonusBadge && data.bonus_points && data.bonus_points.length > 0) {
+            const totalBonus = data.bonus_points.reduce((acc, curr) => acc + curr.amount, 0);
+            if (totalBonus > 0) {
+                bonusBadge.innerText = `+${totalBonus} Bonus`;
+                bonusBadge.classList.remove('hidden');
+            }
+        }
+
+    } catch (e) {
+        console.error("Failed to fetch gamification data:", e);
+    }
+}
+
+async function generateQuest() {
+    try {
+        const questsList = document.getElementById('quests-list');
+        if (questsList) questsList.innerHTML = '<p class="text-xs text-theme-muted animate-pulse">Coach is thinking...</p>';
+        const res = await fetch('/api/gamification/generate_quest', { method: 'POST', headers: getAuthHeaders() });
+        if (res.ok) {
+            fetchGamificationData();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function generateTitle() {
+    try {
+        const res = await fetch('/api/gamification/generate_title', { method: 'POST', headers: getAuthHeaders() });
+        if (res.ok) {
+            const btn = document.getElementById('generate-title-btn');
+            if (btn) btn.innerHTML = 'Coach is thinking...';
+            setTimeout(() => { fetchGamificationData(); }, 1500);
+        }
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+// Hook into buildDashboard
+const originalBuildDashboard = buildDashboard;
+buildDashboard = async function() {
+    await originalBuildDashboard();
+    await fetchGamificationData();
+};

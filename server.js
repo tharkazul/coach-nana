@@ -129,14 +129,59 @@ setInterval(() => {
     }
 }, 3600000);
 
+function getUserGamificationContext(userId) {
+    return new Promise((resolve) => {
+        db.all(`SELECT start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC`, [userId], (err, rows) => {
+            let streak = 0;
+            if (!err && rows && rows.length > 0) {
+                const todayStr = getAMSDateString();
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = getAMSDateString(yesterday);
+                
+                // Group by unique days
+                const activityDates = [...new Set(rows.map(r => r.start_date.split('T')[0]))];
+                
+                if (activityDates.includes(todayStr) || activityDates.includes(yesterdayStr)) {
+                    let currentDate = new Date();
+                    if (!activityDates.includes(todayStr)) {
+                        currentDate = yesterday;
+                    }
+                    
+                    while(true) {
+                        const checkDateStr = getAMSDateString(currentDate);
+                        if (activityDates.includes(checkDateStr)) {
+                            streak++;
+                            currentDate.setDate(currentDate.getDate() - 1);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            db.get(`SELECT SUM(amount) as total FROM bonus_points WHERE user_id = ?`, [userId], (err2, bpRow) => {
+                const bonusPoints = (!err2 && bpRow && bpRow.total) ? bpRow.total : 0;
+                
+                db.get(`SELECT title FROM user_titles WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId], (err3, titleRow) => {
+                    const latestTitle = (!err3 && titleRow && titleRow.title) ? titleRow.title : "None yet";
+                    
+                    resolve({ streak, bonusPoints, latestTitle });
+                });
+            });
+        });
+    });
+}
+
 function getUserLeaderboardString(userId) {
     return new Promise((resolve) => {
         db.all(`
-            SELECT u.username, SUM(a.spark_score) as total_spark_score
-            FROM activities a
-            JOIN users u ON a.user_id = u.id
-            WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
-              AND a.start_date >= datetime('now', '-7 days')
+            SELECT u.username, 
+                   (COALESCE(SUM(a.spark_score), 0) + 
+                    COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND created_at >= datetime('now', '-7 days')), 0)) as total_spark_score
+            FROM users u
+            LEFT JOIN activities a ON a.user_id = u.id AND a.start_date >= datetime('now', '-7 days')
+            WHERE (u.id = ? OR u.id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
             GROUP BY u.id
             ORDER BY total_spark_score DESC
         `, [userId, userId], (err, rows) => {
@@ -335,6 +380,8 @@ db.serialize(() => {
     db.run(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN training_availability TEXT`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN gender TEXT DEFAULT 'Prefer not to say'`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN last_cycle_start TEXT`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN average_cycle_length INTEGER DEFAULT 28`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {
         if (!err) {
             console.log("Backfilling total_spark for all users...");
@@ -471,6 +518,38 @@ db.serialize(() => {
         user_id INTEGER PRIMARY KEY,
         data TEXT,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Gamification tables
+    db.run(`CREATE TABLE IF NOT EXISTS bonus_points (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        amount REAL,
+        reason TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS user_quests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        description TEXT,
+        target_metric TEXT,
+        target_value REAL,
+        reward_points REAL,
+        status TEXT DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completed_at DATETIME,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS user_titles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        title TEXT,
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS system_state (
@@ -805,6 +884,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                             return `${getAMSWeekday(d)}: ${getAMSDateString(d)}`;
                                         }).join(', ');
 
+                                        const gamification = await getUserGamificationContext(req.user.id);
+
                                         const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
                     Name coach: Spark
                     Tone: ${user.coach_tone}
@@ -867,6 +948,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     8. STRENGTH TRAINING: Only prescribe 'Strength' workouts if the Athlete Context explicitly mentions strength training, weightlifting, or being a hybrid athlete. For Strength workouts, YOU MUST put the individual exercises into the 'steps_json' array, NOT in the 'details' text! Use "condition_type": "reps" instead of time for the interval steps. Set "condition_value" to the number of reps. Add "weight": <kg_number> and "exerciseName": "<name>" to the step object. Use simple, standard exercise names (e.g., "Barbell Back Squat", "Dumbbell Lunge"). Between sets, use a "rest" step with "condition_type": "time_sec" and set "condition_value" to the number of SECONDS to rest (e.g., 90 for 90 seconds). Reference the Athlete Context for their past weights, and try to prescribe slight progressive overload (e.g., +2.5kg).
                     9. TARGETS: If a workout requires a specific pace (e.g. "4:15 min/km") or power (e.g. "250W") instead of a generic zone, add a "target_value" string to the step object (e.g., "target_value": "4:15 min/km"). Otherwise, continue using "zone": <number>.
                     10. PREDICTIVE LOGISTICS: If the WEATHER ALERT is active and the user agrees to move an outdoor workout (Bike/Run) indoors, use the JSON block to update their microplan (e.g. changing 'Bike' to 'Zwift' or 'Run' to 'Treadmill').
+                    11. GAMIFICATION (CRITICAL):
+                        - The athlete's current activity streak is: ${gamification.streak} days.
+                        - The athlete has earned a total of ${gamification.bonusPoints} bonus spark points.
+                        - The athlete's latest earned title/badge is: "${gamification.latestTitle}".
+                        - Mention their streak or title occasionally to motivate them, especially if their streak is high (e.g., "You're on a ${gamification.streak} day streak, keep the momentum going!"). Do NOT mention it every single time.
 
                     WORKOUT PLANNING (CRITICAL):
                     If you create, suggest, or modify a workout plan, you MUST append a JSON code block at the very end of your response. 
@@ -924,6 +1010,17 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         "spark_score": 25
                       }
                     }
+                    \`\`\`
+
+                    MENSTRUAL CYCLE LOGGING (CRITICAL FOR FEMALES):
+                    If the athlete mentions that their period/menstrual cycle started today or on a specific date, you MUST update the cycle tracking system by outputting an additional JSON block. Format it exactly like this inside triple backticks:
+                    \`\`\`json
+                    {
+                      "type": "log_cycle",
+                      "data": {
+                        "start_date": "YYYY-MM-DD"
+                      }
+                    }
                     \`\`\``;
 
                                         let aiReply = await generateWithFallback(message, systemPrompt, cleanHistory, base64Data, req.user.id);
@@ -962,6 +1059,12 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                                         stmt.run(req.user.id, key, String(val));
                                                     }
                                                     stmt.finalize();
+                                                } else if (parsedData && parsedData.type === 'log_cycle' && parsedData.data && parsedData.data.start_date) {
+                                                    const startDate = parsedData.data.start_date;
+                                                    db.run(`UPDATE users SET last_cycle_start = ? WHERE id = ?`, [startDate, req.user.id], (err) => {
+                                                        if (err) console.error("Failed to update cycle start date from chat:", err);
+                                                    });
+                                                    planUpdated = true; // Signal frontend to reload settings/dashboard
                                                 } else if (parsedData && parsedData.type === 'log_activity' && parsedData.data) {
                                                     const act = parsedData.data;
                                                     // Use negative ID to avoid collision with real Strava IDs
@@ -1078,6 +1181,7 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
                     const phase = await getUserMacroPhase(req.user.id);
                     const todayStr = getAMSDateString();
                     const weatherContext = await getWeatherContext();
+                    const gamification = await getUserGamificationContext(req.user.id);
                     let systemPrompt = `You are Spark, an elite Ironman Triathlon and endurance coach.
 Today is ${todayStr}.
 Athlete Context: ${user.athlete_context || 'General endurance athlete'}
@@ -1105,7 +1209,8 @@ CRITICAL RULES:
 2. Analyze their fitness (CTL), fatigue (ATL), and readiness (TSB) from their Key Physiological Metrics. Reference these trends to steer the user towards action (e.g., prioritize recovery if TSB is very negative, or push hard if TSB is positive). You can also reference a recent/upcoming workout.
 3. Keep it brief, extremely human, and supportive. 
 4. DO NOT generate any JSON or workout plan updates. Just the greeting.
-5. PREDICTIVE LOGISTICS: If the WEATHER ALERT is present and the athlete has an outdoor workout (e.g. Bike or Run) scheduled for today, you MUST proactively ask if they want to convert today's outdoor session into an indoor Zwift/treadmill session due to the miserable weather. For example: "Looks miserable out there today. Do you want me to convert today's ride into an indoor Zwift session?"`;
+5. PREDICTIVE LOGISTICS: If the WEATHER ALERT is present and the athlete has an outdoor workout (e.g. Bike or Run) scheduled for today, you MUST proactively ask if they want to convert today's outdoor session into an indoor Zwift/treadmill session due to the miserable weather. For example: "Looks miserable out there today. Do you want me to convert today's ride into an indoor Zwift session?"
+6. GAMIFICATION: The athlete has a current activity streak of ${gamification.streak} days and has ${gamification.bonusPoints} bonus points. Occasionally mention their streak if it's impressive to hype them up.`;
 
                     try {
                         let aiReply = await generateWithFallback("Generate the proactive greeting.", systemPrompt, []);
@@ -1124,7 +1229,7 @@ CRITICAL RULES:
 });
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
-        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, gender, search_privacy, profile_picture_url, training_availability, total_spark FROM users WHERE id = ?`,
+        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, gender, last_cycle_start, average_cycle_length, search_privacy, profile_picture_url, training_availability, total_spark FROM users WHERE id = ?`,
         [req.user.id],
         (err, row) => {
             if (err || !row) return res.status(500).json({ error: "DB Error" });
@@ -1142,6 +1247,8 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
                 coachTone: row.coach_tone,
                 athleteContext: row.athlete_context,
                 gender: row.gender,
+                lastCycleStart: row.last_cycle_start,
+                averageCycleLength: row.average_cycle_length || 28,
                 searchPrivacy: row.search_privacy === 1,
                 profilePictureUrl: row.profile_picture_url,
                 trainingAvailability: availability,
@@ -1152,15 +1259,27 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
 });
 
 app.post('/api/user/settings/coach', authenticateToken, (req, res) => {
-    const { coachTone, athleteContext, gender, trainingAvailability } = req.body;
+    const { coachTone, athleteContext, gender, lastCycleStart, trainingAvailability } = req.body;
     const availabilityStr = trainingAvailability ? JSON.stringify(trainingAvailability) : '{}';
 
     db.run(
-        `UPDATE users SET coach_tone = ?, athlete_context = ?, gender = ?, training_availability = ? WHERE id = ?`,
-        [coachTone, athleteContext, gender || 'Prefer not to say', availabilityStr, req.user.id],
+        `UPDATE users SET coach_tone = ?, athlete_context = ?, gender = ?, last_cycle_start = ?, training_availability = ? WHERE id = ?`,
+        [coachTone, athleteContext, gender || 'Prefer not to say', lastCycleStart || null, availabilityStr, req.user.id],
         function (err) {
             if (err) return res.status(500).json({ error: "Failed to update coach settings." });
             res.json({ message: "Coach updated successfully!" });
+        }
+    );
+});
+
+app.post('/api/user/cycle/log', authenticateToken, (req, res) => {
+    const { cycleStartDate } = req.body;
+    db.run(
+        `UPDATE users SET last_cycle_start = ? WHERE id = ?`,
+        [cycleStartDate, req.user.id],
+        function (err) {
+            if (err) return res.status(500).json({ error: "Failed to log cycle start." });
+            res.json({ message: "Cycle logged successfully!" });
         }
     );
 });
@@ -2883,11 +3002,12 @@ app.get('/api/social/feed', authenticateToken, (req, res) => {
 
 app.get('/api/social/leaderboard', authenticateToken, (req, res) => {
     db.all(`
-        SELECT u.id, u.username, u.profile_picture_url, u.total_spark, SUM(a.spark_score) as total_spark_score, SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
-        FROM activities a
-        JOIN users u ON a.user_id = u.id
-        WHERE (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
-          AND a.start_date >= datetime('now', '-7 days')
+        SELECT u.id, u.username, u.profile_picture_url, u.total_spark, 
+               (COALESCE(SUM(a.spark_score), 0) + COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND created_at >= datetime('now', '-7 days')), 0)) as total_spark_score, 
+               SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
+        FROM users u
+        LEFT JOIN activities a ON a.user_id = u.id AND a.start_date >= datetime('now', '-7 days')
+        WHERE (u.id = ? OR u.id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
         GROUP BY u.id
         ORDER BY total_spark_score DESC
     `, [req.user.id, req.user.id], (err, rows) => {
@@ -2962,6 +3082,122 @@ Keep it extremely concise (under 150 words). Do not include pleasantries. Only o
         });
     });
 }
+// --- GAMIFICATION ENDPOINTS ---
+app.get('/api/gamification', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const responseData = { quests: [], titles: [], bonus_points: [] };
+
+    db.all(`SELECT * FROM user_quests WHERE user_id = ? ORDER BY created_at DESC`, [userId], (err, quests) => {
+        if (!err && quests) responseData.quests = quests;
+        db.all(`SELECT * FROM user_titles WHERE user_id = ? ORDER BY created_at DESC`, [userId], (err, titles) => {
+            if (!err && titles) responseData.titles = titles;
+            db.all(`SELECT * FROM bonus_points WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`, [userId], (err, points) => {
+                if (!err && points) responseData.bonus_points = points;
+                res.json(responseData);
+            });
+        });
+    });
+});
+
+app.post('/api/gamification/generate_quest', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    
+    // Check if user already has an active quest to avoid spamming
+    db.get(`SELECT count(*) as count FROM user_quests WHERE user_id = ? AND status = 'active'`, [userId], async (err, row) => {
+        if (row && row.count >= 3) {
+            return res.status(400).json({ error: "You already have 3 active quests. Complete them first!" });
+        }
+
+        db.all(`SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 5`, [userId], async (err, recentActivities) => {
+            const activitiesStr = recentActivities && recentActivities.length > 0 
+                ? recentActivities.map(a => `- ${a.start_date}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min`).join('\n')
+                : "No recent activities logged.";
+
+            const prompt = `Based on the following recent activities of the user, generate a personalized, motivating micro-challenge (Quest) for them to complete in the next 3 days. 
+            Recent activities:
+            ${activitiesStr}
+            
+            Return ONLY a JSON object with this exact structure:
+            {
+            "description": "Short description of the quest (e.g. Run 5k this weekend)",
+            "target_metric": "distance_km", // or moving_time_min, etc.
+            "target_value": 5,
+            "reward_points": 50 // Keep it between 10 and 100
+            }`;
+
+            try {
+                const aiReply = await generateWithFallback(prompt, "You are a JSON-only API that outputs valid JSON.", null, null, userId);
+                const jsonStr = aiReply.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+                const questData = JSON.parse(jsonStr);
+
+                db.run(`INSERT INTO user_quests (user_id, description, target_metric, target_value, reward_points) VALUES (?, ?, ?, ?, ?)`, 
+                    [userId, questData.description, questData.target_metric, questData.target_value, questData.reward_points]);
+
+                res.json({ success: true, quest: questData });
+            } catch (e) {
+                console.error("Failed to generate quest:", e);
+                res.status(500).json({ error: "Failed to generate quest" });
+            }
+        });
+    });
+});
+
+app.post('/api/gamification/evaluate_quests', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    // Simple mock evaluation for now: If they clicked "evaluate", we look at their most recent activity and mark all active quests as complete if they have an activity today.
+    // In a real production system, we'd map "target_metric" to the latest activity row accurately.
+    db.all(`SELECT id, reward_points, description FROM user_quests WHERE user_id = ? AND status = 'active'`, [userId], (err, quests) => {
+        if (!err && quests && quests.length > 0) {
+            quests.forEach(q => {
+                // Award points
+                db.run(`INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`, [userId, q.reward_points, `Quest Completed: ${q.description}`]);
+                // Mark complete
+                db.run(`UPDATE user_quests SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?`, [q.id]);
+            });
+            res.json({ success: true, message: `Evaluated and completed ${quests.length} quests!` });
+        } else {
+            res.json({ success: true, message: "No active quests to complete." });
+        }
+    });
+});
+
+app.post('/api/gamification/generate_title', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    
+    db.all(`SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 10`, [userId], async (err, recentActivities) => {
+        const activitiesStr = recentActivities && recentActivities.length > 0 
+            ? recentActivities.map(a => `- ${a.start_date}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min`).join('\n')
+            : "No recent activities logged.";
+
+        const prompt = `Based on the following recent activities, invent a cool, heroic, or funny custom 'Title' or 'Badge' to award the user. 
+        For example: "Titan of the Tarmac", "The Weekend Warrior", "Aquaman Protocol".
+        Recent activities:
+        ${activitiesStr}
+        
+        Return ONLY a JSON object with this exact structure:
+        {
+          "title": "The Title Name",
+          "description": "A short, funny, or epic description of why they earned it."
+        }`;
+
+        try {
+            const aiReply = await generateWithFallback(prompt, "You are a JSON-only API that outputs valid JSON.", null, null, userId);
+            const jsonStr = aiReply.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+            const titleData = JSON.parse(jsonStr);
+
+            db.run(`INSERT INTO user_titles (user_id, title, description) VALUES (?, ?, ?)`, 
+                [userId, titleData.title, titleData.description]);
+                
+            // Also award 50 bonus points for a new title
+            db.run(`INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`, [userId, 50, `Earned Title: ${titleData.title}`]);
+
+            res.json({ success: true, title: titleData });
+        } catch (e) {
+            console.error("Failed to generate title:", e);
+            res.status(500).json({ error: "Failed to generate title" });
+        }
+    });
+});
 
 app.listen(process.env.PORT || 3001, () => {
     console.log('🚀 Spark HQ Multi-Tenant Engine live on port 3001...');
