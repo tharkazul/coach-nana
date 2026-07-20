@@ -1785,25 +1785,43 @@ function closeEditWorkoutModal() {
 }
 
 function calculateWbSpark() {
-    const blocks = document.querySelectorAll('.wb-block-item');
     let totalMins = 0;
-    blocks.forEach(block => {
-        let val = parseFloat(block.dataset.conditionValue) || 0;
-        let condType = block.dataset.conditionType || 'time';
-        let iterations = parseInt(block.dataset.iterations) || 1;
+    wbSteps.forEach(step => {
+        if (step.type === 'repeat') {
+            let repeatMins = 0;
+            let iterations = parseInt(step.iterations) || 1;
+            (step.steps || []).forEach(sub => {
+                let val = parseFloat(sub.condition_value) || 0;
+                let multiplier = 1.0;
+                if (sub.target_type && sub.target_type.endsWith('.zone')) {
+                    let z = parseInt(sub.zone) || 2;
+                    if (z >= 4) multiplier = 1.2;
+                    else if (z === 3) multiplier = 1.1;
+                    else if (z <= 1) multiplier = 0.9;
+                }
 
-        if (condType === 'time') {
-            totalMins += (val * iterations);
-        } else if (condType === 'distance') {
-            // Rough estimate: 5 min per km
-            totalMins += ((val / 1000) * 5 * iterations);
+                if (sub.condition_type === 'time') repeatMins += (val * multiplier);
+                else if (sub.condition_type === 'distance') repeatMins += ((val / 1000) * 5 * multiplier);
+            });
+            totalMins += (repeatMins * iterations);
+        } else {
+            let val = parseFloat(step.condition_value) || 0;
+            let multiplier = 1.0;
+            if (step.target_type && step.target_type.endsWith('.zone')) {
+                let z = parseInt(step.zone) || 2;
+                if (z >= 4) multiplier = 1.2;
+                else if (z === 3) multiplier = 1.1;
+                else if (z <= 1) multiplier = 0.9;
+            }
+
+            if (step.condition_type === 'time') totalMins += (val * multiplier);
+            else if (step.condition_type === 'distance') totalMins += ((val / 1000) * 5 * multiplier);
         }
     });
 
     const sparkInput = document.getElementById('edit-workout-spark');
     if (totalMins > 0) {
-        // Roughly 1 Spark per minute as a generic estimate
-        sparkInput.value = Math.round(totalMins * 1.0);
+        sparkInput.value = Math.round(totalMins);
     } else {
         sparkInput.value = '';
     }
@@ -1816,6 +1834,7 @@ function wbAddStep(type) {
         { type: type, condition_type: 'reps', condition_value: 10, target_type: 'no.target', weight: 0, exerciseName: '' } :
         { type: type, condition_type: 'time', condition_value: 5, target_type: 'no.target' };
     wbSteps.push(step);
+    calculateWbSpark();
     renderWbSteps();
 }
 
@@ -1830,6 +1849,7 @@ function wbAddRepeat() {
         ]
     };
     wbSteps.push(step);
+    calculateWbSpark();
     renderWbSteps();
 }
 
@@ -1839,6 +1859,7 @@ function wbRemoveStep(idx, subIdx = null) {
     } else {
         wbSteps[idx].steps.splice(subIdx, 1);
     }
+    calculateWbSpark();
     renderWbSteps();
 }
 
@@ -1862,8 +1883,8 @@ function wbUpdateStep(idx, subIdx, field, val) {
         step.zone = 2;
         renderWbSteps();
     }
-    // Only re-calculate Spark if condition_type or value changes
-    if (field === 'condition_type' || field === 'condition_value') {
+    // Only re-calculate Spark if condition_type, value, or zone changes
+    if (field === 'condition_type' || field === 'condition_value' || field === 'zone' || field === 'target_type') {
         calculateWbSpark();
     }
 }
@@ -1871,8 +1892,6 @@ function wbUpdateStep(idx, subIdx, field, val) {
 function renderWbSteps() {
     const container = document.getElementById('wb-steps-container');
     if (!container) return;
-
-    calculateWbSpark();
 
     if (wbSteps.length === 0) {
         container.innerHTML = `<div class="text-xs text-theme-muted italic py-4 text-center border border-dashed border-theme-border rounded-lg">No structured steps. Click above to add blocks.</div>`;
