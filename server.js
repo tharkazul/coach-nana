@@ -334,6 +334,7 @@ db.serialize(() => {
     db.run(`ALTER TABLE users ADD COLUMN search_privacy INTEGER DEFAULT 0`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN training_availability TEXT`, (err) => { });
+    db.run(`ALTER TABLE users ADD COLUMN gender TEXT DEFAULT 'Prefer not to say'`, (err) => { });
     db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {
         if (!err) {
             console.log("Backfilling total_spark for all users...");
@@ -717,7 +718,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    db.get(`SELECT coach_tone, athlete_context, long_term_memory, daily_token_usage, last_token_reset_date FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    db.get(`SELECT coach_tone, athlete_context, gender, long_term_memory, daily_token_usage, last_token_reset_date FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err) {
             console.error("DB Error fetching user context:", err);
             return res.status(500).json({ error: "Failed to load athlete context." });
@@ -817,8 +818,11 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                     ${await getWeatherContext()}
                     
                     ATHLETE CONTEXT:
+                    Gender: ${user.gender || 'Prefer not to say'}
                     ${user.athlete_context}
                     
+                    ${user.gender === 'Female' ? 'IMPORTANT FOR FEMALE ATHLETES: Proactively ask when her menstrual cycle starts to optimize training. Track these dates in your long term memory. Suggest and distribute exercises carefully, reducing physical demand during the strenuous days of the cycle.' : ''}
+
                     LONG-TERM MEMORY (From Past Conversations):
                     ${user.long_term_memory}
 
@@ -1052,7 +1056,7 @@ app.get('/api/chat/briefing', authenticateToken, (req, res) => {
 });
 
 app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
-    db.get(`SELECT coach_tone, athlete_context FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    db.get(`SELECT coach_tone, athlete_context, gender FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err || !user) return res.status(500).json({ error: "Failed to load athlete context." });
 
         db.all(`SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`, [req.user.id], async (err, recentActivities) => {
@@ -1077,6 +1081,8 @@ app.post('/api/chat/checkin', authenticateToken, async (req, res) => {
                     let systemPrompt = `You are Spark, an elite Ironman Triathlon and endurance coach.
 Today is ${todayStr}.
 Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+Gender: ${user.gender || 'Prefer not to say'}
+${user.gender === 'Female' ? 'IMPORTANT: Track menstrual cycle phases and adjust demands based on the physically demanding days of her cycle.' : ''}
 Key Physiological Metrics:
 ${metricsText}
 Current Macro Phase: ${phase}
@@ -1118,7 +1124,7 @@ CRITICAL RULES:
 });
 app.get('/api/user/settings', authenticateToken, (req, res) => {
     db.get(
-        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, search_privacy, profile_picture_url, training_availability, total_spark FROM users WHERE id = ?`,
+        `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, gender, search_privacy, profile_picture_url, training_availability, total_spark FROM users WHERE id = ?`,
         [req.user.id],
         (err, row) => {
             if (err || !row) return res.status(500).json({ error: "DB Error" });
@@ -1135,6 +1141,7 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
                 garminUsername: row.garmin_username,
                 coachTone: row.coach_tone,
                 athleteContext: row.athlete_context,
+                gender: row.gender,
                 searchPrivacy: row.search_privacy === 1,
                 profilePictureUrl: row.profile_picture_url,
                 trainingAvailability: availability,
@@ -1145,12 +1152,12 @@ app.get('/api/user/settings', authenticateToken, (req, res) => {
 });
 
 app.post('/api/user/settings/coach', authenticateToken, (req, res) => {
-    const { coachTone, athleteContext, trainingAvailability } = req.body;
+    const { coachTone, athleteContext, gender, trainingAvailability } = req.body;
     const availabilityStr = trainingAvailability ? JSON.stringify(trainingAvailability) : '{}';
 
     db.run(
-        `UPDATE users SET coach_tone = ?, athlete_context = ?, training_availability = ? WHERE id = ?`,
-        [coachTone, athleteContext, availabilityStr, req.user.id],
+        `UPDATE users SET coach_tone = ?, athlete_context = ?, gender = ?, training_availability = ? WHERE id = ?`,
+        [coachTone, athleteContext, gender || 'Prefer not to say', availabilityStr, req.user.id],
         function (err) {
             if (err) return res.status(500).json({ error: "Failed to update coach settings." });
             res.json({ message: "Coach updated successfully!" });
@@ -1537,7 +1544,7 @@ app.delete('/api/micro-plan/:id', authenticateToken, (req, res) => {
 app.post('/api/generate-plan', authenticateToken, async (req, res) => {
     const { targetDate } = req.body;
 
-    db.get(`SELECT coach_tone, athlete_context, training_availability FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+    db.get(`SELECT coach_tone, athlete_context, gender, training_availability FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
         if (err) {
             console.error("DB Error fetching user context for plan generation:", err);
             return res.status(500).json({ error: "Failed to load athlete context." });
@@ -1576,6 +1583,8 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
                     const systemPrompt = `You are Coach Spark, an elite Ironman Triathlon and endurance coach.
                 Tone: ${user.coach_tone || 'empathetic'}
                 Athlete Context: ${user.athlete_context || 'General endurance athlete'}
+                Gender: ${user.gender || 'Prefer not to say'}
+                ${user.gender === 'Female' ? 'IMPORTANT: Adjust training load taking the menstrual cycle into consideration. Distribute exercises carefully around the physically demanding days.' : ''}
                 Schedule Boundaries:
                 ${availabilityText}
                 Key Physiological Metrics: ${metricsText}

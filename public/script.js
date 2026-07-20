@@ -625,6 +625,7 @@ async function loadSettings() {
 
         document.getElementById('set-coach-tone').value = data.coachTone || '';
         document.getElementById('set-athlete-context').value = data.athleteContext || '';
+        document.getElementById('set-gender').value = data.gender || 'Prefer not to say';
         document.getElementById('set-garmin-user').value = data.garminUsername || '';
         const searchPrivacyToggle = document.getElementById('setting-search-privacy');
         if (searchPrivacyToggle) searchPrivacyToggle.checked = !!data.searchPrivacy;
@@ -790,6 +791,7 @@ async function saveSettings(type) {
         payload = {
             coachTone: document.getElementById('set-coach-tone').value,
             athleteContext: document.getElementById('set-athlete-context').value,
+            gender: document.getElementById('set-gender').value,
             trainingAvailability: trainingAvailability
         };
     } else if (type === 'garmin') {
