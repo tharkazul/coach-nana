@@ -2609,6 +2609,13 @@ async function loadChatHistory() {
 
         chatWindow.scrollTop = chatWindow.scrollHeight;
 
+        // Ensure we stay at bottom as images load
+        chatWindow.querySelectorAll('img').forEach(img => {
+            img.addEventListener('load', () => {
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            });
+        });
+
         // Proactive Check-in Logic & Unread Badge
         if (history && history.length > 0) {
             const lastMsg = history[history.length - 1];
@@ -2762,6 +2769,9 @@ async function triggerProactiveCheckin() {
         }
         
         walk(targetEl);
+        
+        // Snap to bottom after base message structure is added to ensure wasAtBottom is true
+        chatWindow.scrollTop = chatWindow.scrollHeight;
         
         let wordIndex = 0;
         function typeStep() {
@@ -3061,17 +3071,23 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
         
         walk(targetEl);
         
+        // Snap to bottom after base message structure is added to ensure wasAtBottom is true
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        
         let wordIndex = 0;
         function typeStep() {
             if (!document.getElementById(msgId)) return; // tab switch safety
             if (wordIndex < spans.length) {
+                // Check if user is at the bottom BEFORE we add height
+                const wasAtBottom = (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight) < 150;
+                
                 const el = spans[wordIndex];
                 el.style.display = ''; // restore normal display
                 void el.offsetWidth; // force layout reflow
                 el.style.opacity = '1'; 
                 wordIndex++;
                 
-                if (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight < 100) {
+                if (wasAtBottom) {
                     chatWindow.scrollTop = chatWindow.scrollHeight;
                 }
                 setTimeout(typeStep, 40);
