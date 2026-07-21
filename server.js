@@ -543,6 +543,9 @@ db.serialize(() => {
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
 
+    db.run(`ALTER TABLE user_quests ADD COLUMN target_sport TEXT DEFAULT 'Any'`, (err) => { });
+    db.run(`ALTER TABLE user_quests ADD COLUMN is_accumulative INTEGER DEFAULT 0`, (err) => { });
+
     db.run(`CREATE TABLE IF NOT EXISTS user_titles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -3191,19 +3194,22 @@ app.post('/api/gamification/generate_quest', authenticateToken, async (req, res)
 
 app.post('/api/gamification/evaluate_quests', authenticateToken, (req, res) => {
     const userId = req.user.id;
-    // Simple mock evaluation for now: If they clicked "evaluate", we look at their most recent activity and mark all active quests as complete if they have an activity today.
-    // In a real production system, we'd map "target_metric" to the latest activity row accurately.
-    db.all(`SELECT id, reward_points, description FROM user_quests WHERE user_id = ? AND status = 'active'`, [userId], (err, quests) => {
-        if (!err && quests && quests.length > 0) {
-            quests.forEach(q => {
-                // Award points
-                db.run(`INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`, [userId, q.reward_points, `Quest Completed: ${q.description}`]);
-                // Mark complete
-                db.run(`UPDATE user_quests SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?`, [q.id]);
-            });
-            res.json({ success: true, message: `Evaluated and completed ${quests.length} quests!` });
-        } else {
-            res.json({ success: true, message: "No active quests to complete." });
+    
+    // Evaluate the latest activity against active quests
+    db.get(`SELECT * FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 1`, [userId], async (err, latestActivity) => {
+        if (err || !latestActivity) {
+            return res.json({ success: true, message: "No activities found to evaluate against." });
+        }
+        
+        try {
+            const completed = await evaluateQuestsAgainstActivity(userId, latestActivity);
+            if (completed.length > 0) {
+                res.json({ success: true, message: `Evaluated and completed ${completed.length} quests based on your latest activity!` });
+            } else {
+                res.json({ success: true, message: "Evaluated your latest activity, but no quests were completed." });
+            }
+        } catch (e) {
+            res.status(500).json({ error: "Failed to evaluate quests." });
         }
     });
 });
@@ -3315,9 +3321,11 @@ async function generateQuestForUser(userId) {
             
             Return ONLY a JSON object with this exact structure:
             {
-            "description": "Short description of the quest (e.g. Run 5k this weekend)",
-            "target_metric": "distance_km", // or moving_time_min, etc.
+            "description": "Short description of the quest (e.g. Run 5k this weekend, or Complete 15km total biking and running)",
+            "target_metric": "distance_km", // OR "moving_time_min", "spark_score", or "unique_sports"
             "target_value": 5,
+            "target_sport": "Run, Ride", // Comma-separated list of required sports (e.g. Run, Ride, Swim) or 'Any'
+            "is_accumulative": false, // Set to true if the goal should sum across multiple activities, false if it must be done in one activity
             "reward_points": 50 // Keep it between 10 and 100
             }`;
 
@@ -3326,8 +3334,8 @@ async function generateQuestForUser(userId) {
                 const jsonStr = aiReply.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
                 const questData = JSON.parse(jsonStr);
 
-                db.run(`INSERT INTO user_quests (user_id, description, target_metric, target_value, reward_points) VALUES (?, ?, ?, ?, ?)`, 
-                    [userId, questData.description, questData.target_metric, questData.target_value, questData.reward_points], function(err) {
+                db.run(`INSERT INTO user_quests (user_id, description, target_metric, target_value, target_sport, is_accumulative, reward_points) VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+                    [userId, questData.description, questData.target_metric, questData.target_value, questData.target_sport || 'Any', questData.is_accumulative ? 1 : 0, questData.reward_points], function(err) {
                         if (err) return reject(err);
                         resolve(questData);
                     });
@@ -3341,18 +3349,49 @@ async function generateQuestForUser(userId) {
 
 async function evaluateQuestsAgainstActivity(userId, activityData) {
     return new Promise((resolve) => {
-        db.all(`SELECT id, reward_points, description, target_metric, target_value FROM user_quests WHERE user_id = ? AND status = 'active'`, [userId], (err, quests) => {
+        db.all(`SELECT id, reward_points, description, target_metric, target_value, target_sport, is_accumulative, created_at FROM user_quests WHERE user_id = ? AND status = 'active'`, [userId], async (err, quests) => {
             if (err || !quests || quests.length === 0) return resolve([]);
             
             let completedQuests = [];
             
-            quests.forEach(q => {
+            for (const q of quests) {
+                const targetSports = q.target_sport ? q.target_sport.split(',').map(s => s.trim().toLowerCase()) : ['any'];
+                const isAnySport = targetSports.includes('any');
+
                 let achievedValue = 0;
                 
-                // Map the target metric to the actual activity data properties
-                if (q.target_metric === 'distance_km') achievedValue = activityData.distance_km;
-                else if (q.target_metric === 'moving_time_min') achievedValue = activityData.moving_time_min;
-                else if (q.target_metric === 'spark_score') achievedValue = activityData.spark_score;
+                if (q.is_accumulative) {
+                    // Accumulative evaluation (sum across all matching activities since quest created_at)
+                    const sumResult = await new Promise(res => {
+                        let sportCondition = "";
+                        if (!isAnySport) {
+                            const sportIn = targetSports.map(s => `'${s}'`).join(',');
+                            sportCondition = `AND LOWER(sport_type) IN (${sportIn})`;
+                        }
+                        
+                        if (q.target_metric === 'unique_sports') {
+                            db.get(`SELECT COUNT(DISTINCT LOWER(sport_type)) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`, [userId, q.created_at], (err, row) => res(row ? row.total : 0));
+                        } else {
+                            const allowedMetrics = ['distance_km', 'moving_time_min', 'spark_score'];
+                            const metricCol = allowedMetrics.includes(q.target_metric) ? q.target_metric : 'distance_km';
+                            db.get(`SELECT SUM(${metricCol}) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`, [userId, q.created_at], (err, row) => res(row ? row.total : 0));
+                        }
+                    });
+                    achievedValue = sumResult;
+                } else {
+                    // Single activity evaluation
+                    if (!isAnySport && activityData.sport_type) {
+                        if (!targetSports.includes(activityData.sport_type.toLowerCase())) {
+                            continue; // Sport mismatch, skip
+                        }
+                    }
+                    
+                    // Map the target metric to the actual activity data properties
+                    if (q.target_metric === 'distance_km') achievedValue = activityData.distance_km;
+                    else if (q.target_metric === 'moving_time_min') achievedValue = activityData.moving_time_min;
+                    else if (q.target_metric === 'spark_score') achievedValue = activityData.spark_score;
+                    else if (q.target_metric === 'unique_sports') achievedValue = 1;
+                }
                 
                 if (achievedValue >= q.target_value) {
                     completedQuests.push(q);
@@ -3361,7 +3400,7 @@ async function evaluateQuestsAgainstActivity(userId, activityData) {
                     // Mark complete
                     db.run(`UPDATE user_quests SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?`, [q.id]);
                 }
-            });
+            }
             
             resolve(completedQuests);
         });

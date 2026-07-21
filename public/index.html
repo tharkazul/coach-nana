@@ -573,11 +573,26 @@
                 <div id="view-dashboard"
                     class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-7xl mx-auto w-full space-y-5 md:space-y-6">
 
-                    <!-- Coach's Desk (Hero Section) -->
-                    <div id="coachs-desk"
-                        class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col group">
-                        <div
-                            class="bg-theme-accent-soft p-5 md:p-8 flex flex-col md:flex-row gap-5 items-start md:items-center relative overflow-hidden">
+                    <!-- SUB NAVIGATION MENU -->
+                    <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border mb-2 md:mb-4">
+                        <nav id="dashboard-sub-nav" class="flex w-full relative">
+                            <button onclick="switchDashboardTab('dash')" id="dash-tab-dash" class="dash-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-accent transition-colors">
+                                Dash
+                            </button>
+                            <button onclick="switchDashboardTab('planning')" id="dash-tab-planning" class="dash-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                Planning
+                            </button>
+                            <!-- Animated Underline Indicator -->
+                            <div id="dash-tab-indicator" class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10" style="left: 0; width: 50%;"></div>
+                        </nav>
+                    </div>
+
+                    <div id="dashboard-subtab-dash" class="space-y-5 md:space-y-6">
+                        <!-- Coach's Desk (Hero Section) -->
+                        <div id="coachs-desk"
+                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col group">
+                            <div
+                                class="bg-theme-accent-soft p-5 md:p-8 flex flex-row gap-4 md:gap-5 items-center relative overflow-hidden">
                             <!-- Decorative background element -->
                             <div
                                 class="absolute -right-10 -top-10 text-[100px] opacity-5 select-none pointer-events-none transform rotate-12 group-hover:rotate-6 transition-transform duration-700">
@@ -585,7 +600,7 @@
 
                             <!-- Coach Avatar -->
                             <div
-                                class="w-16 h-16 md:w-20 md:h-20 shrink-0 rounded-full border-2 border-theme-accent shadow-md bg-theme-bg overflow-hidden relative z-10">
+                                class="w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-full border-2 border-theme-accent shadow-md bg-theme-bg overflow-hidden relative z-10">
                                 <img id="desk-coach-avatar" src="" alt="Coach" class="w-full h-full object-cover">
                             </div>
 
@@ -737,7 +752,12 @@
                             </p>
                         </div>
 
+                    </div>
+                    </div> <!-- End dashboard-subtab-dash -->
 
+                    <!-- PLANNING TAB -->
+                    <div id="dashboard-subtab-planning" class="hidden">
+                        <div id="dashboard-planning-content" class="space-y-5 md:space-y-6 hidden">
 
                         <div id="macro-block"
                             class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden hidden">
@@ -817,7 +837,7 @@
                             </div>
                         </div>
 
-
+                        </div>
                     </div>
                 </div>
 

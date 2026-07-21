@@ -754,9 +754,11 @@ async function loadSettings() {
         // If user is connected, hide the banner and show the dashboard!
         if (data.hasGarmin || data.hasStrava) {
             const banner = document.getElementById('welcome-banner');
-            const content = document.getElementById('dashboard-content');
+            const dashContent = document.getElementById('dashboard-subtab-dash');
+            const planningContent = document.getElementById('dashboard-planning-content');
             if (banner) banner.classList.add('hidden');
-            if (content) content.classList.remove('hidden');
+            if (dashContent) dashContent.classList.remove('hidden');
+            if (planningContent) planningContent.classList.remove('hidden');
         }
         updateCycleWidget(data.gender, data.lastCycleStart, data.averageCycleLength);
         await loadMetrics();
@@ -997,6 +999,42 @@ function switchTab(t) {
     }
 }
 
+function switchDashboardTab(subtab) {
+    const tabs = ['dash', 'planning'];
+    tabs.forEach(tab => {
+        const container = document.getElementById(`dashboard-subtab-${tab}`);
+        const btn = document.getElementById(`dash-tab-${tab}`);
+        if (container) {
+            container.classList.toggle('hidden', tab !== subtab);
+        }
+        if (btn) {
+            if (tab === subtab) {
+                btn.classList.add('text-theme-accent');
+                btn.classList.remove('text-theme-muted', 'hover:text-theme-text');
+            } else {
+                btn.classList.remove('text-theme-accent');
+                btn.classList.add('text-theme-muted', 'hover:text-theme-text');
+            }
+        }
+    });
+
+    const indicator = document.getElementById('dash-tab-indicator');
+    const activeBtn = document.getElementById(`dash-tab-${subtab}`);
+    if (indicator && activeBtn) {
+        indicator.style.left = `${activeBtn.offsetLeft}px`;
+        indicator.style.width = `${activeBtn.offsetWidth}px`;
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    if (subtab === 'dash') {
+        setTimeout(() => {
+            ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
+                if (window[`sparkline_${metric}`]) window[`sparkline_${metric}`].resize();
+            });
+        }, 50);
+    }
+}
+
 function switchProgressTab(subtab) {
     const tabs = ['spark', 'nutrition', 'health', 'dailylog'];
     tabs.forEach(tab => {
@@ -1058,6 +1096,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 switchProgressTab(tabs[currentIdx - 1]);
             }
         });
+    }
+});
+
+// Initialize swipe gestures for Dashboard view
+document.addEventListener('DOMContentLoaded', () => {
+    const dashView = document.getElementById('view-dashboard');
+    if (dashView && typeof Hammer !== 'undefined') {
+        const hammer = new Hammer(dashView);
+        hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+        
+        const tabs = ['dash', 'planning'];
+        
+        hammer.on('swipeleft', () => {
+            let currentIdx = tabs.findIndex(tab => !document.getElementById(`dashboard-subtab-${tab}`).classList.contains('hidden'));
+            if (currentIdx < tabs.length - 1) {
+                switchDashboardTab(tabs[currentIdx + 1]);
+            }
+        });
+        
+        hammer.on('swiperight', () => {
+            let currentIdx = tabs.findIndex(tab => !document.getElementById(`dashboard-subtab-${tab}`).classList.contains('hidden'));
+            if (currentIdx > 0) {
+                switchDashboardTab(tabs[currentIdx - 1]);
+            }
+        });
+        
+        // Initialize indicator position
+        setTimeout(() => switchDashboardTab('dash'), 100);
     }
 });
 
