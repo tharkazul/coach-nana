@@ -73,12 +73,7 @@ setInterval(() => {
   calculateGlobalMaxStats();
 }, 6 * 60 * 60 * 1000);
 
-// SSE Heartbeat (every 30 seconds)
-setInterval(() => {
-  sseClients.forEach((client) => {
-    client.res.write(`:\n\n`); // send a comment to keep connection alive
-  });
-}, 30000);
+
 
 // Graceful Shutdown
 process.on("SIGINT", () => {

@@ -2752,7 +2752,8 @@ async function loadChatHistory() {
                 }
 
                 if (msg.role === 'user') {
-                    let imgHtml = msg.image_path ? `<img src="${msg.image_path}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-xl mb-1 object-cover">` : '';
+                    const tokenSuffix = msg.image_path && msg.image_path.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
+                    let imgHtml = msg.image_path ? `<img src="${msg.image_path}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-xl mb-1 object-cover">` : '';
                     html += `
                                 <div class="flex justify-end">
                                     <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">

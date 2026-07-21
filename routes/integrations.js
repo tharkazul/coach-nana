@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
+const { GarminConnect } = require("@flow-js/garmin-connect");
 const { authenticateToken } = require('../services/auth');
 const { sseClients, sendSSEEvent } = require('../services/sse');
 const { generateWithFallback } = require('../services/ai');
@@ -35,6 +36,37 @@ const {
   generateQuestForUser,
   evaluateQuestsAgainstActivity
 } = require('../services/utils');
+
+const SPORT_MAP = {
+  Run: { sportTypeId: 1, sportTypeKey: "running" },
+  Bike: { sportTypeId: 2, sportTypeKey: "cycling" },
+  Swim: { sportTypeId: 4, sportTypeKey: "swimming" },
+  Strength: { sportTypeId: 5, sportTypeKey: "strength_training" },
+};
+
+const STEP_TYPE_MAP = {
+  warmup: { id: 1, key: "warmup" },
+  cooldown: { id: 2, key: "cooldown" },
+  interval: { id: 3, key: "interval" },
+  recovery: { id: 4, key: "recovery" },
+  rest: { id: 5, key: "rest" },
+};
+
+const TARGET_TYPE_MAP = {
+  "no.target": { id: 1, key: "no.target" },
+  "power.zone": { id: 2, key: "power.zone" },
+  "heart.rate.zone": { id: 4, key: "heart.rate.zone" },
+  "speed.zone": { id: 5, key: "speed.zone" },
+  "pace.zone": { id: 6, key: "pace.zone" },
+};
+
+const CONDITION_TYPE_MAP = {
+  time: { id: 2, key: "time" },
+  time_sec: { id: 2, key: "time" },
+  distance: { id: 3, key: "distance" },
+  "lap.button": { id: 1, key: "lap.button" },
+  reps: { id: 10, key: "reps" },
+};
 
 router.get("/webhook/strava", (req, res) => {
   const VERIFY_TOKEN = process.env.STRAVA_VERIFY_TOKEN || "STRAVA";
