@@ -43,17 +43,27 @@ const path = require("path");
 // --- GEMINI LOAD BALANCER REGISTRY ---
 const geminiConfigs = [
   {
-    name: "Primary",
+    name: "Primary (Key 1)",
     model: "gemini-3.5-flash",
     apiKey: process.env.GEMINI_API_KEY, // Your main key
   },
   {
-    name: "Backup",
+    name: "Primary (Key 2)",
+    model: "gemini-3.5-flash",
+    apiKey: process.env.GEMINI_API_KEY2 || process.env.GEMINI_API_KEY,
+  },
+  {
+    name: "Backup (Key 1)",
     model: "gemini-2.5-flash",
     apiKey: process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY, // Uses backup key if it exists, otherwise re-uses the main one
   },
   {
-    name: "Tertiary",
+    name: "Backup (Key 2)",
+    model: "gemini-2.5-flash",
+    apiKey: process.env.GEMINI_API_KEY2 || process.env.GEMINI_API_KEY_BACKUP || process.env.GEMINI_API_KEY,
+  },
+  {
+    name: "Tertiary (Key 1)",
     model: "gemini-3.1-flash-lite",
     apiKey:
       process.env.GEMINI_API_KEY_TERTIARY ||
@@ -61,7 +71,16 @@ const geminiConfigs = [
       process.env.GEMINI_API_KEY,
   },
   {
-    name: "Quaternary",
+    name: "Tertiary (Key 2)",
+    model: "gemini-3.1-flash-lite",
+    apiKey:
+      process.env.GEMINI_API_KEY2 ||
+      process.env.GEMINI_API_KEY_TERTIARY ||
+      process.env.GEMINI_API_KEY_BACKUP ||
+      process.env.GEMINI_API_KEY,
+  },
+  {
+    name: "Quaternary (Key 1)",
     model: "gemini-3-flash",
     apiKey:
       process.env.GEMINI_API_KEY_QUATERNARY ||
@@ -70,9 +89,30 @@ const geminiConfigs = [
       process.env.GEMINI_API_KEY,
   },
   {
-    name: "Quinary",
+    name: "Quaternary (Key 2)",
+    model: "gemini-3-flash",
+    apiKey:
+      process.env.GEMINI_API_KEY2 ||
+      process.env.GEMINI_API_KEY_QUATERNARY ||
+      process.env.GEMINI_API_KEY_TERTIARY ||
+      process.env.GEMINI_API_KEY_BACKUP ||
+      process.env.GEMINI_API_KEY,
+  },
+  {
+    name: "Quinary (Key 1)",
     model: "gemini-2.5-flash-lite",
     apiKey:
+      process.env.GEMINI_API_KEY_QUINARY ||
+      process.env.GEMINI_API_KEY_QUATERNARY ||
+      process.env.GEMINI_API_KEY_TERTIARY ||
+      process.env.GEMINI_API_KEY_BACKUP ||
+      process.env.GEMINI_API_KEY,
+  },
+  {
+    name: "Quinary (Key 2)",
+    model: "gemini-2.5-flash-lite",
+    apiKey:
+      process.env.GEMINI_API_KEY2 ||
       process.env.GEMINI_API_KEY_QUINARY ||
       process.env.GEMINI_API_KEY_QUATERNARY ||
       process.env.GEMINI_API_KEY_TERTIARY ||
