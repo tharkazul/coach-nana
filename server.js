@@ -1072,6 +1072,29 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                                                     const startDate = new Date().toISOString();
                                                     const sparkScore = act.spark_score || calculateSparkScore(act.moving_time_min, act.average_heartrate);
 
+                                                    // QUEST EVALUATION
+                                                    try {
+                                                        const completedQuests = await evaluateQuestsAgainstActivity(req.user.id, {
+                                                            distance_km: act.distance_km || 0,
+                                                            moving_time_min: act.moving_time_min || 0,
+                                                            spark_score: sparkScore
+                                                        });
+
+                                                        if (completedQuests && completedQuests.length > 0) {
+                                                            const newQuest = await generateQuestForUser(req.user.id);
+                                                            let appendPrompt = `The user just manually logged an activity and ALSO completed their active quest: "${completedQuests[0].description}" earning ${completedQuests[0].reward_points} Spark points! `;
+                                                            if (newQuest) {
+                                                                appendPrompt += `I (the system) have assigned them a NEW quest: "${newQuest.description}". Give a short 1-2 sentence highly motivating response celebrating their completed quest and announcing their new quest!`;
+                                                            } else {
+                                                                appendPrompt += `Give a short 1-2 sentence motivating response celebrating their completed quest!`;
+                                                            }
+                                                            const coachAddendum = await generateWithFallback(appendPrompt, "You are a motivating elite coach.");
+                                                            aiReply += "\n\n" + coachAddendum;
+                                                        }
+                                                    } catch (e) {
+                                                        console.error("Quest evaluation failed during manual sync:", e);
+                                                    }
+
                                                     db.run(
                                                         `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score, sets_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                                                         [manualId, req.user.id, act.name || 'Manual Workout', act.sport_type || 'Workout', act.distance_km || 0, act.moving_time_min || 0, startDate, sparkScore, JSON.stringify(act.sets || [])],
@@ -1826,7 +1849,8 @@ app.post('/api/generate-plan', authenticateToken, async (req, res) => {
 
 app.get('/api/admin/usage', authenticateToken, (req, res) => {
     const isRutger = req.user.username && req.user.username.toLowerCase().includes('rutger');
-    if (!isRutger && req.user.id !== 1) {
+    const isFelix = req.user.username && req.user.username.toLowerCase().includes('felixson');
+    if (!isRutger && !isFelix && req.user.id !== 1) {
         return res.status(403).json({ error: "Unauthorized" });
     }
     const query = `
@@ -2811,6 +2835,29 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                             prompt += `This was an unplanned activity. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}).`;
                         }
 
+                        // QUEST EVALUATION
+                        try {
+                            const completedQuests = await evaluateQuestsAgainstActivity(internalUserId, {
+                                distance_km: data.distance / 1000,
+                                moving_time_min: data.moving_time / 60,
+                                spark_score: sparkScore
+                            });
+
+                            if (completedQuests && completedQuests.length > 0) {
+                                const newQuest = await generateQuestForUser(internalUserId);
+                                
+                                prompt += `\n\nCRITICAL INFO: The user ALSO just completed their active quest: "${completedQuests[0].description}" and earned ${completedQuests[0].reward_points} Spark points! `;
+                                
+                                if (newQuest) {
+                                    prompt += `I (the system) have automatically assigned them a NEW quest: "${newQuest.description}" (Target: ${newQuest.target_value} ${newQuest.target_metric}, Reward: ${newQuest.reward_points} Spark). You MUST enthusiastically celebrate their completed quest AND announce their brand new quest to keep them motivated!`;
+                                } else {
+                                    prompt += `You MUST enthusiastically celebrate their completed quest!`;
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Quest evaluation failed during Strava sync:", e);
+                        }
+
                         // 1. Generate AI Coach Response
                         try {
                             const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
@@ -3249,6 +3296,74 @@ function triggerLevelUpCoachPrompt(userId, newLevel) {
             } catch (e) {
                 console.error("Failed to generate level up message", e);
             }
+        });
+    });
+}
+
+// --- GAMIFICATION HELPERS ---
+
+async function generateQuestForUser(userId) {
+    return new Promise((resolve, reject) => {
+        db.all(`SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 5`, [userId], async (err, recentActivities) => {
+            const activitiesStr = recentActivities && recentActivities.length > 0 
+                ? recentActivities.map(a => `- ${a.start_date}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min`).join('\n')
+                : "No recent activities logged.";
+
+            const prompt = `Based on the following recent activities of the user, generate a personalized, motivating micro-challenge (Quest) for them to complete in the next 3 days. 
+            Recent activities:
+            ${activitiesStr}
+            
+            Return ONLY a JSON object with this exact structure:
+            {
+            "description": "Short description of the quest (e.g. Run 5k this weekend)",
+            "target_metric": "distance_km", // or moving_time_min, etc.
+            "target_value": 5,
+            "reward_points": 50 // Keep it between 10 and 100
+            }`;
+
+            try {
+                const aiReply = await generateWithFallback(prompt, "You are a JSON-only API that outputs valid JSON.", null, null, userId);
+                const jsonStr = aiReply.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+                const questData = JSON.parse(jsonStr);
+
+                db.run(`INSERT INTO user_quests (user_id, description, target_metric, target_value, reward_points) VALUES (?, ?, ?, ?, ?)`, 
+                    [userId, questData.description, questData.target_metric, questData.target_value, questData.reward_points], function(err) {
+                        if (err) return reject(err);
+                        resolve(questData);
+                    });
+            } catch (e) {
+                console.error("Failed to generate background quest:", e);
+                resolve(null);
+            }
+        });
+    });
+}
+
+async function evaluateQuestsAgainstActivity(userId, activityData) {
+    return new Promise((resolve) => {
+        db.all(`SELECT id, reward_points, description, target_metric, target_value FROM user_quests WHERE user_id = ? AND status = 'active'`, [userId], (err, quests) => {
+            if (err || !quests || quests.length === 0) return resolve([]);
+            
+            let completedQuests = [];
+            
+            quests.forEach(q => {
+                let achievedValue = 0;
+                
+                // Map the target metric to the actual activity data properties
+                if (q.target_metric === 'distance_km') achievedValue = activityData.distance_km;
+                else if (q.target_metric === 'moving_time_min') achievedValue = activityData.moving_time_min;
+                else if (q.target_metric === 'spark_score') achievedValue = activityData.spark_score;
+                
+                if (achievedValue >= q.target_value) {
+                    completedQuests.push(q);
+                    // Award points
+                    db.run(`INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`, [userId, q.reward_points, `Quest Completed: ${q.description}`]);
+                    // Mark complete
+                    db.run(`UPDATE user_quests SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?`, [q.id]);
+                }
+            });
+            
+            resolve(completedQuests);
         });
     });
 }

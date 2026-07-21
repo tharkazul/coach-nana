@@ -20,6 +20,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <link rel="stylesheet" href="/styles.css?v=75">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1166,6 +1167,19 @@
                         </div>
                     </div>
 
+                    <!-- Quests Log -->
+                    <div id="quests-log-container" class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 hidden">
+                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Quests Log
+                            </h3>
+                            <p class="text-xs text-theme-muted mt-1">Your active and completed quests.</p>
+                        </div>
+                        <div class="p-6 flex flex-col gap-4" id="quests-log-list">
+                             <!-- Dynamically populated -->
+                        </div>
+                    </div>
+
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
                             <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
@@ -1820,9 +1834,10 @@
 
     <!-- Edit Workout Modal -->
     <div id="edit-workout-modal"
-        class="fixed inset-0 z-[10000] hidden flex items-end p-0 md:items-center md:justify-center md:p-8 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        class="fixed inset-x-0 top-0 z-[10000] hidden flex items-end p-0 md:items-center md:justify-center md:p-8 backdrop-blur-sm transition-opacity duration-300 opacity-0"
+        style="height: var(--vv-height, 100vh);">
         <div id="edit-workout-modal-content"
-            class="pt-safe bg-theme-card rounded-t-[2rem] md:rounded-sm shadow-2xl w-full max-w-3xl h-[90vh] md:h-auto md:max-h-[80vh] flex flex-col overflow-hidden relative border border-theme-border translate-y-full md:translate-y-0 md:scale-95 transition-all duration-300 ease-out">
+            class="pt-safe bg-theme-card rounded-t-[2rem] md:rounded-sm shadow-2xl w-full max-w-3xl h-[90%] md:h-auto md:max-h-[80vh] flex flex-col overflow-hidden relative border border-theme-border translate-y-full md:translate-y-0 md:scale-95 transition-all duration-300 ease-out">
             <!-- Drag Handle for Mobile -->
             <div class="w-full flex justify-center py-3 md:hidden shrink-0 bg-theme-bg/50 border-b border-theme-border">
                 <div class="w-12 h-1.5 bg-theme-border rounded-full"></div>
@@ -2090,19 +2105,19 @@
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- App Logic -->
-    <script src="/script.js?v=72"></script>
+    <script src="/script.js?v=75"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(reg => reg.unregister());
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
             });
         }
-        if ('caches' in window) {
-            caches.keys().then(keys => {
-                keys.forEach(key => caches.delete(key));
-            });
-        }
+        caches.keys().then(function(names) {
+            for (let name of names) caches.delete(name);
+        });
     </script>
 </body>
 

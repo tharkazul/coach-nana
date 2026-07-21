@@ -29,11 +29,11 @@ function renderScheduleBoundaries() {
 
             const dayEl = document.createElement('div');
             dayEl.className = 'p-3 bg-theme-bg border border-theme-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-theme-bg/80 transition select-none';
-            
+
             let icon = '🟢';
             let statusText = 'Open';
             let minutesHtml = `<div class="text-[10px] text-theme-muted mt-1 h-5">&nbsp;</div>`;
-            
+
             if (data.status === 'time_capped') {
                 icon = '🟡';
                 statusText = 'Capped';
@@ -125,13 +125,13 @@ function getSportCardColor(sportType) {
 function getSportBadge(sportType) {
     if (!sportType) sportType = 'Activity';
     let s = sportType.toLowerCase();
-    
+
     let colorClass = "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:border-gray-700";
     if (s.includes('run')) colorClass = "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-400 dark:border-orange-800";
     else if (s.includes('swim')) colorClass = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800";
     else if (s.includes('strength')) colorClass = "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/40 dark:text-purple-400 dark:border-purple-800";
     else if (s.includes('ride') || s.includes('bike')) colorClass = "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800";
-    
+
     return `<span class="${colorClass} border text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide shrink-0 inline-flex items-center justify-center">${sportType}</span>`;
 }
 
@@ -602,7 +602,10 @@ async function loadSettings() {
             (data.email && data.email.toLowerCase().includes('rutger')) ||
             (data.id === 1); // From your previous logs, you are likely User #1!
 
-        if (isRutger) {
+        const isFelix = (data.username && data.username.toLowerCase() === 'felixson') ||
+            (data.email && data.email.toLowerCase().includes('felixson'));
+
+        if (isRutger || isFelix) {
             console.log("✅ Admin verified! Unlocking admin features...");
 
             // Unhide the Admin Section in Settings
@@ -614,10 +617,15 @@ async function loadSettings() {
                 console.error("❌ Could not find 'admin-settings-section' in the HTML!");
             }
 
-            // Unhide the secret Admin-Only coach tone
+            // Unhide the secret Admin-Only coach tones
             const select = document.getElementById('set-coach-tone');
-            if (select && !select.querySelector('option[value*="liana"]')) {
-                select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Liana.">Coach Liana</option>`;
+            if (select) {
+                if (isRutger && !select.querySelector('option[value*="Madison"]')) {
+                    select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Madison Beer.">Coach Liana</option>`;
+                }
+                if ((isRutger || isFelix) && !select.querySelector('option[value*="Mia"]')) {
+                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Mia Khalifa, supportive.">Coach Mia</option>`;
+                }
             }
         }
 
@@ -627,7 +635,7 @@ async function loadSettings() {
         document.getElementById('set-athlete-context').value = data.athleteContext || '';
         document.getElementById('set-gender').value = data.gender || 'Prefer not to say';
         document.getElementById('set-last-cycle-start').value = data.lastCycleStart || '';
-        
+
         const toggleCycleContainer = () => {
             const genderVal = document.getElementById('set-gender').value;
             const container = document.getElementById('set-cycle-container');
@@ -636,7 +644,7 @@ async function loadSettings() {
         };
         document.getElementById('set-gender').addEventListener('change', toggleCycleContainer);
         toggleCycleContainer(); // Initialize
-        
+
         document.getElementById('set-garmin-user').value = data.garminUsername || '';
         const searchPrivacyToggle = document.getElementById('setting-search-privacy');
         if (searchPrivacyToggle) searchPrivacyToggle.checked = !!data.searchPrivacy;
@@ -649,7 +657,7 @@ async function loadSettings() {
                 avatarPreview.innerHTML = data.username ? data.username.charAt(0).toUpperCase() : '?';
             }
         }
-        
+
         if (data.trainingAvailability && Object.keys(data.trainingAvailability).length > 0) {
             trainingAvailability = { ...trainingAvailability, ...data.trainingAvailability };
         }
@@ -672,7 +680,7 @@ async function loadSettings() {
             if (overlay) {
                 overlay.classList.remove('hidden');
                 overlay.classList.add('flex');
-                
+
                 // Resume state if coming back from Strava auth
                 if (localStorage.getItem('resumeOnboardingStep')) {
                     const step = parseInt(localStorage.getItem('resumeOnboardingStep'), 10);
@@ -717,7 +725,7 @@ async function loadSettings() {
             const cbtn = document.getElementById('garmin-connect-btn');
             if (cbtn) cbtn.classList.remove('hidden');
         }
-        
+
         if (data.hasStrava) {
             const b = document.getElementById('strava-status');
             b.innerText = "Connected";
@@ -726,7 +734,7 @@ async function loadSettings() {
             if (btn) btn.classList.remove('hidden');
             const cbtn = document.getElementById('strava-connect-btn');
             if (cbtn) cbtn.classList.add('hidden');
-            
+
             const onboardBtn = document.getElementById('btn-strava-onboard-connect');
             if (onboardBtn) {
                 onboardBtn.innerText = "Connected";
@@ -1158,7 +1166,7 @@ async function buildDashboard() {
                 if (deskReflection) deskReflection.innerHTML = "<span class='text-theme-muted italic'>Your highlights will appear here after enough training data is collected.</span>";
                 if (deskAvatar) deskAvatar.src = getCoachAvatar('default');
             }
-            
+
             // Render Progress Charts if data is available
             if (profileData && profileData.trends && profileData.radar) {
                 const d = profileData.trends;
@@ -1575,6 +1583,7 @@ async function buildDashboard() {
     // 8. Fire dependent modules
     loadMicroPlan();
     renderMacroPlan();
+    fetchGamificationData();
 }
 
 async function loadMicroPlan() {
@@ -1646,11 +1655,11 @@ async function loadMicroPlan() {
 
             // Header for the day
             html += `<div class="bg-theme-bg/50 px-3 py-2 border-b border-theme-border flex justify-between items-center">`;
-            
+
             // Left side: Date + Weather
             html += `<div class="flex items-center gap-3">`;
             html += `<div class="flex flex-col"><span class="text-[10px] uppercase font-bold text-theme-muted tracking-wider">${dayName}</span><span class="text-xs font-medium text-theme-text">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>`;
-            
+
             // Weather
             if (weatherMap[dateStr]) {
                 const w = weatherMap[dateStr];
@@ -1666,7 +1675,7 @@ async function loadMicroPlan() {
             } else {
                 html += `<div></div>`;
             }
-            
+
             html += `</div>`; // End Header
 
             // Body for workouts
@@ -2165,8 +2174,8 @@ async function openActivityModal(id) {
     document.getElementById('modal-content').classList.add('hidden');
     document.getElementById('modal-title').innerText = "Connecting to Strava...";
     try {
-        const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() }); 
-        
+        const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() });
+
         if (!res.ok) {
             document.getElementById('modal-loader').classList.add('hidden');
             document.getElementById('modal-title').innerText = "Error Fetching Data";
@@ -2544,6 +2553,7 @@ function getCoachAvatar(mood) {
     let persona = 'empathetic';
     const toneCheck = currentCoachTone.toLowerCase();
     if (toneCheck.includes('liana') || toneCheck.includes('madison')) persona = 'liana';
+    else if (toneCheck.includes('mia')) persona = 'old';
     else if (toneCheck.includes('strict')) persona = 'strict';
     else if (toneCheck.includes('cheerleader')) persona = 'cheer';
 
@@ -2560,7 +2570,8 @@ function getCoachAvatar(mood) {
         'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e', horny: '10b981' },
         'strict': { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626', horny: '2563eb' },
         'cheer': { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e', horny: 'd946ef' },
-        'liana': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' }
+        'liana': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' },
+        'old': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' }
     };
     const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
     const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
@@ -2771,12 +2782,12 @@ async function triggerProactiveCheckin() {
         const targetEl = document.getElementById(msgId);
         targetEl.innerHTML = formattedContent;
         const spans = [];
-        
+
         function walk(node) {
             if (node.nodeType === Node.TEXT_NODE) {
                 const text = node.textContent;
-                if (!text.trim()) return; 
-                
+                if (!text.trim()) return;
+
                 const words = text.split(/(\s+)/);
                 const fragment = document.createDocumentFragment();
                 words.forEach(word => {
@@ -2804,25 +2815,25 @@ async function triggerProactiveCheckin() {
                 Array.from(node.childNodes).forEach(walk);
             }
         }
-        
+
         walk(targetEl);
-        
+
         // Snap to bottom after base message structure is added to ensure wasAtBottom is true
         chatWindow.scrollTop = chatWindow.scrollHeight;
-        
+
         let wordIndex = 0;
         function typeStep() {
             if (!document.getElementById(msgId)) return; // tab switch safety
             if (wordIndex < spans.length) {
                 // Check if user is at the bottom BEFORE we add height
                 const wasAtBottom = (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight) < 150;
-                
+
                 const el = spans[wordIndex];
                 el.style.display = ''; // restore normal display
                 void el.offsetWidth; // force layout reflow
-                el.style.opacity = '1'; 
+                el.style.opacity = '1';
                 wordIndex++;
-                
+
                 if (wasAtBottom) {
                     chatWindow.scrollTop = chatWindow.scrollHeight;
                 }
@@ -2943,13 +2954,13 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
     const input = document.getElementById('chat-input');
     const message = retryMessage !== null ? retryMessage : input.value.trim();
     const imageToUse = retryMessage !== null ? retryImage : currentImageBase64;
-    
+
     if (!message && !imageToUse) return;
 
     if (navigator.vibrate) navigator.vibrate(50);
 
     const chatWindow = document.getElementById('chat-window');
-    
+
     if (errorBubbleToRemove) {
         errorBubbleToRemove.remove();
     }
@@ -2968,7 +2979,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
                             <div class="text-[9px] text-white/70 text-right mt-1">${timeStr}</div>
                         </div>
                     </div>`);
-        
+
         input.value = '';
         input.style.height = '44px';
         clearImageSelection();
@@ -3037,7 +3048,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
             chatWindow.scrollTop = chatWindow.scrollHeight;
             return;
         }
-        
+
         if (!res.ok) {
             throw new Error(data.error || "Server returned an error status: " + res.status);
         }
@@ -3074,12 +3085,12 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
         const targetEl = document.getElementById(msgId);
         targetEl.innerHTML = formattedContent;
         const spans = [];
-        
+
         function walk(node) {
             if (node.nodeType === Node.TEXT_NODE) {
                 const text = node.textContent;
-                if (!text.trim()) return; 
-                
+                if (!text.trim()) return;
+
                 const words = text.split(/(\s+)/);
                 const fragment = document.createDocumentFragment();
                 words.forEach(word => {
@@ -3107,25 +3118,25 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
                 Array.from(node.childNodes).forEach(walk);
             }
         }
-        
+
         walk(targetEl);
-        
+
         // Snap to bottom after base message structure is added to ensure wasAtBottom is true
         chatWindow.scrollTop = chatWindow.scrollHeight;
-        
+
         let wordIndex = 0;
         function typeStep() {
             if (!document.getElementById(msgId)) return; // tab switch safety
             if (wordIndex < spans.length) {
                 // Check if user is at the bottom BEFORE we add height
                 const wasAtBottom = (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight) < 150;
-                
+
                 const el = spans[wordIndex];
                 el.style.display = ''; // restore normal display
                 void el.offsetWidth; // force layout reflow
-                el.style.opacity = '1'; 
+                el.style.opacity = '1';
                 wordIndex++;
-                
+
                 if (wasAtBottom) {
                     chatWindow.scrollTop = chatWindow.scrollHeight;
                 }
@@ -3140,7 +3151,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
         if (loadEl) {
             window.failedMessages = window.failedMessages || {};
             window.failedMessages[loadId] = { message, imageToUse };
-            
+
             loadEl.outerHTML = `
                 <div class="flex justify-center my-4" id="err-${loadId}">
                     <div class="bg-red-50 text-red-500 text-xs px-4 py-2 rounded-full border border-red-100 flex items-center gap-2 shadow-sm">
@@ -3282,7 +3293,7 @@ const totalOnboardingSteps = 5;
 function updateOnboardingStep() {
     // Hide all steps
     document.querySelectorAll('.onboarding-step').forEach(step => step.classList.add('hidden'));
-    
+
     // Show current step
     const currentEl = document.querySelector(`.onboarding-step[data-step="${currentOnboardingStep}"]`);
     if (currentEl) currentEl.classList.remove('hidden');
@@ -3354,10 +3365,10 @@ async function completeOnboarding(redirectUrl = null) {
         // 1. Save Coach Settings (including availability)
         await fetch('/api/user/settings/coach', {
             method: 'POST', headers: getAuthHeaders(),
-            body: JSON.stringify({ 
-                coachTone: tone, 
+            body: JSON.stringify({
+                coachTone: tone,
                 athleteContext: context || 'Endurance Athlete',
-                trainingAvailability: trainingAvailability 
+                trainingAvailability: trainingAvailability
             })
         });
 
@@ -4020,6 +4031,9 @@ function updateAppHeight() {
     const coachInput = document.getElementById('coach-input-area');
     const shell = document.getElementById('app-shell');
 
+    // Set a global CSS variable for other fixed elements to use
+    document.documentElement.style.setProperty('--vv-height', `${vh}px`);
+
     // Always JS-driven now, but applied to the shell instead of the root document
     if (shell) shell.style.height = `${vh}px`;
 
@@ -4078,6 +4092,19 @@ document.addEventListener('focusout', (e) => {
     }
 });
 
+// Ensure active inputs are scrolled into view when keyboard opens inside scrollable modals
+document.addEventListener('focusin', (e) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+        setTimeout(() => {
+            // Check if we are inside a modal's scrollable container
+            const modalScroll = e.target.closest('.overflow-y-auto');
+            if (modalScroll && window.innerHeight - (window.visualViewport?.height || window.innerHeight) > 100) {
+                e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 300); // Wait for iOS keyboard to finish animating
+    }
+});
+
 // Automatically sync 'inert' with hidden/display status for all modals to keep iOS keyboard clean
 const overlaysToTrack = ['login-overlay', 'onboarding-overlay', 'add-person-modal', 'post-modal', 'edit-workout-modal', 'image-modal', 'public-profile-modal'];
 overlaysToTrack.forEach(id => {
@@ -4123,7 +4150,7 @@ setTimeout(() => {
 async function openPublicProfile(userId) {
     const modal = document.getElementById('public-profile-modal');
     const content = document.getElementById('public-profile-modal-content');
-    
+
     // Reset contents to loading state
     document.getElementById('public-profile-avatar').innerHTML = '';
     document.getElementById('public-profile-username').innerText = 'Loading...';
@@ -4140,11 +4167,11 @@ async function openPublicProfile(userId) {
                 <div class="h-3 bg-theme-border rounded w-1/4"></div>
             </div>
         </div>`;
-        
+
     ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
         if (window[`public_sparkline_${metric}`]) window[`public_sparkline_${metric}`].destroy();
     });
-    
+
     // Show modal
     modal.classList.remove('hidden');
     // slight delay for transition
@@ -4157,14 +4184,14 @@ async function openPublicProfile(userId) {
         const res = await fetch(`/api/social/profile/${userId}`, { headers: getAuthHeaders() });
         if (!res.ok) throw new Error("Failed to load profile");
         const data = await res.json();
-        
+
         document.getElementById('public-profile-avatar').innerHTML = data.profilePictureUrl
             ? `<img src="${data.profilePictureUrl}" class="w-full h-full object-cover">`
             : data.username.charAt(0).toUpperCase();
-            
+
         document.getElementById('public-profile-username').innerText = data.username;
         document.getElementById('public-profile-highlight').innerHTML = `<p>${data.highlight}</p>`;
-        
+
         const actContainer = document.getElementById('public-profile-activities');
         if (!data.activities || data.activities.length === 0) {
             actContainer.innerHTML = '<p class="text-xs text-theme-muted italic">No recent activities.</p>';
@@ -4185,7 +4212,7 @@ async function openPublicProfile(userId) {
                 </div>
             `).join('');
         }
-        
+
         // Render Sparklines
         const d = data.trends;
         renderPublicSparkline('public-sparkline-fitness', d.dates, d.ctl, '#3b82f6');
@@ -4257,11 +4284,11 @@ function closePublicProfile() {
 function renderPublicSparkline(canvasId, labels, dataPoints, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    
+
     // Clean up old chart
     const metric = canvasId.split('-').pop();
     if (window[`public_sparkline_${metric}`]) window[`public_sparkline_${metric}`].destroy();
-    
+
     window[`public_sparkline_${metric}`] = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
@@ -4302,7 +4329,7 @@ function openLifeHappensMenu(dateStr) {
     const modal = document.getElementById('life-happens-modal');
     const content = document.getElementById('life-happens-modal-content');
     if (!modal || !content) return;
-    
+
     modal.classList.remove('hidden');
     // slight delay to allow display block to render before opacity transition
     setTimeout(() => {
@@ -4325,10 +4352,10 @@ function closeLifeHappensMenu() {
 
 function triggerLifeHappensAction(actionType) {
     closeLifeHappensMenu();
-    
+
     let dateStr = window.currentLifeHappensDate || new Date().toISOString().split('T')[0];
     let msg = '';
-    
+
     if (actionType === 'push') {
         const aiLoader = document.getElementById('ai-loading');
         if (aiLoader) aiLoader.classList.remove('hidden');
@@ -4338,22 +4365,22 @@ function triggerLifeHappensAction(actionType) {
             headers: getAuthHeaders(),
             body: JSON.stringify({ date: dateStr })
         })
-        .then(res => res.json())
-        .then(data => {
-            if (aiLoader) aiLoader.classList.add('hidden');
-            if (data.success) {
-                showToast("Schedule shifted +1 day successfully!", "success");
-                loadMicroPlan();
-                loadChatHistory();
-            } else {
-                showToast("Failed to shift schedule.", "error");
-            }
-        })
-        .catch(err => {
-            if (aiLoader) aiLoader.classList.add('hidden');
-            console.error(err);
-            showToast("Error shifting schedule.", "error");
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (aiLoader) aiLoader.classList.add('hidden');
+                if (data.success) {
+                    showToast("Schedule shifted +1 day successfully!", "success");
+                    loadMicroPlan();
+                    loadChatHistory();
+                } else {
+                    showToast("Failed to shift schedule.", "error");
+                }
+            })
+            .catch(err => {
+                if (aiLoader) aiLoader.classList.add('hidden');
+                console.error(err);
+                showToast("Error shifting schedule.", "error");
+            });
         return;
     }
 
@@ -4366,7 +4393,7 @@ function triggerLifeHappensAction(actionType) {
     } else {
         msg = actionType;
     }
-    
+
     sendQuickAction(msg);
 }
 
@@ -4380,12 +4407,12 @@ async function loadActiveNiggles() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         activeNiggles = await res.json();
-        
+
         // Reset all colors
         document.querySelectorAll('.body-part').forEach(part => {
             part.classList.remove('severity-1', 'severity-2', 'severity-3', 'severity-4', 'severity-5');
         });
-        
+
         // Apply colors to active parts
         activeNiggles.forEach(niggle => {
             const el = document.getElementById(niggle.body_part);
@@ -4400,10 +4427,10 @@ async function loadActiveNiggles() {
 
 function openNiggleModal(bodyPartId) {
     const existing = activeNiggles.find(n => n.body_part === bodyPartId);
-    
+
     document.getElementById('niggle-body-part').value = bodyPartId;
     document.getElementById('niggle-modal-title').innerText = `Log Issue: ${bodyPartId.replace('_', ' ')}`;
-    
+
     if (existing) {
         document.getElementById('niggle-id').value = existing.id;
         document.getElementById('niggle-severity').value = existing.severity;
@@ -4417,7 +4444,7 @@ function openNiggleModal(bodyPartId) {
         document.getElementById('niggle-notes').value = '';
         document.getElementById('niggle-resolve-btn').classList.add('hidden');
     }
-    
+
     const modal = document.getElementById('niggle-modal');
     modal.classList.remove('hidden');
     // slight delay to allow display:block to apply before animating opacity
@@ -4440,7 +4467,7 @@ async function saveNiggle() {
     const bodyPart = document.getElementById('niggle-body-part').value;
     const severity = document.getElementById('niggle-severity').value;
     const notes = document.getElementById('niggle-notes').value;
-    
+
     try {
         const token = localStorage.getItem('nana_token');
         const res = await fetch('/api/niggles', {
@@ -4451,7 +4478,7 @@ async function saveNiggle() {
             },
             body: JSON.stringify({ body_part: bodyPart, severity, notes })
         });
-        
+
         if (res.ok) {
             closeNiggleModal();
             loadActiveNiggles();
@@ -4467,14 +4494,14 @@ async function saveNiggle() {
 async function resolveNiggle() {
     const id = document.getElementById('niggle-id').value;
     if (!id) return;
-    
+
     try {
         const token = localStorage.getItem('nana_token');
         const res = await fetch(`/api/niggles/${id}/resolve`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (res.ok) {
             closeNiggleModal();
             loadActiveNiggles();
@@ -4511,50 +4538,50 @@ async function logCycleStart() {
         if (res.ok) {
             loadSettings(); // Reload settings to update widget
         }
-    } catch(e) { console.error("Failed to log cycle"); }
+    } catch (e) { console.error("Failed to log cycle"); }
 }
 
 function updateCycleWidget(gender, lastCycleStart, avgCycleLength) {
     const container = document.getElementById('cycle-widget-container');
     if (!container) return;
-    
+
     if (gender !== 'Female') {
         container.classList.add('hidden');
         return;
     }
-    
+
     container.classList.remove('hidden');
-    
+
     const dayNumberEl = document.getElementById('cycle-day-number');
     const phaseTitleEl = document.getElementById('cycle-phase-title');
     const phaseDescEl = document.getElementById('cycle-phase-desc');
     const progressRing = document.getElementById('cycle-progress-ring');
     const glowEl = document.getElementById('cycle-glow');
-    
+
     if (!lastCycleStart) {
         container.classList.add('hidden');
         return;
     }
-    
+
     // Calculate days elapsed
     const start = new Date(lastCycleStart);
     // Ensure we strip time from 'now' for accurate day diff if start is just YYYY-MM-DD
     const now = new Date(new Date().toISOString().split('T')[0]);
     const diffTime = now - start;
     let cycleDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because day 0 is day 1
-    
+
     // If it's over the avg cycle length, wrap it around (or cap it, wrapping makes more sense)
     if (cycleDay > avgCycleLength) {
         cycleDay = cycleDay % avgCycleLength;
         if (cycleDay === 0) cycleDay = avgCycleLength;
     }
-    
+
     dayNumberEl.innerText = `Day ${cycleDay}`;
-    
+
     let phase = "";
     let desc = "";
     let color = "";
-    
+
     if (cycleDay >= 1 && cycleDay <= 5) {
         phase = "Menstrual Phase";
         desc = "Your body is working hard. Prioritize recovery, stretching, and low-intensity movement.";
@@ -4572,11 +4599,11 @@ function updateCycleWidget(gender, lastCycleStart, avgCycleLength) {
         desc = "Energy may start to taper. Focus on steady-state endurance and maintaining form.";
         color = "#a855f7"; // purple
     }
-    
+
     phaseTitleEl.innerText = phase;
     phaseTitleEl.style.color = color;
     phaseDescEl.innerText = desc;
-    
+
     // Update SVG Ring
     // 251.2 is the circumference (2 * pi * 40)
     if (progressRing) {
@@ -4586,7 +4613,7 @@ function updateCycleWidget(gender, lastCycleStart, avgCycleLength) {
         progressRing.style.strokeDashoffset = offset;
         progressRing.setAttribute('stroke', color);
     }
-    
+
     if (glowEl) glowEl.style.backgroundColor = color + '20'; // 20 hex for 12.5% opacity
 }
 
@@ -4596,11 +4623,11 @@ async function fetchGamificationData() {
         const res = await fetch('/api/gamification', { headers: getAuthHeaders(), cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        
+
         // Render Quests
         const questsContainer = document.getElementById('active-quests-container');
         const questsList = document.getElementById('quests-list');
-        
+
         if (questsContainer && questsList) {
             questsContainer.classList.remove('hidden');
             if (data.quests && data.quests.length > 0) {
@@ -4623,6 +4650,33 @@ async function fetchGamificationData() {
                 questsList.innerHTML = '<button onclick="generateQuest()" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1.5 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition">Ask Coach for a Quest</button>';
             }
         }
+
+        // Render Quests Log in Progress Page
+        const questsLogContainer = document.getElementById('quests-log-container');
+        const questsLogList = document.getElementById('quests-log-list');
+        if (questsLogContainer && questsLogList) {
+            questsLogContainer.classList.remove('hidden');
+            if (data.quests && data.quests.length > 0) {
+                questsLogList.innerHTML = data.quests.map(q => {
+                    const isActive = q.status === 'active';
+                    const iconColor = isActive ? 'bg-theme-accent animate-pulse' : 'bg-green-500';
+                    const opacity = isActive ? 'opacity-100' : 'opacity-60 grayscale';
+                    const statusText = isActive ? 'Active' : 'Completed';
+                    return `
+                        <div class="flex items-center gap-3 p-3 bg-theme-bg rounded border border-theme-border ${opacity}">
+                            <div class="w-2 h-2 rounded-full ${iconColor}"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-theme-text">${q.description}</p>
+                                <p class="text-[10px] text-theme-muted">Reward: ${q.reward_points} Spark | Status: ${statusText}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                questsLogList.innerHTML = '<p class="text-xs text-theme-muted text-center italic">No quests found. Start an active quest to see it here!</p>';
+            }
+        }
+
 
         // Render Titles
         const titlesList = document.getElementById('public-profile-titles');
@@ -4675,14 +4729,7 @@ async function generateTitle() {
             if (btn) btn.innerHTML = 'Coach is thinking...';
             setTimeout(() => { fetchGamificationData(); }, 1500);
         }
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 }
-
-// Hook into buildDashboard
-const originalBuildDashboard = buildDashboard;
-buildDashboard = async function() {
-    await originalBuildDashboard();
-    await fetchGamificationData();
-};
