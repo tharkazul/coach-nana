@@ -18,14 +18,18 @@ const gamificationRoutes = require("./routes/gamification");
 const integrationsRoutes = require("./routes/integrations");
 const physiqueRoutes = require("./routes/physique");
 const activitiesRoutes = require("./routes/activities");
+const settingsRoutes = require("./routes/settings");
+const adminRoutes = require("./routes/admin");
 
-app.use("/", authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/", chatRoutes);
 app.use("/", socialRoutes);
 app.use("/", gamificationRoutes);
 app.use("/", integrationsRoutes);
 app.use("/", physiqueRoutes);
 app.use("/", activitiesRoutes);
+app.use("/", settingsRoutes);
+app.use("/", adminRoutes);
 
 // Utilities and cron jobs
 const {
