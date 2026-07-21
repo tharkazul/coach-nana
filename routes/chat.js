@@ -215,9 +215,10 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                         .join("\n");
                     }
 
+                    const todayStr = getAMSDateString();
                     db.all(
-                      `SELECT * FROM micro_plan WHERE user_id = ? AND date >= date('now', 'localtime') ORDER BY date ASC LIMIT 14`,
-                      [req.user.id],
+                      `SELECT * FROM micro_plan WHERE user_id = ? AND date >= ? ORDER BY date ASC LIMIT 14`,
+                      [req.user.id, todayStr],
                       async (err, planRows) => {
                         const planText =
                           planRows && planRows.length > 0
@@ -230,8 +231,8 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                             : "No upcoming workouts scheduled.";
 
                         db.all(
-                          `SELECT name, date, target_ctl FROM milestones WHERE user_id = ? AND date >= date('now', 'localtime') ORDER BY date ASC LIMIT 3`,
-                          [req.user.id],
+                          `SELECT name, date, target_ctl FROM milestones WHERE user_id = ? AND date >= ? ORDER BY date ASC LIMIT 3`,
+                          [req.user.id, todayStr],
                           async (err, milestoneRows) => {
                             const milestonesText =
                               milestoneRows && milestoneRows.length > 0
