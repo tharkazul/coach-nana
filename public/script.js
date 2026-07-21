@@ -1035,6 +1035,32 @@ function switchProgressTab(subtab) {
     }
 }
 
+// Initialize swipe gestures for Progress view
+document.addEventListener('DOMContentLoaded', () => {
+    const progressView = document.getElementById('view-physique');
+    if (progressView && typeof Hammer !== 'undefined') {
+        const hammer = new Hammer(progressView);
+        hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+        
+        const tabs = ['spark', 'nutrition', 'health', 'dailylog'];
+        
+        hammer.on('swipeleft', () => {
+            // Find current active tab
+            let currentIdx = tabs.findIndex(tab => !document.getElementById(`progress-subtab-${tab}`).classList.contains('hidden'));
+            if (currentIdx < tabs.length - 1) {
+                switchProgressTab(tabs[currentIdx + 1]);
+            }
+        });
+        
+        hammer.on('swiperight', () => {
+            let currentIdx = tabs.findIndex(tab => !document.getElementById(`progress-subtab-${tab}`).classList.contains('hidden'));
+            if (currentIdx > 0) {
+                switchProgressTab(tabs[currentIdx - 1]);
+            }
+        });
+    }
+});
+
 // 1. Sends the user to Strava's login screen
 function connectStravaOAuth() {
     const clientId = '208765'; // Replace with your actual numeric Client ID
