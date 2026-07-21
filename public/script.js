@@ -958,7 +958,7 @@ function switchTab(t) {
         if (badge) badge.classList.add('hidden');
     }
 
-    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'profile': 'Athlete Profile', 'history': 'Log', 'physique': 'Physique & Recovery', 'social': 'Social' }[t];
+    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'profile': 'Athlete Profile', 'history': 'Log', 'physique': 'Progress', 'social': 'Social' }[t];
 
     views.forEach(tab => {
         const btn = document.getElementById(`nav-btn-${tab}`);
@@ -993,6 +993,44 @@ function switchTab(t) {
         setTimeout(() => {
             const chatWindow = document.getElementById('chat-window');
             if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
+        }, 50);
+    }
+}
+
+function switchProgressTab(subtab) {
+    const tabs = ['spark', 'nutrition', 'health', 'dailylog'];
+    tabs.forEach(tab => {
+        const container = document.getElementById(`progress-subtab-${tab}`);
+        const btn = document.getElementById(`prog-tab-${tab}`);
+        if (container) {
+            container.classList.toggle('hidden', tab !== subtab);
+        }
+        if (btn) {
+            if (tab === subtab) {
+                btn.classList.add('text-theme-accent');
+                btn.classList.remove('text-theme-muted', 'hover:text-theme-text');
+            } else {
+                btn.classList.remove('text-theme-accent');
+                btn.classList.add('text-theme-muted', 'hover:text-theme-text');
+            }
+        }
+    });
+
+    const indicator = document.getElementById('prog-tab-indicator');
+    const activeBtn = document.getElementById(`prog-tab-${subtab}`);
+    if (indicator && activeBtn) {
+        indicator.style.left = `${activeBtn.offsetLeft}px`;
+        indicator.style.width = `${activeBtn.offsetWidth}px`;
+        
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    if (subtab === 'spark') {
+        setTimeout(() => {
+            if (window.progress_radar) window.progress_radar.resize();
+            ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
+                if (window[`public_sparkline_${metric}`]) window[`public_sparkline_${metric}`].resize();
+            });
         }, 50);
     }
 }

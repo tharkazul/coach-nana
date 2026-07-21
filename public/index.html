@@ -20,7 +20,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <link rel="stylesheet" href="/styles.css?v=75">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -196,6 +196,14 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 </head>
@@ -962,43 +970,36 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- PHYSIQUE VIEW -->
                 <div id="view-physique"
                     class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
                     <div>
-                        <h2 class="text-xl font-bold text-theme-text font-barlow">Progress & Recovery</h2>
-                        <p class="text-xs text-theme-muted mt-1">Track your fitness, fatigue, and physical readiness.
-                        </p>
+                        <h2 class="text-xl font-bold text-theme-text font-barlow">Progress</h2>
+                        <p class="text-xs text-theme-muted mt-1">Track your overall progress and readiness.</p>
                     </div>
 
-                    <!-- Cycle Widget (Hidden by default) -->
-                    <div id="cycle-widget-container" class="hidden bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden group mb-6">
-                        <div class="p-5 md:p-6 relative overflow-hidden">
-                            <!-- Background glow -->
-                            <div class="absolute -right-20 -top-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl pointer-events-none transition-colors" id="cycle-glow"></div>
-                            
-                            <div class="flex flex-col md:flex-row gap-6 items-center">
-                                <!-- Circular Indicator -->
-                                <div class="relative w-24 h-24 shrink-0 flex items-center justify-center">
-                                    <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                        <circle cx="50" cy="50" r="40" fill="none" class="stroke-theme-border" stroke-width="8" />
-                                        <circle id="cycle-progress-ring" cx="50" cy="50" r="40" fill="none" stroke="#ec4899" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
-                                    </svg>
-                                    <div class="flex flex-col items-center justify-center text-center z-10">
-                                        <span id="cycle-day-number" class="text-xl md:text-2xl font-bold text-theme-text font-barlow">--</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex-1 flex flex-col justify-center text-center md:text-left z-10">
-                                    <h3 class="text-sm font-bold text-theme-muted uppercase tracking-wider mb-1">Cycle & Readiness</h3>
-                                    <div id="cycle-phase-title" class="text-xl md:text-2xl font-bold text-theme-text mb-2">--</div>
-                                    <p id="cycle-phase-desc" class="text-sm text-theme-muted">--</p>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- SUB NAVIGATION MENU -->
+                    <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border mb-6">
+                        <nav id="progress-sub-nav" class="flex whitespace-nowrap min-w-max px-1 relative">
+                            <button onclick="switchProgressTab('spark')" id="prog-tab-spark" class="prog-tab-btn py-3 px-4 text-sm font-bold text-theme-accent transition-colors">
+                                Spark
+                            </button>
+                            <button onclick="switchProgressTab('nutrition')" id="prog-tab-nutrition" class="prog-tab-btn py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                Nutrition
+                            </button>
+                            <button onclick="switchProgressTab('health')" id="prog-tab-health" class="prog-tab-btn py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                Health
+                            </button>
+                            <button onclick="switchProgressTab('dailylog')" id="prog-tab-dailylog" class="prog-tab-btn py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                Daily Log
+                            </button>
+                            <!-- Animated Underline Indicator -->
+                            <div id="prog-tab-indicator" class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10" style="left: 0.25rem; width: 50px;"></div>
+                        </nav>
                     </div>
 
+                    <!-- SPARK SUB-TAB -->
+                    <div id="progress-subtab-spark" class="space-y-6 animate-msg">
                     <!-- Spark Level Progress -->
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 p-6">
                         <div class="flex justify-between items-end mb-2">
@@ -1010,7 +1011,6 @@
                         </div>
                         <p class="text-[10px] text-theme-muted mt-2 text-right">Progress to next level</p>
                     </div>
-
                     <!-- Athlete Radar -->
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 p-6">
                         <h4 class="text-sm font-bold text-theme-text uppercase tracking-wider mb-4">Athlete Archetype
@@ -1021,7 +1021,6 @@
                             </div>
                         </div>
                     </div>
-
                     <!-- Trend Sparklines -->
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 p-6">
                         <h4 class="text-sm font-bold text-theme-text uppercase tracking-wider mb-4">30-Day Trends</h4>
@@ -1056,7 +1055,22 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Quests Log -->
+                    <div id="quests-log-container" class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 hidden">
+                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Quests Log
+                            </h3>
+                            <p class="text-xs text-theme-muted mt-1">Your active and completed quests.</p>
+                        </div>
+                        <div class="p-6 flex flex-col gap-4" id="quests-log-list">
+                             <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                    </div>
 
+                    <!-- NUTRITION SUB-TAB -->
+                    <div id="progress-subtab-nutrition" class="space-y-6 hidden animate-msg">
                     <!-- AI NUTRITION PROTOCOL -->
                     <div
                         class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 relative">
@@ -1106,7 +1120,36 @@
                             </div>
                         </div>
                     </div>
+                    </div>
 
+                    <!-- HEALTH SUB-TAB -->
+                    <div id="progress-subtab-health" class="space-y-6 hidden animate-msg">
+                    <!-- Cycle Widget (Hidden by default) -->
+                    <div id="cycle-widget-container" class="hidden bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden group mb-6">
+                        <div class="p-5 md:p-6 relative overflow-hidden">
+                            <!-- Background glow -->
+                            <div class="absolute -right-20 -top-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl pointer-events-none transition-colors" id="cycle-glow"></div>
+                            
+                            <div class="flex flex-col md:flex-row gap-6 items-center">
+                                <!-- Circular Indicator -->
+                                <div class="relative w-24 h-24 shrink-0 flex items-center justify-center">
+                                    <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="40" fill="none" class="stroke-theme-border" stroke-width="8" />
+                                        <circle id="cycle-progress-ring" cx="50" cy="50" r="40" fill="none" stroke="#ec4899" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                                    </svg>
+                                    <div class="flex flex-col items-center justify-center text-center z-10">
+                                        <span id="cycle-day-number" class="text-xl md:text-2xl font-bold text-theme-text font-barlow">--</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex-1 flex flex-col justify-center text-center md:text-left z-10">
+                                    <h3 class="text-sm font-bold text-theme-muted uppercase tracking-wider mb-1">Cycle & Readiness</h3>
+                                    <div id="cycle-phase-title" class="text-xl md:text-2xl font-bold text-theme-text mb-2">--</div>
+                                    <p id="cycle-phase-desc" class="text-sm text-theme-muted">--</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Niggles / Body Map Section -->
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
@@ -1166,20 +1209,10 @@
                             </svg>
                         </div>
                     </div>
-
-                    <!-- Quests Log -->
-                    <div id="quests-log-container" class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 hidden">
-                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
-                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Quests Log
-                            </h3>
-                            <p class="text-xs text-theme-muted mt-1">Your active and completed quests.</p>
-                        </div>
-                        <div class="p-6 flex flex-col gap-4" id="quests-log-list">
-                             <!-- Dynamically populated -->
-                        </div>
                     </div>
 
+                    <!-- DAILY LOG SUB-TAB -->
+                    <div id="progress-subtab-dailylog" class="space-y-6 hidden animate-msg">
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
                             <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
@@ -1258,7 +1291,6 @@
                             </form>
                         </div>
                     </div>
-
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
                             <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
@@ -1272,8 +1304,8 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
-
                 <!-- SOCIAL VIEW -->
                 <div id="view-social"
                     class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
