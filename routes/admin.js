@@ -102,21 +102,46 @@ router.delete("/api/admin/delete-user/:targetUsername", authenticateToken, (req,
       return res.status(403).json({ error: "Cannot delete admin accounts" });
   }
 
-  db.get(`SELECT id FROM users WHERE username = ?`, [targetUsername], (err, row) => {
-      if (err || !row) return res.status(404).json({ error: "User not found" });
-      const userId = row.id;
-      
-      db.serialize(() => {
-          db.run(`DELETE FROM activities WHERE user_id = ?`, [userId]);
-          db.run(`DELETE FROM chat_history WHERE user_id = ?`, [userId]);
-          db.run(`DELETE FROM micro_plan WHERE user_id = ?`, [userId]);
-          db.run(`DELETE FROM connections WHERE user_id1 = ? OR user_id2 = ?`, [userId, userId]);
-          db.run(`DELETE FROM users WHERE id = ?`, [userId], function (err) {
-              if (err) return res.status(500).json({ error: "Failed to delete user" });
-              res.json({ success: true, message: "Account deleted completely." });
-          });
-      });
-  });
+    db.get(`SELECT id FROM users WHERE username = ?`, [targetUsername], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: "User not found" });
+        const userId = row.id;
+        
+        const tablesWithUserId = [
+            "activities", "micro_plan", "weight_log", "chat_history", 
+            "athlete_metrics", "user_daily_metrics", "user_quests", 
+            "completed_quests", "user_xp", "nutrition_protocols", 
+            "kudos", "public_profile_cache", "completed_micro_steps", 
+            "push_subscriptions", "garmin_health_data", "user_titles", 
+            "athlete_niggles"
+        ];
+
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+            
+            tablesWithUserId.forEach(table => {
+                db.run(`DELETE FROM ${table} WHERE user_id = ?`, [userId], function(err) {
+                    if (err) console.error(`Error deleting from ${table}:`, err.message);
+                });
+            });
+
+            // Special cases
+            db.run(`DELETE FROM connections WHERE user_id = ? OR friend_id = ?`, [userId, userId], function(err) {
+                if (err) console.error("Error deleting connections:", err.message);
+            });
+
+            db.run(`DELETE FROM users WHERE id = ?`, [userId], function (err) {
+                if (err) {
+                    console.error("Error deleting user:", err.message);
+                    db.run("ROLLBACK");
+                    return res.status(500).json({ error: "Failed to delete user" });
+                }
+                db.run("COMMIT", function(err) {
+                    if (err) return res.status(500).json({ error: "Failed to commit deletion" });
+                    res.json({ success: true, message: "Account deleted completely." });
+                });
+            });
+        });
+    });
 });
 
 module.exports = router;
