@@ -714,7 +714,7 @@ async function tagStravaActivity(userId, activity, token) {
       );
 
       db.get(
-        "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+        "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND LOWER(sport) = LOWER(?)",
         [userId, activityDate, sparkSport],
         async (err, plan) => {
           if (err || !plan) return;
@@ -863,7 +863,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         }
 
         db.get(
-          "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND sport = ?",
+          "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND LOWER(sport) = LOWER(?)",
           [internalUserId, activityDate, sparkSport],
           async (err, plan) => {
             // Fetch the coach tone

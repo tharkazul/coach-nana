@@ -196,7 +196,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     ? recentActivities
                         .map(
                           (a) =>
-                            `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`,
+                            `- ${getAMSDateString(a.start_date)} at ${new Date(a.start_date).toLocaleTimeString("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" })}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`,
                         )
                         .join("\n                    ")
                     : "No recent activities recorded.";
@@ -324,7 +324,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     Current Training Phase: ${phase || user.training_phase || "Base/General"}
                     
                     TIME CONTEXT:
-                    Today is ${todayStr}.
+                    Current Date & Time: ${todayStr} at ${new Date().toLocaleTimeString("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" })}
                     The upcoming week mapping is:
                     ${next7Days}
                     

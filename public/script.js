@@ -81,7 +81,7 @@ function showToast(message, type = 'info') {
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
-        toastContainer.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none';
+        toastContainer.className = 'fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none';
         document.body.appendChild(toastContainer);
     }
     const toast = document.createElement('div');
@@ -624,7 +624,7 @@ async function loadSettings() {
                     select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Madison Beer.">Coach Liana</option>`;
                 }
                 if ((isRutger || isFelix) && !select.querySelector('option[value*="Mia"]')) {
-                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Mia Khalifa, supportive.">Coach Mia</option>`;
+                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, homewrecker, supportive.">Coach Mia</option>`;
                 }
             }
         }
@@ -1059,7 +1059,7 @@ function switchProgressTab(subtab) {
     if (indicator && activeBtn) {
         indicator.style.left = `${activeBtn.offsetLeft}px`;
         indicator.style.width = `${activeBtn.offsetWidth}px`;
-        
+
         activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
 
@@ -1079,9 +1079,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (progressView && typeof Hammer !== 'undefined') {
         const hammer = new Hammer(progressView);
         hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
-        
+
         const tabs = ['spark', 'nutrition', 'health', 'dailylog'];
-        
+
         hammer.on('swipeleft', () => {
             // Find current active tab
             let currentIdx = tabs.findIndex(tab => !document.getElementById(`progress-subtab-${tab}`).classList.contains('hidden'));
@@ -1089,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 switchProgressTab(tabs[currentIdx + 1]);
             }
         });
-        
+
         hammer.on('swiperight', () => {
             let currentIdx = tabs.findIndex(tab => !document.getElementById(`progress-subtab-${tab}`).classList.contains('hidden'));
             if (currentIdx > 0) {
@@ -1105,23 +1105,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dashView && typeof Hammer !== 'undefined') {
         const hammer = new Hammer(dashView);
         hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
-        
+
         const tabs = ['dash', 'planning'];
-        
+
         hammer.on('swipeleft', () => {
             let currentIdx = tabs.findIndex(tab => !document.getElementById(`dashboard-subtab-${tab}`).classList.contains('hidden'));
             if (currentIdx < tabs.length - 1) {
                 switchDashboardTab(tabs[currentIdx + 1]);
             }
         });
-        
+
         hammer.on('swiperight', () => {
             let currentIdx = tabs.findIndex(tab => !document.getElementById(`dashboard-subtab-${tab}`).classList.contains('hidden'));
             if (currentIdx > 0) {
                 switchDashboardTab(tabs[currentIdx - 1]);
             }
         });
-        
+
         // Initialize indicator position
         setTimeout(() => switchDashboardTab('dash'), 100);
     }
