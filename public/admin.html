@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark | Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen">
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">Spark Admin Dashboard</h1>
+            <a href="/" class="text-blue-600 hover:underline">← Back to App</a>
+        </header>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="statsContainer">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Total Users</h3>
+                <p class="text-3xl font-bold mt-2" id="statTotalUsers">...</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Personal Tokens Today</h3>
+                <p class="text-3xl font-bold mt-2 text-blue-600" id="statPersonalTokens">...</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Common Tokens Today</h3>
+                <p class="text-3xl font-bold mt-2 text-green-600" id="statCommonTokens">...</p>
+            </div>
+        </div>
+
+        <!-- User Management Table -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-semibold">User Management</h2>
+                <button onclick="fetchUsage()" class="text-sm bg-white border border-gray-300 px-3 py-1 rounded hover:bg-gray-50 shadow-sm transition">↻ Refresh</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-sm text-gray-600">
+                            <th class="p-4 font-medium">Username</th>
+                            <th class="p-4 font-medium">Logins</th>
+                            <th class="p-4 font-medium">Chats</th>
+                            <th class="p-4 font-medium">Personal Tokens</th>
+                            <th class="p-4 font-medium">Common Tokens</th>
+                            <th class="p-4 font-medium">Connections</th>
+                            <th class="p-4 font-medium text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="text-sm divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="7" class="p-8 text-center text-gray-400">Loading user data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div id="errorToast" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none">
+        <p id="errorMsg">Error occurred.</p>
+    </div>
+
+    <script src="/admin.js"></script>
+</body>
+</html>

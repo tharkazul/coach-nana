@@ -453,6 +453,9 @@ You MUST respond with ONLY a raw JSON object containing exactly these keys:
                       "Generate the macro protocol.",
                       systemPrompt,
                       [],
+                      null,
+                      req.user.id,
+                      "common"
                     );
                     // Extract JSON between the first { and last } to avoid markdown formatting issues
                     const firstBrace = aiReply.indexOf("{");

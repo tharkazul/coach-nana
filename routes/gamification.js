@@ -144,6 +144,7 @@ router.post(
                 null,
                 null,
                 userId,
+                "common"
               );
               const jsonStr = aiReply
                 .replace(/\`\`\`json/g, "")
@@ -290,6 +291,7 @@ router.post(
             null,
             null,
             userId,
+            "common"
           );
           const jsonStr = aiReply
             .replace(/\`\`\`json/g, "")

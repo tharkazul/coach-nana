@@ -608,14 +608,7 @@ async function loadSettings() {
         if (isRutger || isFelix) {
             console.log("✅ Admin verified! Unlocking admin features...");
 
-            // Unhide the Admin Section in Settings
-            const adminSection = document.getElementById('admin-settings-section');
-            if (adminSection) {
-                adminSection.classList.remove('hidden');
-                loadAdminUsage();
-            } else {
-                console.error("❌ Could not find 'admin-settings-section' in the HTML!");
-            }
+
 
             // Unhide the secret Admin-Only coach tones
             const select = document.getElementById('set-coach-tone');
@@ -1378,6 +1371,7 @@ async function buildDashboard() {
             }
         } else {
             if (deskReflection) deskReflection.innerHTML = "<span class='text-theme-muted italic'>Failed to load highlights.</span>";
+            if (deskAvatar) deskAvatar.src = getCoachAvatar('default');
         }
 
         // 3. Process Weight & Biometrics Table
@@ -3402,50 +3396,7 @@ function toggleGarminBtn() {
     }
 }
 
-// --- ADMIN USAGE LOGIC ---
-async function loadAdminUsage() {
-    try {
-        const usageRes = await fetch('/api/admin/usage', { headers: getAuthHeaders() });
-        if (usageRes.ok) {
-            const usageData = await usageRes.json();
-            const usageTbody = document.getElementById('admin-usage-table');
-            if (usageTbody) {
-                if (usageData.length === 0) {
-                    usageTbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-theme-muted">No usage data.</td></tr>`;
-                } else {
-                    usageTbody.innerHTML = usageData.map(u => {
-                        const tokenUsage = u.daily_token_usage || 0;
-                        const tokenPercent = Math.min(100, Math.round((tokenUsage / 100000) * 100));
-                        let tokenColor = 'bg-green-500';
-                        if (tokenPercent > 75) tokenColor = 'bg-yellow-500';
-                        if (tokenPercent > 90) tokenColor = 'bg-red-500';
 
-                        return `
-                        <tr class="hover:bg-theme-bg transition border-b border-theme-border last:border-0">
-                            <td class="px-4 py-3 font-medium text-xs">${u.username || 'Unknown'}</td>
-                            <td class="px-4 py-3 text-xs text-theme-muted">${u.login_count || 0}</td>
-                            <td class="px-4 py-3 text-xs text-theme-muted">${u.chat_count || 0}</td>
-                            <td class="px-4 py-3 text-xs text-theme-muted">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-full h-1.5 bg-theme-border rounded-full overflow-hidden shrink-0">
-                                        <div class="h-full ${tokenColor} rounded-full" style="width: ${tokenPercent}%"></div>
-                                    </div>
-                                    <span class="text-[10px] w-8 text-right">${tokenPercent}%</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-xs text-theme-muted">${u.strava_connected ? '✅' : '❌'}</td>
-                            <td class="px-4 py-3 text-xs text-theme-muted">${u.garmin_connected ? '✅' : '❌'}</td>
-                            <td class="px-4 py-3 text-xs text-theme-muted">${u.activities_count || 0}</td>
-                        </tr>
-                        `;
-                    }).join('');
-                }
-            }
-        }
-    } catch (e) {
-        console.error("Failed to load admin usage", e);
-    }
-}
 // --- ONBOARDING LOGIC ---
 function selectTone(element, tone) {
     document.getElementById('onboard-tone').value = tone;

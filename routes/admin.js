@@ -50,6 +50,7 @@ router.get("/api/admin/usage", authenticateToken, (req, res) => {
             u.login_count, 
             u.chat_count,
             u.daily_token_usage,
+            u.common_token_usage,
             CASE WHEN u.strava_refresh_token IS NOT NULL AND u.strava_refresh_token != '' THEN 1 ELSE 0 END as strava_connected,
             CASE WHEN u.garmin_username IS NOT NULL AND u.garmin_username != '' THEN 1 ELSE 0 END as garmin_connected,
             (SELECT COUNT(*) FROM activities WHERE user_id = u.id) as activities_count
@@ -58,8 +59,31 @@ router.get("/api/admin/usage", authenticateToken, (req, res) => {
     `;
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: "Database error" });
-    res.json(rows || []);
+    res.json(rows);
   });
+});
+
+router.post("/api/admin/reset-tokens", authenticateToken, (req, res) => {
+  const isRutger =
+    req.user.username && req.user.username.toLowerCase().includes("rutger");
+  const isFelix =
+    req.user.username && req.user.username.toLowerCase().includes("felixson");
+  if (!isRutger && !isFelix && req.user.id !== 1) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  const { targetUsername } = req.body;
+  if (!targetUsername) return res.status(400).json({ error: "Missing username" });
+
+  db.run(
+    `UPDATE users SET daily_token_usage = 0, common_token_usage = 0 WHERE username = ?`,
+    [targetUsername],
+    function (err) {
+      if (err) return res.status(500).json({ error: "Database error" });
+      if (this.changes === 0) return res.status(404).json({ error: "User not found" });
+      res.json({ success: true, message: "Tokens reset to 0." });
+    }
+  );
 });
 
 module.exports = router;

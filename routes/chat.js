@@ -143,7 +143,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
   }
 
   db.get(
-    `SELECT coach_tone, athlete_context, gender, long_term_memory, daily_token_usage, last_token_reset_date FROM users WHERE id = ?`,
+    `SELECT coach_tone, athlete_context, gender, long_term_memory, daily_token_usage, common_token_usage, last_token_reset_date FROM users WHERE id = ?`,
     [req.user.id],
     async (err, user) => {
       if (err) {
@@ -163,12 +163,12 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
       if (user.last_token_reset_date !== todayStr) {
         currentDailyUsage = 0;
         db.run(
-          `UPDATE users SET daily_token_usage = 0, last_token_reset_date = ? WHERE id = ?`,
+          `UPDATE users SET daily_token_usage = 0, common_token_usage = 0, last_token_reset_date = ? WHERE id = ?`,
           [todayStr, req.user.id],
         );
       }
 
-      if (currentDailyUsage > 100000) {
+      if (currentDailyUsage > 50000) {
         return res
           .status(429)
           .json({

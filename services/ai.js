@@ -88,6 +88,7 @@ async function generateWithFallback(
   chatHistory = null,
   imageBase64 = null,
   userId = null,
+  poolType = "personal",
 ) {
   let lastError = null;
 
@@ -135,8 +136,9 @@ async function generateWithFallback(
           `🪙 Tokens Used -> Input: ${usage.promptTokenCount} | Output: ${usage.candidatesTokenCount} | Total: ${usage.totalTokenCount}`,
         );
         if (userId) {
+          const columnToUpdate = poolType === "common" ? "common_token_usage" : "daily_token_usage";
           db.run(
-            `UPDATE users SET daily_token_usage = daily_token_usage + ? WHERE id = ?`,
+            `UPDATE users SET ${columnToUpdate} = ${columnToUpdate} + ? WHERE id = ?`,
             [usage.totalTokenCount, userId],
           );
         }
