@@ -103,13 +103,11 @@ async function deleteAccount(username) {
     if (!confirm(`CRITICAL WARNING: Are you absolutely sure you want to PERMANENTLY delete the account for ${username}? This will remove all their activities and data and cannot be undone.`)) return;
 
     try {
-        const response = await fetch('/api/admin/delete-user', {
+        const response = await fetch(`/api/admin/delete-user/${encodeURIComponent(username)}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('nana_token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ targetUsername: username })
+                'Authorization': `Bearer ${localStorage.getItem('nana_token')}`
+            }
         });
 
         const data = await response.json();

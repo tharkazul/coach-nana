@@ -86,7 +86,7 @@ router.post("/api/admin/reset-tokens", authenticateToken, (req, res) => {
   );
 });
 
-router.delete("/api/admin/delete-user", authenticateToken, (req, res) => {
+router.delete("/api/admin/delete-user/:targetUsername", authenticateToken, (req, res) => {
   const isRutger =
     req.user.username && req.user.username.toLowerCase().includes("rutger");
   const isFelix =
@@ -95,7 +95,7 @@ router.delete("/api/admin/delete-user", authenticateToken, (req, res) => {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
-  const { targetUsername } = req.body;
+  const { targetUsername } = req.params;
   if (!targetUsername) return res.status(400).json({ error: "Missing username" });
   
   if (targetUsername.toLowerCase().includes("rutger") || targetUsername.toLowerCase().includes("felixson")) {
