@@ -43,15 +43,28 @@ function renderTable(users) {
         const personalTokens = u.daily_token_usage || 0;
         const commonTokens = u.common_token_usage || 0;
         
-        const currentLimit = u.daily_token_limit || 50000;
+        const currentLimit = u.daily_token_limit || (u.subscription_tier === 'spark_plus' ? 50000 : 10000);
         let personalTokenClass = "text-gray-900";
         if (personalTokens >= currentLimit) personalTokenClass = "text-red-600 font-bold";
         else if (personalTokens > currentLimit * 0.8) personalTokenClass = "text-orange-500 font-semibold";
+
+        const tier = u.subscription_tier || 'free';
+        const tierSelect = `
+            <select onchange="setTier('${u.username}', this.value)" class="text-xs bg-gray-50 border border-gray-200 rounded p-1">
+                <option value="free" ${tier === 'free' ? 'selected' : ''}>Free</option>
+                <option value="spark_plus" ${tier === 'spark_plus' ? 'selected' : ''}>Spark+</option>
+            </select>
+        `;
+
+        const clicks = u.spark_plus_clicks || 0;
+        const clicksDisplay = clicks > 0 ? `<span class="text-green-600 font-bold">${clicks} <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></span>` : '<span class="text-gray-400">0</span>';
 
         tr.innerHTML = `
             <td class="p-4 font-medium text-gray-900">${u.username}</td>
             <td class="p-4 text-gray-600">${u.login_count || 0}</td>
             <td class="p-4 text-gray-600">${u.chat_count || 0}</td>
+            <td class="p-4">${tierSelect}</td>
+            <td class="p-4">${clicksDisplay}</td>
             <td class="p-4 ${personalTokenClass}">${personalTokens.toLocaleString()} / ${(currentLimit/1000)}k</td>
             <td class="p-4 text-gray-600">${commonTokens.toLocaleString()}</td>
             <td class="p-4">
@@ -74,6 +87,33 @@ function updateStats(users) {
     
     document.getElementById('statPersonalTokens').innerText = totalPersonal.toLocaleString();
     document.getElementById('statCommonTokens').innerText = totalCommon.toLocaleString();
+}
+
+async function setTier(username, tier) {
+    if (!confirm(`Change tier for ${username} to ${tier}?`)) {
+        fetchUsage(); // Reset dropdown
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/set-tier', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('nana_token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ targetUsername: username, tier: tier })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            fetchUsage();
+        } else {
+            showError(data.error || "Failed to set tier.");
+        }
+    } catch (err) {
+        showError("Network error occurred.");
+    }
 }
 
 async function addTokens(username) {

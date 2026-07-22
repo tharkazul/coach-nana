@@ -580,6 +580,25 @@ async function attemptAuth(action) {
     }
 }
 
+// Spark+ Tracking
+async function trackSparkPlusClick() {
+    try {
+        const response = await fetch('/api/track-spark-plus-click', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('nana_token')}`
+            }
+        });
+        if (response.ok) {
+            alert('Awesome! We will let you know when Spark+ features become available.');
+        } else {
+            console.error('Failed to track click');
+        }
+    } catch (error) {
+        console.error('Error tracking click:', error);
+    }
+}
+
 function logout() {
     localStorage.removeItem('nana_token');
     window.location.reload();

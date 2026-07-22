@@ -82,4 +82,15 @@ router.post("/api/user/settings/coach", authenticateToken, (req, res) => {
   );
 });
 
+router.post('/api/track-spark-plus-click', authenticateToken, (req, res) => {
+    db.run(
+        `UPDATE users SET spark_plus_clicks = COALESCE(spark_plus_clicks, 0) + 1 WHERE id = ?`,
+        [req.user.id],
+        function(err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.json({ success: true });
+        }
+    );
+});
+
 module.exports = router;

@@ -52,6 +52,8 @@ router.get("/api/admin/usage", authenticateToken, (req, res) => {
             u.daily_token_usage,
             u.common_token_usage,
             u.daily_token_limit,
+            u.subscription_tier,
+            u.spark_plus_clicks,
             CASE WHEN u.strava_refresh_token IS NOT NULL AND u.strava_refresh_token != '' THEN 1 ELSE 0 END as strava_connected,
             CASE WHEN u.garmin_username IS NOT NULL AND u.garmin_username != '' THEN 1 ELSE 0 END as garmin_connected,
             (SELECT COUNT(*) FROM activities WHERE user_id = u.id) as activities_count
@@ -143,6 +145,30 @@ router.delete("/api/admin/delete-user/:targetUsername", authenticateToken, (req,
             });
         });
     });
+});
+
+router.post("/api/admin/set-tier", authenticateToken, (req, res) => {
+    const isRutger = req.user.username && req.user.username.toLowerCase().includes("rutger");
+    const isFelix = req.user.username && req.user.username.toLowerCase().includes("felixson");
+    if (!isRutger && !isFelix && req.user.id !== 1) {
+        return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const { targetUsername, tier } = req.body;
+    if (!targetUsername || !tier) return res.status(400).json({ error: "Missing parameters" });
+
+    // Set tier, and automatically adjust daily_token_limit so it takes effect immediately
+    const limit = tier === 'spark_plus' ? 50000 : 10000;
+
+    db.run(
+        `UPDATE users SET subscription_tier = ?, daily_token_limit = ? WHERE username = ?`,
+        [tier, limit, targetUsername],
+        function (err) {
+            if (err) return res.status(500).json({ error: "Database error" });
+            if (this.changes === 0) return res.status(404).json({ error: "User not found" });
+            res.json({ success: true, message: `Set ${targetUsername} tier to ${tier}` });
+        }
+    );
 });
 
 module.exports = router;

@@ -163,10 +163,10 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
 
       if (user.last_token_reset_date !== todayStr) {
         currentDailyUsage = 0;
-        currentDailyLimit = 50000;
+        currentDailyLimit = user.subscription_tier === 'spark_plus' ? 50000 : 10000;
         db.run(
-          `UPDATE users SET daily_token_usage = 0, common_token_usage = 0, daily_token_limit = 50000, last_token_reset_date = ? WHERE id = ?`,
-          [todayStr, req.user.id],
+          `UPDATE users SET daily_token_usage = 0, common_token_usage = 0, daily_token_limit = ?, last_token_reset_date = ? WHERE id = ?`,
+          [currentDailyLimit, todayStr, req.user.id],
         );
       }
 

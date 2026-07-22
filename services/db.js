@@ -18,7 +18,9 @@ db.serialize(() => {
         search_privacy INTEGER DEFAULT 0,
         profile_picture_url TEXT,
         common_token_usage INTEGER DEFAULT 0,
-        daily_token_limit INTEGER DEFAULT 50000
+        daily_token_limit INTEGER DEFAULT 50000,
+        subscription_tier TEXT DEFAULT 'free',
+        spark_plus_clicks INTEGER DEFAULT 0
     )`);
   // Add columns if they don't exist (fails silently if they do)
   db.run(
@@ -35,6 +37,14 @@ db.serialize(() => {
   );
   db.run(
     `ALTER TABLE users ADD COLUMN daily_token_limit INTEGER DEFAULT 50000`,
+    (err) => {},
+  );
+  db.run(
+    `ALTER TABLE users ADD COLUMN subscription_tier TEXT DEFAULT 'free'`,
+    (err) => {},
+  );
+  db.run(
+    `ALTER TABLE users ADD COLUMN spark_plus_clicks INTEGER DEFAULT 0`,
     (err) => {},
   );
   db.run(
