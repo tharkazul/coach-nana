@@ -43,21 +43,22 @@ function renderTable(users) {
         const personalTokens = u.daily_token_usage || 0;
         const commonTokens = u.common_token_usage || 0;
         
+        const currentLimit = u.daily_token_limit || 50000;
         let personalTokenClass = "text-gray-900";
-        if (personalTokens > 40000) personalTokenClass = "text-red-600 font-bold";
-        else if (personalTokens > 25000) personalTokenClass = "text-orange-500 font-semibold";
+        if (personalTokens >= currentLimit) personalTokenClass = "text-red-600 font-bold";
+        else if (personalTokens > currentLimit * 0.8) personalTokenClass = "text-orange-500 font-semibold";
 
         tr.innerHTML = `
             <td class="p-4 font-medium text-gray-900">${u.username}</td>
             <td class="p-4 text-gray-600">${u.login_count || 0}</td>
             <td class="p-4 text-gray-600">${u.chat_count || 0}</td>
-            <td class="p-4 ${personalTokenClass}">${personalTokens.toLocaleString()} / 50k</td>
+            <td class="p-4 ${personalTokenClass}">${personalTokens.toLocaleString()} / ${(currentLimit/1000)}k</td>
             <td class="p-4 text-gray-600">${commonTokens.toLocaleString()}</td>
             <td class="p-4">
                 <div class="flex gap-1">${connections.join('') || '<span class="text-gray-400 text-xs italic">None</span>'}</div>
             </td>
             <td class="p-4 text-right space-x-2">
-                <button onclick="resetTokens('${u.username}')" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1 rounded transition">Reset Tokens</button>
+                <button onclick="addTokens('${u.username}')" class="text-xs bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 px-3 py-1 rounded transition">+50k Tokens</button>
                 <button onclick="deleteAccount('${u.username}')" class="text-xs bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 px-3 py-1 rounded transition">Delete Account</button>
             </td>
         `;
@@ -75,11 +76,11 @@ function updateStats(users) {
     document.getElementById('statCommonTokens').innerText = totalCommon.toLocaleString();
 }
 
-async function resetTokens(username) {
-    if (!confirm(`Are you sure you want to reset all token usage for ${username}?`)) return;
+async function addTokens(username) {
+    if (!confirm(`Are you sure you want to add an extra 50k tokens to the daily limit for ${username}?`)) return;
 
     try {
-        const response = await fetch('/api/admin/reset-tokens', {
+        const response = await fetch('/api/admin/add-tokens', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('nana_token')}`,
@@ -90,9 +91,9 @@ async function resetTokens(username) {
 
         const data = await response.json();
         if (response.ok) {
-            fetchUsage(); // Refresh the table
+            fetchUsage();
         } else {
-            showError(data.error || "Failed to reset tokens.");
+            showError(data.error || "Failed to add tokens.");
         }
     } catch (err) {
         showError("Network error occurred.");

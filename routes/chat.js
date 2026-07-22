@@ -159,16 +159,18 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
       // Token limit logic
       const todayStr = new Date().toISOString().split("T")[0];
       let currentDailyUsage = user.daily_token_usage || 0;
+      let currentDailyLimit = user.daily_token_limit || 50000;
 
       if (user.last_token_reset_date !== todayStr) {
         currentDailyUsage = 0;
+        currentDailyLimit = 50000;
         db.run(
-          `UPDATE users SET daily_token_usage = 0, common_token_usage = 0, last_token_reset_date = ? WHERE id = ?`,
+          `UPDATE users SET daily_token_usage = 0, common_token_usage = 0, daily_token_limit = 50000, last_token_reset_date = ? WHERE id = ?`,
           [todayStr, req.user.id],
         );
       }
 
-      if (currentDailyUsage > 50000) {
+      if (currentDailyUsage > currentDailyLimit) {
         return res
           .status(429)
           .json({

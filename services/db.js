@@ -17,7 +17,8 @@ db.serialize(() => {
         last_token_reset_date TEXT,
         search_privacy INTEGER DEFAULT 0,
         profile_picture_url TEXT,
-        common_token_usage INTEGER DEFAULT 0
+        common_token_usage INTEGER DEFAULT 0,
+        daily_token_limit INTEGER DEFAULT 50000
     )`);
   // Add columns if they don't exist (fails silently if they do)
   db.run(
@@ -30,6 +31,10 @@ db.serialize(() => {
   );
   db.run(
     `ALTER TABLE users ADD COLUMN common_token_usage INTEGER DEFAULT 0`,
+    (err) => {},
+  );
+  db.run(
+    `ALTER TABLE users ADD COLUMN daily_token_limit INTEGER DEFAULT 50000`,
     (err) => {},
   );
   db.run(
