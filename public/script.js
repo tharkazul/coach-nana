@@ -624,7 +624,7 @@ async function loadSettings() {
                     select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Madison Beer.">Coach Liana</option>`;
                 }
                 if ((isRutger || isFelix) && !select.querySelector('option[value*="Mia"]')) {
-                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, homewrecker, supportive.">Coach Mia</option>`;
+                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, sometimes uses hangulhomewrecker, supportive.">Coach Mia</option>`;
                 }
             }
         }
