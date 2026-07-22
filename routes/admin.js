@@ -86,4 +86,37 @@ router.post("/api/admin/reset-tokens", authenticateToken, (req, res) => {
   );
 });
 
+router.delete("/api/admin/delete-user", authenticateToken, (req, res) => {
+  const isRutger =
+    req.user.username && req.user.username.toLowerCase().includes("rutger");
+  const isFelix =
+    req.user.username && req.user.username.toLowerCase().includes("felixson");
+  if (!isRutger && !isFelix && req.user.id !== 1) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  const { targetUsername } = req.body;
+  if (!targetUsername) return res.status(400).json({ error: "Missing username" });
+  
+  if (targetUsername.toLowerCase().includes("rutger") || targetUsername.toLowerCase().includes("felixson")) {
+      return res.status(403).json({ error: "Cannot delete admin accounts" });
+  }
+
+  db.get(`SELECT id FROM users WHERE username = ?`, [targetUsername], (err, row) => {
+      if (err || !row) return res.status(404).json({ error: "User not found" });
+      const userId = row.id;
+      
+      db.serialize(() => {
+          db.run(`DELETE FROM activities WHERE user_id = ?`, [userId]);
+          db.run(`DELETE FROM chat_history WHERE user_id = ?`, [userId]);
+          db.run(`DELETE FROM micro_plan WHERE user_id = ?`, [userId]);
+          db.run(`DELETE FROM connections WHERE user_id1 = ? OR user_id2 = ?`, [userId, userId]);
+          db.run(`DELETE FROM users WHERE id = ?`, [userId], function (err) {
+              if (err) return res.status(500).json({ error: "Failed to delete user" });
+              res.json({ success: true, message: "Account deleted completely." });
+          });
+      });
+  });
+});
+
 module.exports = router;

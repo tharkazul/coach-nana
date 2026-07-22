@@ -58,6 +58,7 @@ function renderTable(users) {
             </td>
             <td class="p-4 text-right space-x-2">
                 <button onclick="resetTokens('${u.username}')" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1 rounded transition">Reset Tokens</button>
+                <button onclick="deleteAccount('${u.username}')" class="text-xs bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 px-3 py-1 rounded transition">Delete Account</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -92,6 +93,30 @@ async function resetTokens(username) {
             fetchUsage(); // Refresh the table
         } else {
             showError(data.error || "Failed to reset tokens.");
+        }
+    } catch (err) {
+        showError("Network error occurred.");
+    }
+}
+
+async function deleteAccount(username) {
+    if (!confirm(`CRITICAL WARNING: Are you absolutely sure you want to PERMANENTLY delete the account for ${username}? This will remove all their activities and data and cannot be undone.`)) return;
+
+    try {
+        const response = await fetch('/api/admin/delete-user', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('nana_token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ targetUsername: username })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            fetchUsage(); // Refresh the table
+        } else {
+            showError(data.error || "Failed to delete account.");
         }
     } catch (err) {
         showError("Network error occurred.");
