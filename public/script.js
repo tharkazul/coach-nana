@@ -677,7 +677,9 @@ async function loadSettings() {
 
         const tokenDisplay = document.getElementById('daily-token-usage-display');
         if (tokenDisplay && data.dailyTokenUsage !== undefined) {
-            tokenDisplay.innerText = data.dailyTokenUsage.toLocaleString();
+            const limit = data.dailyTokenLimit || 10000;
+            const limitDisplay = limit >= 1000 ? (limit / 1000) + 'k' : limit;
+            tokenDisplay.innerText = `${data.dailyTokenUsage.toLocaleString()} / ${limitDisplay}`;
         }
 
         // --- SPARK LEVEL PROGRESS ---
