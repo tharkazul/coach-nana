@@ -663,6 +663,11 @@ async function loadSettings() {
         }
         renderScheduleBoundaries();
 
+        const tokenDisplay = document.getElementById('daily-token-usage-display');
+        if (tokenDisplay && data.dailyTokenUsage !== undefined) {
+            tokenDisplay.innerText = data.dailyTokenUsage.toLocaleString();
+        }
+
         // --- SPARK LEVEL PROGRESS ---
         if (data.sparkLevel) {
             const levelDisplay = document.getElementById('spark-level-display');
@@ -752,14 +757,7 @@ async function loadSettings() {
         }
 
         // If user is connected, hide the banner and show the dashboard!
-        if (data.hasGarmin || data.hasStrava) {
-            const banner = document.getElementById('welcome-banner');
-            const dashContent = document.getElementById('dashboard-subtab-dash');
-            const planningContent = document.getElementById('dashboard-planning-content');
-            if (banner) banner.classList.add('hidden');
-            if (dashContent) dashContent.classList.remove('hidden');
-            if (planningContent) planningContent.classList.remove('hidden');
-        }
+        // (Legacy logic removed - Dashboard is now visible by default)
         updateCycleWidget(data.gender, data.lastCycleStart, data.averageCycleLength);
         await loadMetrics();
         await loadStravaAutomations();
@@ -1032,6 +1030,33 @@ function switchDashboardTab(subtab) {
                 if (window[`sparkline_${metric}`]) window[`sparkline_${metric}`].resize();
             });
         }, 50);
+    }
+}
+
+function switchProfileTab(subtab) {
+    const tabs = ['profile', 'goals', 'connections', 'account'];
+    tabs.forEach(tab => {
+        const container = document.getElementById(`profile-subtab-${tab}`);
+        const btn = document.getElementById(`profile-tab-${tab}`);
+        if (container) {
+            container.classList.toggle('hidden', tab !== subtab);
+        }
+        if (btn) {
+            if (tab === subtab) {
+                btn.classList.add('text-theme-accent');
+                btn.classList.remove('text-theme-muted', 'hover:text-theme-text');
+            } else {
+                btn.classList.remove('text-theme-accent');
+                btn.classList.add('text-theme-muted', 'hover:text-theme-text');
+            }
+        }
+    });
+
+    const indicator = document.getElementById('profile-tab-indicator');
+    const activeBtn = document.getElementById(`profile-tab-${subtab}`);
+    if (indicator && activeBtn) {
+        indicator.style.left = `${activeBtn.offsetLeft}px`;
+        indicator.style.width = `${activeBtn.offsetWidth}px`;
     }
 }
 
@@ -1714,6 +1739,7 @@ async function buildDashboard() {
     loadMicroPlan();
     renderMacroPlan();
     fetchGamificationData();
+    loadNutritionProtocol();
 }
 
 async function loadMicroPlan() {
@@ -1767,9 +1793,11 @@ async function loadMicroPlan() {
 
         let html = '';
         let todayStr = new Date().toISOString().split('T')[0];
+        let todayHtml = '';
 
         // 2. Loop through all 7 days of the week view
         for (let i = 0; i < 7; i++) {
+            let dayHtml = '';
             let d = new Date(viewingWeekStart);
             d.setDate(d.getDate() + i);
             let dateStr = d.toISOString().split('T')[0];
@@ -1781,35 +1809,35 @@ async function loadMicroPlan() {
             let isToday = (dateStr === todayStr);
 
             // Open Day Container
-            html += `<div id="row-${dateStr}" class="flex flex-col bg-theme-card border ${isToday ? 'border-theme-accent ring-1 ring-theme-accent/50' : 'border-theme-border'} rounded-lg overflow-hidden h-full min-h-[150px]">`;
+            dayHtml += `<div id="row-${dateStr}" class="flex flex-col bg-theme-card border ${isToday ? 'border-theme-accent ring-1 ring-theme-accent/50' : 'border-theme-border'} rounded-lg overflow-hidden h-full min-h-[150px]">`;
 
             // Header for the day
-            html += `<div class="bg-theme-bg/50 px-3 py-2 border-b border-theme-border flex justify-between items-center">`;
+            dayHtml += `<div class="bg-theme-bg/50 px-3 py-2 border-b border-theme-border flex justify-between items-center">`;
 
             // Left side: Date + Weather
-            html += `<div class="flex items-center gap-3">`;
-            html += `<div class="flex flex-col"><span class="text-[10px] uppercase font-bold text-theme-muted tracking-wider">${dayName}</span><span class="text-xs font-medium text-theme-text">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>`;
+            dayHtml += `<div class="flex items-center gap-3">`;
+            dayHtml += `<div class="flex flex-col"><span class="text-[10px] uppercase font-bold text-theme-muted tracking-wider">${dayName}</span><span class="text-xs font-medium text-theme-text">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>`;
 
             // Weather
             if (weatherMap[dateStr]) {
                 const w = weatherMap[dateStr];
-                html += `<div class="flex items-center gap-1 leading-none bg-theme-bg px-2 py-1 rounded-md border border-theme-border"><span class="text-sm" title="${w.temp}°C">${w.emoji}</span><span class="text-[9px] font-mono text-theme-muted mt-1">${w.temp}°C</span></div>`;
+                dayHtml += `<div class="flex items-center gap-1 leading-none bg-theme-bg px-2 py-1 rounded-md border border-theme-border"><span class="text-sm" title="${w.temp}°C">${w.emoji}</span><span class="text-[9px] font-mono text-theme-muted mt-1">${w.temp}°C</span></div>`;
             }
-            html += `</div>`; // End Left side
+            dayHtml += `</div>`; // End Left side
 
             // Right side: Life Happens Button (only if date >= today)
             if (dateStr >= todayStr) {
-                html += `<button onclick="openLifeHappensMenu('${dateStr}')" class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-theme-accent bg-theme-accent-soft hover:bg-theme-accent-soft/80 border border-theme-accent-border px-2 py-1 rounded transition shadow-sm" title="Adapt Plan">
+                dayHtml += `<button onclick="openLifeHappensMenu('${dateStr}')" class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-theme-accent bg-theme-accent-soft hover:bg-theme-accent-soft/80 border border-theme-accent-border px-2 py-1 rounded transition shadow-sm" title="Adapt Plan">
                     <span>⚡️ ADAPT</span>
                 </button>`;
             } else {
-                html += `<div></div>`;
+                dayHtml += `<div></div>`;
             }
 
-            html += `</div>`; // End Header
+            dayHtml += `</div>`; // End Header
 
             // Body for workouts
-            html += `<div class="p-2 flex flex-col gap-2 flex-grow">`;
+            dayHtml += `<div class="p-2 flex flex-col gap-2 flex-grow">`;
 
             workoutsForDay.forEach((p, wIdx) => {
                 let actualSpark = actualSparkMap[`${dateStr}_${p.sport}`] || 0;
@@ -1820,7 +1848,7 @@ async function loadMicroPlan() {
                 const isStructured = p.steps_json && p.steps_json !== '[]' && p.steps_json !== 'null';
                 const pJson = encodeURIComponent(JSON.stringify(p)).replace(/'/g, "%27");
 
-                html += `
+                dayHtml += `
                 <div class="relative group p-2 rounded-md border ${sportColor} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
                     <div class="flex justify-between items-start mb-1">
                         <span class="text-[10px] font-bold uppercase tracking-wider">${p.sport}</span>
@@ -1840,15 +1868,31 @@ async function loadMicroPlan() {
             });
 
             // Add workout button
-            html += `
+            dayHtml += `
                 <button onclick="openEditWorkoutModal(null, '${dateStr}')" class="mt-auto py-1.5 border border-dashed border-theme-border rounded-md text-theme-muted text-[10px] font-medium hover:text-theme-accent hover:border-theme-accent transition flex items-center justify-center gap-1 w-full">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add
                 </button>
             `;
 
-            html += `</div></div>`; // End body and day container
+            dayHtml += `</div></div>`; // End body and day container
+            
+            html += dayHtml;
+            if (isToday) todayHtml = dayHtml;
         }
         container.innerHTML = html;
+        
+        const dashTodayContainer = document.getElementById('dash-today-plan-content');
+        const dashTodayWrapper = document.getElementById('dash-today-plan-container');
+        if (dashTodayContainer && dashTodayWrapper) {
+            if (todayHtml) {
+                dashTodayContainer.innerHTML = todayHtml;
+                dashTodayWrapper.classList.remove('hidden');
+                dashTodayWrapper.classList.add('flex');
+            } else {
+                dashTodayWrapper.classList.add('hidden');
+                dashTodayWrapper.classList.remove('flex');
+            }
+        }
     } catch (e) { console.error("Micro Plan Load Error:", e); }
 }
 
@@ -3795,8 +3839,18 @@ async function deletePhysiqueLog(id) {
 
 async function loadNutritionProtocol() {
     try {
-        document.getElementById('nutrition-loading').classList.remove('hidden');
-        document.getElementById('nutrition-content').classList.add('hidden');
+        const els = {
+            loading: [document.getElementById('nutrition-loading'), document.getElementById('dash-nutrition-loading')],
+            content: [document.getElementById('nutrition-content'), document.getElementById('dash-nutrition-content')],
+            title: [document.getElementById('nutrition-focus-title'), document.getElementById('dash-nutrition-focus-title')],
+            rationale: [document.getElementById('nutrition-rationale'), document.getElementById('dash-nutrition-rationale')],
+            carbs: [document.getElementById('macro-carbs'), document.getElementById('dash-macro-carbs')],
+            protein: [document.getElementById('macro-protein'), document.getElementById('dash-macro-protein')],
+            fat: [document.getElementById('macro-fat'), document.getElementById('dash-macro-fat')]
+        };
+
+        els.loading.forEach(el => { if (el) el.classList.remove('hidden') });
+        els.content.forEach(el => { if (el) el.classList.add('hidden') });
 
         const token = localStorage.getItem('nana_token');
         const res = await fetch('/api/physique/nutrition', {
@@ -3804,17 +3858,18 @@ async function loadNutritionProtocol() {
         });
         const protocol = await res.json();
 
-        document.getElementById('nutrition-focus-title').innerText = protocol.title || 'Balanced Protocol';
-        document.getElementById('nutrition-rationale').innerText = protocol.rationale || '';
-        document.getElementById('macro-carbs').innerText = `${protocol.carbs || '--'}g`;
-        document.getElementById('macro-protein').innerText = `${protocol.protein || '--'}g`;
-        document.getElementById('macro-fat').innerText = `${protocol.fat || '--'}g`;
+        els.title.forEach(el => { if (el) el.innerText = protocol.title || 'Balanced Protocol' });
+        els.rationale.forEach(el => { if (el) el.innerText = protocol.rationale || '' });
+        els.carbs.forEach(el => { if (el) el.innerText = `${protocol.carbs || '--'}g` });
+        els.protein.forEach(el => { if (el) el.innerText = `${protocol.protein || '--'}g` });
+        els.fat.forEach(el => { if (el) el.innerText = `${protocol.fat || '--'}g` });
 
-        document.getElementById('nutrition-loading').classList.add('hidden');
-        document.getElementById('nutrition-content').classList.remove('hidden');
+        els.loading.forEach(el => { if (el) el.classList.add('hidden') });
+        els.content.forEach(el => { if (el) el.classList.remove('hidden') });
     } catch (e) {
         console.error("Failed to load nutrition protocol", e);
-        document.getElementById('nutrition-loading').innerText = 'Failed to load';
+        const loadingEls = [document.getElementById('nutrition-loading'), document.getElementById('dash-nutrition-loading')];
+        loadingEls.forEach(el => { if (el) el.innerText = 'Failed to load' });
     }
 }
 

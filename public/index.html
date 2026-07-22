@@ -674,6 +674,53 @@
                             </div>
                         </div>
 
+                        <!-- TODAY'S PLAN -->
+                        <div id="dash-today-plan-container" class="hidden flex-col gap-4">
+                            <h3 class="text-sm uppercase tracking-widest font-bold text-theme-text flex items-center gap-2"><span class="text-xl">📅</span> Today's Plan</h3>
+                            <div id="dash-today-plan-content" class="w-full"></div>
+                        </div>
+
+                        <!-- DASHBOARD NUTRITION PROTOCOL -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 relative">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-theme-accent to-purple-500">
+                            </div>
+                            <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="text-lg">🥗</span> Daily AI Nutrition Protocol
+                                </h3>
+                                <span id="dash-nutrition-loading" class="text-xs text-theme-muted animate-pulse">Generating...</span>
+                            </div>
+                            <div id="dash-nutrition-content" class="p-6 hidden">
+                                <div class="flex flex-col md:flex-row gap-6 items-center">
+                                    <div class="flex-1 space-y-2">
+                                        <h4 id="dash-nutrition-focus-title" class="text-md font-bold text-theme-text">--</h4>
+                                        <p id="dash-nutrition-rationale" class="text-sm text-theme-muted leading-relaxed">--
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-4 md:gap-6 justify-center">
+                                        <div class="text-center">
+                                            <div class="w-16 h-16 rounded-full border-4 border-blue-500 flex items-center justify-center mb-2">
+                                                <span id="dash-macro-carbs" class="font-bold text-theme-text text-sm">--g</span>
+                                            </div>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="w-16 h-16 rounded-full border-4 border-red-500 flex items-center justify-center mb-2">
+                                                <span id="dash-macro-protein" class="font-bold text-theme-text text-sm">--g</span>
+                                            </div>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="w-16 h-16 rounded-full border-4 border-yellow-500 flex items-center justify-center mb-2">
+                                                <span id="dash-macro-fat" class="font-bold text-theme-text text-sm">--g</span>
+                                            </div>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Active Quests -->
                         <div id="active-quests-container"
                             class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden hidden">
@@ -798,7 +845,7 @@
 
                     <!-- PLANNING TAB -->
                     <div id="dashboard-subtab-planning" class="hidden">
-                        <div id="dashboard-planning-content" class="space-y-5 md:space-y-6 hidden">
+                        <div id="dashboard-planning-content" class="space-y-5 md:space-y-6">
 
                             <div id="macro-block"
                                 class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden hidden">
@@ -1485,6 +1532,35 @@
                         <p class="text-xs text-theme-muted mt-1">Your Configuration and Connections.</p>
                     </div>
 
+                    <!-- SUB NAVIGATION MENU -->
+                    <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border mb-2 md:mb-4">
+                        <nav id="profile-sub-nav" class="flex w-full relative">
+                            <button onclick="switchProfileTab('profile')" id="profile-tab-profile"
+                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-accent transition-colors">
+                                Profile
+                            </button>
+                            <button onclick="switchProfileTab('goals')" id="profile-tab-goals"
+                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                Goals
+                            </button>
+                            <button onclick="switchProfileTab('connections')" id="profile-tab-connections"
+                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                Connections
+                            </button>
+                            <button onclick="switchProfileTab('account')" id="profile-tab-account"
+                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                Account
+                            </button>
+                            <!-- Animated Underline Indicator -->
+                            <div id="profile-tab-indicator"
+                                class="absolute bottom-0 left-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-20">
+                            </div>
+                        </nav>
+                    </div>
+
+                    <!-- PROFILE TAB -->
+                    <div id="profile-subtab-profile" class="space-y-6">
+
 
                     <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                         <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
@@ -1637,8 +1713,12 @@
                         </div>
                     </div>
 
-                    <!-- RACE CALENDAR & MILESTONES -->
-                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                    </div> <!-- END PROFILE TAB -->
+
+                    <!-- GOALS TAB -->
+                    <div id="profile-subtab-goals" class="hidden space-y-6">
+                        <!-- RACE CALENDAR & MILESTONES -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                         <div
                             class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
@@ -1712,7 +1792,11 @@
                                 </div>
                             </div>
                         </div>
+                        </div> <!-- END RACE CALENDAR -->
+                    </div> <!-- END GOALS TAB -->
 
+                    <!-- CONNECTIONS TAB -->
+                    <div id="profile-subtab-connections" class="hidden space-y-6">
 
                         <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                             <div
@@ -1837,6 +1921,30 @@
                             </div>
                         </div>
 
+                    </div> <!-- END CONNECTIONS TAB -->
+
+                    <!-- ACCOUNT TAB -->
+                    <div id="profile-subtab-account" class="hidden space-y-6">
+
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-purple-500"></span> Usage Statistics
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-theme-bg rounded-lg border border-theme-border gap-4 md:gap-0">
+                                    <div>
+                                        <p class="text-xs font-bold text-theme-muted uppercase tracking-wider">Personal Daily Token Use Rate</p>
+                                        <p class="text-xs text-theme-muted mt-1">Tokens consumed today by AI Coach interactions</p>
+                                    </div>
+                                    <div class="text-xl font-bold text-theme-accent">
+                                        <span id="daily-token-usage-display">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- LOG OUT SECTION -->
                         <div class="pt-8 pb-4 mt-8 border-t border-theme-border">
                             <button onclick="logout()"
@@ -1850,10 +1958,12 @@
                             </button>
                         </div>
 
-                    </div>
-                </div>
+                    </div> <!-- END ACCOUNT TAB -->
 
-                <nav id="main-nav"
+                </div>
+            </div> <!-- END VIEW PROFILE -->
+
+            <nav id="main-nav"
                     class="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/90 backdrop-blur-md border border-theme-border rounded-[2rem] flex justify-between items-center px-6 py-1.5 shadow-2xl z-50 transition-all duration-300">
                     <button onclick="switchTab('dashboard')" id="nav-btn-dashboard"
                         class="nav-btn p-2 text-theme-accent transition relative">

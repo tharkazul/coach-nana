@@ -18,7 +18,7 @@ router.post("/api/settings/privacy", authenticateToken, (req, res) => {
 
 router.get("/api/user/settings", authenticateToken, (req, res) => {
   db.get(
-    `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, gender, last_cycle_start, average_cycle_length, search_privacy, profile_picture_url, training_availability, total_spark FROM users WHERE id = ?`,
+    `SELECT id, username, strava_refresh_token, garmin_username, coach_tone, athlete_context, gender, last_cycle_start, average_cycle_length, search_privacy, profile_picture_url, training_availability, total_spark, daily_token_usage FROM users WHERE id = ?`,
     [req.user.id],
     (err, row) => {
       if (err || !row) return res.status(500).json({ error: "DB Error" });
@@ -44,6 +44,7 @@ router.get("/api/user/settings", authenticateToken, (req, res) => {
         profilePictureUrl: row.profile_picture_url,
         trainingAvailability: availability,
         sparkLevel: sparkLevelInfo,
+        dailyTokenUsage: row.daily_token_usage || 0,
       });
     },
   );
