@@ -623,8 +623,8 @@ async function loadSettings() {
                 if (isRutger && !select.querySelector('option[value*="Madison"]')) {
                     select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Madison Beer.">Coach Liana</option>`;
                 }
-                if ((isRutger || isFelix) && !select.querySelector('option[value*="Mia"]')) {
-                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, sometimes uses hangulhomewrecker, supportive.">Coach Mia</option>`;
+                if ((isRutger || isFelix) && !select.querySelector('option[value*="Jenny"]')) {
+                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, sometimes uses hangulhomewrecker, supportive.">Coach Jenny</option>`;
                 }
             }
         }
@@ -1875,12 +1875,12 @@ async function loadMicroPlan() {
             `;
 
             dayHtml += `</div></div>`; // End body and day container
-            
+
             html += dayHtml;
             if (isToday) todayHtml = dayHtml;
         }
         container.innerHTML = html;
-        
+
         const dashTodayContainer = document.getElementById('dash-today-plan-content');
         const dashTodayWrapper = document.getElementById('dash-today-plan-container');
         if (dashTodayContainer && dashTodayWrapper) {
@@ -2727,7 +2727,7 @@ function getCoachAvatar(mood) {
     let persona = 'empathetic';
     const toneCheck = currentCoachTone.toLowerCase();
     if (toneCheck.includes('liana') || toneCheck.includes('madison')) persona = 'liana';
-    else if (toneCheck.includes('mia')) persona = 'old';
+    else if (toneCheck.includes('jenny')) persona = 'old';
     else if (toneCheck.includes('strict')) persona = 'strict';
     else if (toneCheck.includes('cheerleader')) persona = 'cheer';
 
