@@ -588,6 +588,7 @@ function getSparkLevelInfo(total_spark) {
     currentLevelThreshold,
     nextLevelThreshold,
     progressPercent: Math.min(Math.max(progressPercent, 0), 100),
+    totalSpark: spark,
   };
 }
 
@@ -936,13 +937,19 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                   db.run(
                     `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`,
                     [internalUserId, aiReply],
-                  );
-                  sendSSEEvent(internalUserId, "unread_message", {
-                    message: aiReply,
-                    mood: "hype",
-                  });
-                  console.log(
-                    `🤖 Sent proactive coach update for activity ${activityId}`,
+                    (err) => {
+                      if (err) {
+                        console.error("Error inserting proactive coach message:", err);
+                        return;
+                      }
+                      sendSSEEvent(internalUserId, "unread_message", {
+                        message: aiReply,
+                        mood: "hype",
+                      });
+                      console.log(
+                        `🤖 Sent proactive coach update for activity ${activityId}`,
+                      );
+                    }
                   );
                 } catch (e) {
                   console.error("Proactive coach activity update failed:", e);
@@ -1448,15 +1455,17 @@ module.exports = {
             // Insert into history
             db.run(
               `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`,
-              [user.id, aiReply]
+              [user.id, aiReply],
+              (err) => {
+                 if (err) { console.error(err); return; }
+                 // Push notification bubble to frontend
+                 sendSSEEvent(user.id, "unread_message", {
+                   message: aiReply,
+                   mood: "hype"
+                 });
+                 console.log(`Sent morning message to user ${user.id}`);
+              }
             );
-            
-            // Push notification bubble to frontend
-            sendSSEEvent(user.id, "unread_message", {
-              message: aiReply,
-              mood: "hype"
-            });
-            console.log(`Sent morning message to user ${user.id}`);
           } catch (e) {
             console.error(`Failed to send morning message to user ${user.id}:`, e);
           }

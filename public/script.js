@@ -689,7 +689,7 @@ async function loadSettings() {
             const levelDetails = document.getElementById('spark-level-details');
             const levelBar = document.getElementById('spark-level-bar');
             if (levelDisplay) levelDisplay.innerText = data.sparkLevel.level;
-            if (levelDetails) levelDetails.innerText = `${Math.round(data.sparkLevel.currentLevelThreshold)} / ${Math.round(data.sparkLevel.nextLevelThreshold)}`;
+            if (levelDetails) levelDetails.innerText = `${Math.round(data.sparkLevel.totalSpark)} / ${Math.round(data.sparkLevel.nextLevelThreshold)}`;
             if (levelBar) levelBar.style.width = `${data.sparkLevel.progressPercent}%`;
         }
 

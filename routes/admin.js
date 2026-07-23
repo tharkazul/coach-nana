@@ -22,11 +22,14 @@ router.post("/api/admin/simulate-24h", authenticateToken, async (req, res) => {
         db.run(
           `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'curious')`,
           [user.id, aiReply],
+          (err) => {
+             if (err) { console.error(err); return; }
+             sendSSEEvent(user.id, "unread_message", {
+               message: aiReply,
+               mood: "curious",
+             });
+          }
         );
-        sendSSEEvent(user.id, "unread_message", {
-          message: aiReply,
-          mood: "curious",
-        });
         res.json({ success: true, message: "Trigger fired." });
       } catch (e) {
         console.error("Simulated AI generation failed:", e);
