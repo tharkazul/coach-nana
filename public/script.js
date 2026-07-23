@@ -1985,37 +1985,49 @@ function closeEditWorkoutModal() {
 }
 
 function calculateWbSpark() {
+    const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
     let totalMins = 0;
+    
     wbSteps.forEach(step => {
         if (step.type === 'repeat') {
             let repeatMins = 0;
             let iterations = parseInt(step.iterations) || 1;
             (step.steps || []).forEach(sub => {
                 let val = parseFloat(sub.condition_value) || 0;
-                let multiplier = 1.0;
-                if (sub.target_type && sub.target_type.endsWith('.zone')) {
-                    let z = parseInt(sub.zone) || 2;
-                    if (z >= 4) multiplier = 1.2;
-                    else if (z === 3) multiplier = 1.1;
-                    else if (z <= 1) multiplier = 0.9;
-                }
+                
+                if (isStrength && sub.condition_type === 'reps') {
+                    repeatMins += 0.5; // Half a minute per set
+                } else {
+                    let multiplier = 1.2; // 20% as standard
+                    if (sub.target_type && sub.target_type.endsWith('.zone')) {
+                        let z = parseInt(sub.zone) || 2;
+                        if (z >= 4) multiplier = 1.4; // +40%
+                        else if (z === 3) multiplier = 1.3; // +30%
+                        else if (z <= 1) multiplier = 1.0; // No bonus
+                    }
 
-                if (sub.condition_type === 'time') repeatMins += (val * multiplier);
-                else if (sub.condition_type === 'distance') repeatMins += ((val / 1000) * 5 * multiplier);
+                    if (sub.condition_type === 'time') repeatMins += (val * multiplier);
+                    else if (sub.condition_type === 'distance') repeatMins += ((val / 1000) * 5 * multiplier);
+                }
             });
             totalMins += (repeatMins * iterations);
         } else {
             let val = parseFloat(step.condition_value) || 0;
-            let multiplier = 1.0;
-            if (step.target_type && step.target_type.endsWith('.zone')) {
-                let z = parseInt(step.zone) || 2;
-                if (z >= 4) multiplier = 1.2;
-                else if (z === 3) multiplier = 1.1;
-                else if (z <= 1) multiplier = 0.9;
-            }
+            
+            if (isStrength && step.condition_type === 'reps') {
+                totalMins += 0.5; // Half a minute per set
+            } else {
+                let multiplier = 1.2; // 20% as standard
+                if (step.target_type && step.target_type.endsWith('.zone')) {
+                    let z = parseInt(step.zone) || 2;
+                    if (z >= 4) multiplier = 1.4; // +40%
+                    else if (z === 3) multiplier = 1.3; // +30%
+                    else if (z <= 1) multiplier = 1.0; // No bonus
+                }
 
-            if (step.condition_type === 'time') totalMins += (val * multiplier);
-            else if (step.condition_type === 'distance') totalMins += ((val / 1000) * 5 * multiplier);
+                if (step.condition_type === 'time') totalMins += (val * multiplier);
+                else if (step.condition_type === 'distance') totalMins += ((val / 1000) * 5 * multiplier);
+            }
         }
     });
 

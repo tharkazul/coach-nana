@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Spark | Athletic HQ</title>
+    <link rel="icon" type="image/png" href="/icon4.png">
+    <link rel="apple-touch-icon" href="/icon4.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Spark">
+    <meta name="theme-color" content="#0B0F17" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#F4F6F9" media="(prefers-color-scheme: light)">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Barlow:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'media',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        display: ['"Outfit"', 'sans-serif'],
+                        barlow: ['"Barlow"', 'sans-serif']
+                    },
+                    colors: {
+                        theme: {
+                            bg: 'var(--bg-main)',
+                            card: 'var(--bg-card)',
+                            'card-hover': 'var(--bg-card-hover)',
+                            border: 'var(--border-color)',
+                            text: 'var(--text-main)',
+                            muted: 'var(--text-muted)',
+                            accent: 'var(--accent-primary)',
+                            'accent-hover': 'var(--accent-hover)',
+                            'accent-soft': 'var(--soft-cyan)',
+                            'accent-border': 'var(--accent-border)',
+                            purple: 'var(--accent-secondary)',
+                            'purple-soft': 'var(--soft-purple)'
+                        }
+                    },
+                    borderRadius: {
+                        '4xl': '2rem',
+                        '5xl': '2.5rem'
+                    },
+                    boxShadow: {
+                        'soft-glow': '0 0 25px -5px rgba(0, 240, 255, 0.15)',
+                        'purple-glow': '0 0 25px -5px rgba(139, 92, 246, 0.2)',
+                        'card-float': '0 10px 30px -10px rgba(0, 0, 0, 0.06)',
+                        'dock': '0 20px 40px -15px rgba(0, 0, 0, 0.35)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* ☀️ DAY PALETTE (Clean Porcelain + 2 Highlights: Cyan & Purple + 2 Soft Supportive Tints) */
+        :root {
+            --bg-main: #F4F6F9;
+            --bg-card: #FFFFFF;
+            --bg-card-hover: #F8FAFC;
+            --border-color: #E2E8F0;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            
+            /* Highlight 1 (Cyan) & Highlight 2 (Purple) */
+            --accent-primary: #0284C7;
+            --accent-hover: #0369A1;
+            --accent-secondary: #7C3AED;
+            
+            /* Supportive Soft Color 1 (Soft Cyan) & Soft Color 2 (Soft Purple) */
+            --soft-cyan: #E0F2FE;
+            --soft-purple: #F3E8FF;
+            
+            --accent-border: #BAE6FD;
+            --color-focus: #0284C7;
+            --color-metric: #7C3AED;
+        }
+
+        /* 🌙 NIGHT PALETTE (Deep Obsidian + 2 Highlights: Electric Cyan & Vibrant Purple + 2 Soft Glow Tints) */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-main: #0B0F17;
+                --bg-card: #151C28;
+                --bg-card-hover: #1E293B;
+                --border-color: #243042;
+                --text-main: #F8FAFC;
+                --text-muted: #94A3B8;
+                
+                /* Highlight 1 (Electric Cyan) & Highlight 2 (Vibrant Purple) */
+                --accent-primary: #00F0FF;
+                --accent-hover: #38BDF8;
+                --accent-secondary: #8B5CF6;
+                
+                /* Supportive Soft Color 1 (Cyan Soft Glow) & Soft Color 2 (Purple Soft Glow) */
+                --soft-cyan: rgba(0, 240, 255, 0.1);
+                --soft-purple: rgba(139, 92, 246, 0.1);
+                
+                --accent-border: rgba(0, 240, 255, 0.25);
+                --color-focus: #00F0FF;
+                --color-metric: #8B5CF6;
+            }
+
+            .leaflet-layer,
+            .leaflet-control-zoom-in,
+            .leaflet-control-zoom-out,
+            .leaflet-control-attribution {
+                filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 9999px;
+        }
+
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            width: 100%;
+            overflow: hidden;
+            overscroll-behavior-y: none;
+            background-color: var(--bg-main);
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .glass-card {
+                background: rgba(21, 28, 40, 0.75);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+            }
+        }
+
+        .glass-dock {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-msg {
+            animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+
+<body class="bg-theme-bg text-theme-text font-sans antialiased overflow-hidden relative">
+
+    <!-- LOGIN / REGISTER OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"></div>
+
+        <div class="relative w-full max-w-md bg-theme-card border border-theme-border rounded-3xl shadow-2xl overflow-hidden p-6 md:p-8 animate-msg z-10">
+            <!-- Brand Logo Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-purple-600 shadow-soft-glow mb-3">
+                    <span class="text-2xl font-black text-white font-display">⚡</span>
+                </div>
+                <h1 class="text-2xl font-extrabold text-theme-text font-display">SPARK</h1>
+                <p class="text-xs text-theme-muted mt-1 font-medium">Your AI-Powered Athletic HQ</p>
+            </div>
+
+            <!-- Login / Register Tab Switcher -->
+            <div class="flex p-1 bg-theme-bg rounded-2xl mb-6 border border-theme-border">
+                <button onclick="switchAuthTab('login')" id="auth-tab-login"
+                    class="flex-1 py-2 text-xs font-bold rounded-xl transition-all bg-theme-card text-theme-text shadow-sm">
+                    Sign In
+                </button>
+                <button onclick="switchAuthTab('register')" id="auth-tab-register"
+                    class="flex-1 py-2 text-xs font-bold rounded-xl transition-all text-theme-muted hover:text-theme-text">
+                    Create Account
+                </button>
+            </div>
+
+            <div class="space-y-2 mb-6">
+                <h2 class="text-lg font-bold text-theme-text font-display" id="auth-title">Welcome Back</h2>
+                <p class="text-xs text-theme-muted" id="auth-subtitle">Enter your credentials to access your daily plan.</p>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="form-login" class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-theme-muted mb-1.5">Username</label>
+                    <input type="text" id="login-user" placeholder="e.g. alex_runner"
+                        class="w-full px-4 py-3 border border-theme-border rounded-xl text-sm bg-theme-bg text-theme-text focus:outline-none focus:border-cyan-500 transition shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-theme-muted mb-1.5">Password</label>
+                    <input type="password" id="login-pass" placeholder="••••••••"
+                        class="w-full px-4 py-3 border border-theme-border rounded-xl text-sm bg-theme-bg text-theme-text focus:outline-none focus:border-cyan-500 transition shadow-inner">
+                </div>
+                <button onclick="handleLogin()"
+                    class="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold rounded-xl text-sm shadow-soft-glow transition-all active:scale-[0.98] mt-2">
+                    Sign In to Spark HQ
+                </button>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div id="form-register" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-theme-muted mb-1.5">New Username</label>
+                    <input type="text" id="reg-user" placeholder="Choose a username"
+                        class="w-full px-4 py-3 border border-theme-border rounded-xl text-sm bg-theme-bg text-theme-text focus:outline-none focus:border-cyan-500 transition">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-theme-muted mb-1.5">Password</label>
+                    <input type="password" id="reg-pass" placeholder="Create password"
+                        class="w-full px-4 py-3 border border-theme-border rounded-xl text-sm bg-theme-bg text-theme-text focus:outline-none focus:border-cyan-500 transition">
+                </div>
+                <button onclick="handleRegister()"
+                    class="w-full py-3.5 px-4 bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-bold rounded-xl text-sm shadow-purple-glow transition-all active:scale-[0.98] mt-2">
+                    Create My Spark Account
+                </button>
+            </div>
+
+            <p id="auth-error" class="text-xs font-semibold text-theme-accent mt-4 text-center hidden"></p>
+        </div>
+    </div>
+
+    <!-- ONBOARDING OVERLAY -->
+    <div id="onboarding-overlay" class="fixed inset-0 z-[9998] flex items-center justify-center p-4 hidden">
+        <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-xl"></div>
+
+        <div class="relative w-full max-w-xl bg-theme-card border border-theme-border rounded-3xl shadow-2xl overflow-hidden p-6 md:p-8 animate-msg z-10 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-theme-border pb-4 mb-6 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl text-cyan-400">🚀</span>
+                    <h2 class="text-lg font-bold text-theme-text font-display">Athlete Setup Wizard</h2>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs font-bold text-cyan-400 bg-theme-accent-soft px-3 py-1 rounded-full border border-theme-accent-border">
+                    Step <span id="onboard-step-num">1</span> / 5
+                </div>
+            </div>
+
+            <div id="onboarding-steps-container" class="space-y-6 flex-1 overflow-y-auto pr-1">
+                <!-- STEP 1: Coach Tone -->
+                <div class="onboarding-step space-y-4" data-step="1">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-theme-muted">1. Select AI Coach Persona</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div onclick="selectTone(this, 'Empathetic but demanding elite endurance coach.')"
+                            class="tone-card cursor-pointer border border-theme-accent bg-theme-accent-soft p-4 rounded-2xl transition">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-lg">🎯</span>
+                                <h3 class="text-sm font-bold text-theme-text">Elite Coach</h3>
+                            </div>
+                            <p class="text-xs text-theme-muted">Empathetic, data-driven, focused on marginal gains.</p>
+                        </div>
+                        <div onclick="selectTone(this, 'Strict, no-nonsense military drill instructor.')"
+                            class="tone-card cursor-pointer border border-theme-border bg-theme-bg p-4 rounded-2xl transition hover:border-theme-accent">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-lg">🔥</span>
+                                <h3 class="text-sm font-bold text-theme-text">Drill Instructor</h3>
+                            </div>
+                            <p class="text-xs text-theme-muted">Strict, intense, no excuses allowed.</p>
+                        </div>
+                    </div>
+                    <input type="hidden" id="onboard-tone" value="Empathetic but demanding elite endurance coach.">
+                </div>
+
+                <!-- STEP 2: Context -->
+                <div class="onboarding-step hidden space-y-4" data-step="2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-theme-muted">2. Background & History</label>
+                    <textarea id="onboard-context" rows="4" placeholder="Tell Spark about your athletic background, injuries, preferred training hours, or current targets..."
+                        class="w-full p-4 border border-theme-border rounded-2xl text-sm bg-theme-bg text-theme-text focus:outline-none focus:border-cyan-500 transition"></textarea>
+                </div>
+
+                <!-- STEP 3: Baseline Metrics -->
+                <div class="onboarding-step hidden space-y-4" data-step="3">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-theme-muted">3. Baseline Fitness Metrics</label>
+                    <div id="onboard-metrics-container" class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-medium text-theme-muted mb-1">FTP (Watts)</label>
+                            <input type="number" placeholder="250" class="w-full p-3 border border-theme-border rounded-xl text-sm bg-theme-bg">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-theme-muted mb-1">Max HR (BPM)</label>
+                            <input type="number" placeholder="190" class="w-full p-3 border border-theme-border rounded-xl text-sm bg-theme-bg">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: Boundaries -->
+                <div class="onboarding-step hidden space-y-4" data-step="4">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-theme-muted">4. Weekly Schedule Boundaries</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="onboard-schedule-boundaries-container">
+                        <!-- JS renders days -->
+                    </div>
+                </div>
+
+                <!-- STEP 5: Connect & Goal -->
+                <div class="onboarding-step hidden space-y-4" data-step="5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-theme-muted">5. Integrations & Goal Event</label>
+                    <div class="space-y-3">
+                        <div class="border border-theme-border rounded-2xl p-4 bg-theme-bg">
+                            <button onclick="document.getElementById('onboard-garmin-fields').classList.toggle('hidden')"
+                                class="w-full flex justify-between items-center text-sm font-bold text-theme-text">
+                                <span class="flex items-center gap-2"><span class="text-cyan-400">⌚</span> Garmin Sync</span>
+                                <span class="text-xs text-theme-accent font-medium">+ Configure</span>
+                            </button>
+                            <div id="onboard-garmin-fields" class="hidden mt-3 pt-3 border-t border-theme-border space-y-2">
+                                <input type="text" id="onboard-garmin-user" placeholder="Garmin Email" class="w-full p-2.5 border border-theme-border rounded-xl text-xs bg-theme-card">
+                                <input type="password" id="onboard-garmin-pass" placeholder="Garmin Password" class="w-full p-2.5 border border-theme-border rounded-xl text-xs bg-theme-card">
+                            </div>
+                        </div>
+
+                        <div class="border border-theme-border rounded-2xl p-4 bg-theme-bg flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="text-purple-400 font-bold text-lg">🏃</span>
+                                <span class="text-sm font-bold text-theme-text">Strava Integration</span>
+                            </div>
+                            <button id="btn-strava-onboard-connect" onclick="saveAndConnectStrava()"
+                                class="bg-theme-purple text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm">
+                                Connect
+                            </button>
+                        </div>
+
+                        <div class="bg-theme-bg p-4 rounded-2xl border border-theme-border space-y-2">
+                            <label class="block text-[11px] font-bold text-theme-muted uppercase">Target Race / Event</label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="text" id="onboard-race-name" placeholder="Race Name (e.g. Marathon)" class="flex-1 p-2.5 border border-theme-border rounded-xl text-xs bg-theme-card">
+                                <input type="date" id="onboard-race-date" class="p-2.5 border border-theme-border rounded-xl text-xs bg-theme-card">
+                                <input type="number" id="onboard-race-ctl" placeholder="Target CTL" class="w-full sm:w-24 p-2.5 border border-theme-border rounded-xl text-xs bg-theme-card">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onboarding Buttons -->
+            <div class="flex justify-between items-center pt-4 border-t border-theme-border mt-4 shrink-0">
+                <button onclick="prevOnboardingStep()" id="btn-onboard-back" class="text-xs font-bold text-theme-muted hover:text-theme-text px-4 py-2 rounded-xl border border-theme-border hidden">
+                    Back
+                </button>
+                <div class="ml-auto flex gap-2">
+                    <button onclick="nextOnboardingStep()" id="btn-onboard-next" class="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-xs rounded-xl shadow-soft-glow">
+                        Continue
+                    </button>
+                    <button onclick="completeOnboarding()" id="btn-complete-setup" class="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-xs rounded-xl shadow-soft-glow hidden">
+                        Complete Setup ⚡
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP SHELL -->
+    <div id="app-shell" class="flex flex-col md:flex-row h-full w-full overflow-hidden relative">
+
+        <!-- DESKTOP SIDEBAR -->
+        <aside class="hidden md:flex flex-col w-64 lg:w-72 bg-theme-card border-r border-theme-border p-5 justify-between shrink-0 z-30">
+            <div class="space-y-6">
+                <!-- Brand Badge -->
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-soft-glow">
+                        ⚡
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-lg tracking-tight font-display text-theme-text">SPARK HQ</h1>
+                        <p class="text-[11px] text-theme-muted font-medium">Performance Engine</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="space-y-1.5">
+                    <button onclick="switchTab('dashboard')" id="desk-nav-btn-dashboard"
+                        class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all bg-theme-accent-soft text-theme-accent border border-theme-accent-border">
+                        <span class="text-lg">⚡</span> Dashboard
+                    </button>
+
+                    <button onclick="switchTab('physique')" id="desk-nav-btn-physique"
+                        class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all text-theme-muted hover:text-theme-text hover:bg-theme-bg">
+                        <span class="text-lg">📈</span> Progress & Health
+                    </button>
+
+                    <button onclick="switchTab('history')" id="desk-nav-btn-history"
+                        class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all text-theme-muted hover:text-theme-text hover:bg-theme-bg">
+                        <span class="text-lg">🗓️</span> Activity Log
+                    </button>
+
+                    <button onclick="switchTab('coach')" id="desk-nav-btn-coach"
+                        class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all text-theme-muted hover:text-theme-text hover:bg-theme-bg relative">
+                        <span class="text-lg">💬</span> AI Coach
+                        <span id="desk-coach-badge" class="ml-auto w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    </button>
+
+                    <button onclick="switchTab('profile')" id="desk-nav-btn-profile"
+                        class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all text-theme-muted hover:text-theme-text hover:bg-theme-bg">
+                        <span class="text-lg">👤</span> Athlete Profile
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Sidebar Footer User Card -->
+            <div class="p-3 bg-theme-bg border border-theme-border rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center font-bold text-white text-xs">
+                        ⚡
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-theme-text" id="user-display-name">Athlete</div>
+                        <div class="text-[10px] text-theme-muted font-mono" id="daily-token-usage-display">Tokens: 0 / 10k</div>
+                    </div>
+                </div>
+                <button onclick="logout()" title="Sign Out" class="text-theme-muted hover:text-purple-400 p-1.5 rounded-lg transition">
+                    🚪
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT VIEW CANVAS -->
+        <main id="main-content" class="flex-1 flex flex-col w-full overflow-hidden relative bg-theme-bg">
+
+            <!-- MOBILE TOP BAR -->
+            <header class="md:hidden flex justify-between items-center px-5 py-4 border-b border-theme-border glass-card z-40 sticky top-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-soft-glow">
+                        ⚡
+                    </div>
+                    <span id="current-tab-title" class="font-extrabold text-base font-display text-theme-text">Dashboard</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="header-date" class="text-[11px] font-mono text-theme-muted bg-theme-card px-3 py-1 rounded-full border border-theme-border">
+                        ...
+                    </div>
+                </div>
+            </header>
+
+            <!-- CANVAS CONTENT CONTAINER -->
+            <div class="flex-1 flex flex-col overflow-hidden relative min-h-0">
+
+                <!-- 1. DASHBOARD VIEW -->
+                <div id="view-dashboard" class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 md:pb-8 max-w-7xl mx-auto w-full space-y-6">
+
+                    <!-- Sticky Filter Pills -->
+                    <div class="sticky top-0 z-30 pt-2 pb-3 bg-theme-bg/95 backdrop-blur-md">
+                        <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+                            <button onclick="switchDashboardTab('dash')" id="dash-tab-dash"
+                                class="dash-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all shadow-sm bg-theme-accent text-white dark:text-slate-950">
+                                HQ Overview
+                            </button>
+                            <button onclick="switchDashboardTab('planning')" id="dash-tab-planning"
+                                class="dash-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-card text-theme-muted hover:text-theme-text border border-theme-border">
+                                Micro Planning 📅
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SUBTAB 1: HQ DASHBOARD MAIN -->
+                    <div id="dashboard-subtab-dash" class="space-y-6">
+
+                        <!-- Welcome Banner / Setup Prompt -->
+                        <div id="welcome-banner" class="bg-theme-accent-soft border border-theme-accent-border rounded-3xl p-5 md:p-6 relative overflow-hidden">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div>
+                                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-theme-card border border-theme-accent-border text-theme-accent text-[11px] font-bold mb-2">
+                                        ✨ Welcome to Spark HQ
+                                    </div>
+                                    <h2 class="text-lg md:text-xl font-bold font-display text-theme-text">Your AI Athletic Headquarters</h2>
+                                    <p class="text-xs text-theme-muted mt-1 max-w-xl">Track training stress, adapt micro-plans on the fly, and chat with your dedicated AI coach.</p>
+                                </div>
+                                <button onclick="document.getElementById('welcome-banner').classList.add('hidden')" class="text-xs font-bold text-theme-muted hover:text-theme-text underline">
+                                    Dismiss
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2-COLUMN QUICK STATS GRID (Standardized to Cyan & Purple 4-Color Palette) -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div class="bg-theme-card border border-theme-border rounded-2xl p-4 flex flex-col justify-between shadow-card-float hover:border-theme-accent/40 transition">
+                                <div class="flex items-center justify-between text-theme-muted text-xs font-medium">
+                                    <span>Fitness (CTL)</span>
+                                    <span class="text-theme-accent">📈</span>
+                                </div>
+                                <div class="mt-3 flex items-baseline justify-between">
+                                    <span class="text-2xl md:text-3xl font-extrabold font-barlow text-theme-text" id="stat-ctl">--</span>
+                                    <span class="text-[10px] font-bold text-theme-accent bg-theme-accent-soft px-2 py-0.5 rounded-full">+2 wk</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-theme-card border border-theme-border rounded-2xl p-4 flex flex-col justify-between shadow-card-float hover:border-theme-purple/40 transition">
+                                <div class="flex items-center justify-between text-theme-muted text-xs font-medium">
+                                    <span>Fatigue (ATL)</span>
+                                    <span class="text-theme-purple">🔥</span>
+                                </div>
+                                <div class="mt-3 flex items-baseline justify-between">
+                                    <span class="text-2xl md:text-3xl font-extrabold font-barlow text-theme-text" id="stat-atl">--</span>
+                                    <span class="text-[10px] font-bold text-theme-purple bg-theme-purple-soft px-2 py-0.5 rounded-full">High</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-theme-card border border-theme-border rounded-2xl p-4 flex flex-col justify-between shadow-card-float hover:border-theme-accent/40 transition">
+                                <div class="flex items-center justify-between text-theme-muted text-xs font-medium">
+                                    <span>Form (TSB)</span>
+                                    <span class="text-theme-accent">⚡</span>
+                                </div>
+                                <div class="mt-3 flex items-baseline justify-between">
+                                    <span class="text-2xl md:text-3xl font-extrabold font-barlow text-theme-text" id="stat-tsb">--</span>
+                                    <span class="text-[10px] font-bold text-theme-accent bg-theme-accent-soft px-2 py-0.5 rounded-full">Fresh</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-theme-card border border-theme-border rounded-2xl p-4 flex flex-col justify-between shadow-card-float hover:border-theme-purple/40 transition">
+                                <div class="flex items-center justify-between text-theme-muted text-xs font-medium">
+                                    <span>Spark Rank</span>
+                                    <span class="text-theme-purple">👑</span>
+                                </div>
+                                <div class="mt-3 flex items-baseline justify-between">
+                                    <span class="text-2xl md:text-3xl font-extrabold font-barlow text-theme-text" id="spark-level-display">--</span>
+                                    <span class="text-[10px] font-bold text-theme-purple bg-theme-purple-soft px-2 py-0.5 rounded-full" id="spark-level-details">0 / 100</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FEATURED HERO CARD (Coach Desk Digest) -->
+                        <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 shadow-2xl border border-white/10 relative overflow-hidden">
+                            <div class="relative z-10 space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative">
+                                            <img id="desk-coach-avatar" src="https://ui-avatars.com/api/?name=Coach&background=0284C7&color=fff" class="w-12 h-12 rounded-2xl border-2 border-cyan-400 object-cover shadow-soft-glow">
+                                            <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-cyan-400 border-2 border-slate-900"></span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-extrabold font-display text-white" id="desk-coach-name">AI Coach Digest</h3>
+                                            <p class="text-[11px] text-cyan-300 font-medium">Daily Briefing & Recovery Focus</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="switchTab('coach')" class="px-4 py-2 bg-theme-accent hover:opacity-90 text-white dark:text-slate-950 font-bold text-xs rounded-full transition shadow-soft-glow">
+                                        Chat with Coach 💬
+                                    </button>
+                                </div>
+
+                                <div class="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                                    <p class="text-sm leading-relaxed text-slate-200 italic" id="desk-coach-reflection">
+                                        "Loading your morning readiness briefing..."
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TODAY'S PLAN WIDGET -->
+                        <div id="dash-today-plan-container" class="hidden flex-col space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-theme-text uppercase tracking-wider font-display flex items-center gap-2">
+                                    <span class="text-theme-accent">📅</span> Today's Workout & Target
+                                </h3>
+                            </div>
+                            <div id="dash-today-plan-content" class="w-full"></div>
+                        </div>
+
+                        <!-- DAILY NUTRITION PROTOCOL -->
+                        <div id="dash-nutrition-content" class="w-full"></div>
+
+                        <!-- ACTIVE QUESTS & CHALLENGES -->
+                        <div id="active-quests-container" class="space-y-4"></div>
+
+                        <!-- MAIN CHARTS & ANALYTICS -->
+                        <div id="dashboard-content" class="space-y-6">
+                            <div class="bg-theme-card border border-theme-border rounded-3xl p-6 shadow-card-float">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                    <div>
+                                        <h3 class="text-base font-bold font-display text-theme-text">Fitness & Fatigue Curve (PMC)</h3>
+                                        <p class="text-xs text-theme-muted">Performance Management Chart telemetry.</p>
+                                    </div>
+                                </div>
+                                <div class="h-64 sm:h-80 w-full relative">
+                                    <canvas id="pmcChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- SUBTAB 2: PLANNING VIEW -->
+                    <div id="dashboard-subtab-planning" class="hidden space-y-6">
+                        <div class="bg-theme-card border border-theme-border rounded-3xl p-6 shadow-card-float">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-theme-border">
+                                <div>
+                                    <h3 class="text-base font-bold font-display text-theme-text">7-Day Micro Plan</h3>
+                                    <p class="text-xs text-theme-muted">View, edit, or sync weekly workout blocks.</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="changeWeek(-1)" class="p-2 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold hover:bg-theme-card">←</button>
+                                    <span id="week-range-label" class="text-xs font-mono font-bold text-theme-text px-3 py-1">Current Week</span>
+                                    <button onclick="changeWeek(1)" class="p-2 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold hover:bg-theme-card">→</button>
+                                    <button id="auto-generate-btn" onclick="generateTemplate()" class="ml-2 px-4 py-2 bg-theme-accent text-white dark:text-slate-950 text-xs font-bold rounded-xl shadow-soft-glow">
+                                        Auto-Generate Week
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="garmin-sync-message" class="text-xs font-bold text-theme-accent mb-4 hidden"></p>
+                            <div id="micro-plan-container" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. PROGRESS & HEALTH VIEW -->
+                <div id="view-physique" class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 md:pb-8 max-w-6xl mx-auto w-full space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-theme-text font-display">Progress & Health</h2>
+                        <p class="text-xs text-theme-muted mt-1">Telemetry, readiness trends, and daily log records.</p>
+                    </div>
+
+                    <!-- Pill Subtabs -->
+                    <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-2">
+                        <button onclick="switchProgressTab('spark')" id="prog-tab-spark"
+                            class="prog-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-accent text-white dark:text-slate-950 shadow-sm">
+                            Spark Metrics
+                        </button>
+                        <button onclick="switchProgressTab('nutrition')" id="prog-tab-nutrition"
+                            class="prog-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-card text-theme-muted hover:text-theme-text border border-theme-border">
+                            Nutrition
+                        </button>
+                        <button onclick="switchProgressTab('health')" id="prog-tab-health"
+                            class="prog-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-card text-theme-muted hover:text-theme-text border border-theme-border">
+                            Health & Biomarkers
+                        </button>
+                        <button onclick="switchProgressTab('dailylog')" id="prog-tab-dailylog"
+                            class="prog-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-card text-theme-muted hover:text-theme-text border border-theme-border">
+                            Daily Log
+                        </button>
+                    </div>
+
+                    <!-- PROGRESS SUBTABS CONTENT -->
+                    <div id="progress-subtab-spark" class="space-y-6 animate-msg">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-theme-card border border-theme-border rounded-3xl p-6 shadow-card-float">
+                                <h3 class="text-sm font-bold font-display text-theme-text mb-4">Volume Distribution</h3>
+                                <div class="h-60 relative"><canvas id="volumeChart"></canvas></div>
+                            </div>
+                            <div class="bg-theme-card border border-theme-border rounded-3xl p-6 shadow-card-float">
+                                <h3 class="text-sm font-bold font-display text-theme-text mb-4">Intensity Zones</h3>
+                                <div class="h-60 relative"><canvas id="intensityChart"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="progress-subtab-nutrition" class="space-y-6 hidden animate-msg"></div>
+                    <div id="progress-subtab-health" class="space-y-6 hidden animate-msg"></div>
+                    <div id="progress-subtab-dailylog" class="space-y-6 hidden animate-msg"></div>
+                </div>
+
+                <!-- 3. ACTIVITY LOG HISTORY VIEW -->
+                <div id="view-history" class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 md:pb-8 max-w-5xl mx-auto w-full space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-theme-text font-display">Activity Log</h2>
+                            <p class="text-xs text-theme-muted mt-1">Tap any activity to view GPS telemetry & map preview.</p>
+                        </div>
+                        <button onclick="downloadSelectedCSV()" class="px-4 py-2 bg-theme-card hover:bg-theme-card-hover border border-theme-border text-theme-text text-xs font-bold rounded-xl transition flex items-center gap-2">
+                            <span>📥</span> Export CSV
+                        </button>
+                    </div>
+
+                    <div id="history-list-container" class="space-y-3">
+                        <p class="text-xs text-theme-muted italic text-center py-10">Loading your completed activities...</p>
+                    </div>
+                </div>
+
+                <!-- 4. AI COACH CHAT VIEW -->
+                <div id="view-coach" class="hidden flex-1 overflow-hidden p-4 md:p-8 pb-28 md:pb-8 max-w-4xl mx-auto w-full flex-col">
+                    <div class="flex items-center justify-between mb-4 shrink-0 pb-3 border-b border-theme-border">
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <img id="coach-avatar-img" src="https://ui-avatars.com/api/?name=Coach&background=0284C7&color=fff" class="w-10 h-10 rounded-2xl border border-theme-accent/40 object-cover">
+                                <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-cyan-400 border-2 border-theme-bg"></span>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-extrabold text-theme-text font-display" id="coach-display-name">AI Endurance Coach</h2>
+                                <p class="text-[11px] text-theme-accent font-medium">Online • Adaptations Active</p>
+                            </div>
+                        </div>
+                        <button onclick="clearChatHistory()" class="text-xs text-theme-muted hover:text-theme-purple font-medium underline">
+                            Clear History
+                        </button>
+                    </div>
+
+                    <!-- Chat Message Stream -->
+                    <div id="chat-window" class="flex-1 overflow-y-auto space-y-4 pr-1 pb-4">
+                        <div class="text-center text-xs text-theme-muted py-6">Starting chat session with your AI Coach...</div>
+                    </div>
+
+                    <!-- Chat Input Drawer Bar -->
+                    <div class="relative shrink-0 pt-3">
+                        <button id="scroll-to-bottom-btn" onclick="forceScrollToBottom()"
+                            class="hidden absolute right-4 -top-10 bg-theme-accent text-white dark:text-slate-950 text-xs font-bold px-4 py-1.5 rounded-full shadow-2xl hover:scale-105 transition-all z-50 flex items-center gap-1">
+                            <span>↓</span> Jump to latest
+                        </button>
+
+                        <div class="flex items-end gap-2 bg-theme-card border border-theme-border rounded-2xl p-2 shadow-card-float focus-within:border-theme-accent transition">
+                            <button id="voice-btn" onclick="toggleRecording()" class="p-2.5 text-theme-muted hover:text-theme-accent transition rounded-xl">
+                                🎙️
+                            </button>
+                            <textarea id="chat-input" rows="1" placeholder="Ask your coach anything..."
+                                class="flex-1 p-2 bg-transparent text-sm text-theme-text focus:outline-none resize-none max-h-32"></textarea>
+                            <button onclick="sendChatMessage()" class="px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-xs rounded-xl shadow-soft-glow hover:opacity-95 transition">
+                                Send ⚡
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. ATHLETE PROFILE & SETTINGS VIEW -->
+                <div id="view-profile" class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 md:pb-8 max-w-4xl mx-auto w-full space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-theme-text font-display">Athlete Profile</h2>
+                        <p class="text-xs text-theme-muted mt-1">Configure your coach persona, goals, and sync preferences.</p>
+                    </div>
+
+                    <!-- Pill Navigation -->
+                    <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-2">
+                        <button onclick="switchProfileTab('profile')" id="profile-tab-profile"
+                            class="profile-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-accent text-white dark:text-slate-950 shadow-sm">
+                            General Profile
+                        </button>
+                        <button onclick="switchProfileTab('goals')" id="profile-tab-goals"
+                            class="profile-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-card text-theme-muted hover:text-theme-text border border-theme-border">
+                            Goals & Events
+                        </button>
+                        <button onclick="switchProfileTab('connections')" id="profile-tab-connections"
+                            class="profile-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-card text-theme-muted hover:text-theme-text border border-theme-border">
+                            Integrations
+                        </button>
+                        <button onclick="switchProfileTab('account')" id="profile-tab-account"
+                            class="profile-tab-btn px-5 py-2.5 rounded-full text-xs font-bold transition-all bg-theme-card text-theme-muted hover:text-theme-text border border-theme-border">
+                            Account & Spark+
+                        </button>
+                    </div>
+
+                    <!-- PROFILE SUBTABS CONTENT -->
+                    <div id="profile-subtab-profile" class="space-y-6">
+                        <div class="bg-theme-card border border-theme-border rounded-3xl p-6 shadow-card-float space-y-4">
+                            <h3 class="text-sm font-bold font-display text-theme-text">Coach Persona & Demands</h3>
+                            <div>
+                                <label class="block text-xs font-medium text-theme-muted mb-2">Coach Tone & Style</label>
+                                <select id="set-coach-tone" class="w-full p-3 border border-theme-border rounded-2xl text-sm bg-theme-bg text-theme-text">
+                                    <option value="Empathetic but demanding elite endurance coach.">Empathetic & Demanding</option>
+                                    <option value="Strict, no-nonsense military drill instructor.">Strict Drill Instructor</option>
+                                    <option value="Scientific, data-focused exercise physiologist.">Scientific Exercise Physiologist</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-theme-muted mb-2">Athlete History & Context</label>
+                                <textarea id="set-athlete-context" rows="3" class="w-full p-3 border border-theme-border rounded-2xl text-sm bg-theme-bg text-theme-text" placeholder="Athlete background context..."></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-theme-muted mb-2">Gender</label>
+                                    <select id="set-gender" class="w-full p-3 border border-theme-border rounded-2xl text-sm bg-theme-bg text-theme-text">
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Male">Male</option>
+                                    </select>
+                                </div>
+                                <div id="set-cycle-container" class="hidden">
+                                    <label class="block text-xs font-medium text-theme-muted mb-2">Last Cycle Start</label>
+                                    <input type="date" id="set-last-cycle-start" class="w-full p-3 border border-theme-border rounded-2xl text-sm bg-theme-bg text-theme-text">
+                                </div>
+                            </div>
+                            <button onclick="saveUserSettings('profile')" class="px-5 py-2.5 bg-theme-accent text-white dark:text-slate-950 font-bold text-xs rounded-xl shadow-soft-glow">
+                                Save Profile Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="profile-subtab-goals" class="hidden space-y-6"></div>
+
+                    <div id="profile-subtab-connections" class="hidden space-y-6">
+                        <div class="bg-theme-card border border-theme-border rounded-3xl p-6 shadow-card-float space-y-4">
+                            <h3 class="text-sm font-bold font-display text-theme-text">Device Connections</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="p-4 border border-theme-border rounded-2xl bg-theme-bg flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-theme-purple font-bold text-xl">🏃</span>
+                                        <div>
+                                            <div class="text-sm font-bold text-theme-text">Strava</div>
+                                            <div class="text-xs text-theme-muted" id="strava-status">Checking status...</div>
+                                        </div>
+                                    </div>
+                                    <button id="strava-connect-btn" onclick="saveAndConnectStrava()" class="px-3 py-1.5 bg-theme-purple text-white text-xs font-bold rounded-xl">
+                                        Connect
+                                    </button>
+                                </div>
+
+                                <div class="p-4 border border-theme-border rounded-2xl bg-theme-bg flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-theme-accent font-bold text-xl">⌚</span>
+                                        <div>
+                                            <div class="text-sm font-bold text-theme-text">Garmin Connect</div>
+                                            <div class="text-xs text-theme-muted" id="garmin-status">Checking status...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-theme-border space-y-3">
+                                <h4 class="text-xs font-bold text-theme-text uppercase">Garmin Credentials</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <input type="text" id="set-garmin-user" placeholder="Garmin Email" class="p-3 border border-theme-border rounded-xl text-xs bg-theme-bg">
+                                    <input type="password" id="set-garmin-pass" placeholder="Garmin Password" class="p-3 border border-theme-border rounded-xl text-xs bg-theme-bg">
+                                </div>
+                                <button onclick="saveUserSettings('garmin')" class="px-4 py-2 bg-theme-card border border-theme-border text-xs font-bold rounded-xl">
+                                    Save Garmin Credentials
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="profile-subtab-account" class="hidden space-y-6">
+                        <!-- Spark+ Upgrade Banner -->
+                        <div class="bg-gradient-to-r from-cyan-500 to-purple-600 rounded-3xl p-6 text-white shadow-purple-glow cursor-pointer transition hover:scale-[1.01]" onclick="trackSparkPlusClick()">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">⚡</span>
+                                    <h3 class="text-lg font-extrabold font-display">Upgrade to Spark+</h3>
+                                </div>
+                                <span class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold">PREMIUM</span>
+                            </div>
+                            <p class="text-xs text-white/90 mb-4">Unlock 50,000 daily AI tokens, priority Garmin auto-push, and advanced biomarker telemetry.</p>
+                            <button class="px-6 py-2.5 bg-white text-slate-950 font-extrabold text-xs rounded-full shadow-lg">
+                                View Premium Benefits
+                            </button>
+                        </div>
+
+                        <div class="pt-4 border-t border-theme-border">
+                            <button onclick="logout()" class="w-full py-3 bg-theme-purple-soft text-theme-purple hover:bg-theme-purple hover:text-white font-bold text-xs rounded-2xl transition border border-theme-purple/20">
+                                Sign Out of Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. SOCIAL VIEW -->
+                <div id="view-social" class="hidden flex-1 overflow-y-auto p-4 md:p-8 pb-28 max-w-4xl mx-auto w-full space-y-6">
+                    <h2 class="text-2xl font-extrabold text-theme-text font-display">Social Feed</h2>
+                    <div id="social-feed-container" class="space-y-4"></div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- FLOATING MOBILE DOCK NAVIGATION BAR -->
+        <nav id="main-nav" class="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 glass-dock rounded-full border border-white/15 shadow-dock px-3 py-2 flex items-center gap-1 sm:gap-2">
+            <button onclick="switchTab('dashboard')" id="nav-btn-dashboard"
+                class="flex flex-col items-center justify-center px-4 py-2 rounded-full text-white bg-white/15 font-bold transition">
+                <span class="text-base">⚡</span>
+                <span class="text-[10px] tracking-tight mt-0.5">HQ</span>
+            </button>
+
+            <button onclick="switchTab('physique')" id="nav-btn-physique"
+                class="flex flex-col items-center justify-center px-4 py-2 rounded-full text-slate-400 hover:text-white transition">
+                <span class="text-base">📈</span>
+                <span class="text-[10px] tracking-tight mt-0.5">Progress</span>
+            </button>
+
+            <button onclick="switchTab('history')" id="nav-btn-history"
+                class="flex flex-col items-center justify-center px-4 py-2 rounded-full text-slate-400 hover:text-white transition">
+                <span class="text-base">🗓️</span>
+                <span class="text-[10px] tracking-tight mt-0.5">Activities</span>
+            </button>
+
+            <button onclick="switchTab('coach')" id="nav-btn-coach"
+                class="flex flex-col items-center justify-center px-4 py-2 rounded-full text-slate-400 hover:text-white transition relative">
+                <span class="text-base">💬</span>
+                <span class="text-[10px] tracking-tight mt-0.5">Coach</span>
+                <span id="coach-badge" class="hidden absolute top-1 right-3 w-2 h-2 rounded-full bg-cyan-400"></span>
+            </button>
+
+            <button onclick="switchTab('profile')" id="nav-btn-profile"
+                class="flex flex-col items-center justify-center px-4 py-2 rounded-full text-slate-400 hover:text-white transition">
+                <span class="text-base">👤</span>
+                <span class="text-[10px] tracking-tight mt-0.5">Profile</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- WORKOUT EDIT MODAL -->
+    <div id="edit-workout-modal" class="fixed inset-0 z-[10000] hidden flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-xl bg-slate-950/70 transition-opacity duration-300">
+        <div id="edit-workout-modal-content" class="w-full max-w-2xl bg-theme-card border border-theme-border rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 sm:p-6 border-b border-theme-border flex items-center justify-between bg-theme-bg/50">
+                <h3 class="text-base font-bold text-theme-text font-display">Edit Planned Workout</h3>
+                <button onclick="closeEditWorkoutModal()" class="text-theme-muted hover:text-theme-text p-1">✕</button>
+            </div>
+            <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-theme-muted uppercase mb-1">Date</label>
+                        <input type="date" id="edit-workout-date" class="w-full p-3 border border-theme-border rounded-xl text-xs bg-theme-bg">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-theme-muted uppercase mb-1">Sport</label>
+                        <select id="edit-workout-sport" class="w-full p-3 border border-theme-border rounded-xl text-xs bg-theme-bg">
+                            <option value="Run">Run</option>
+                            <option value="Bike">Bike</option>
+                            <option value="Swim">Swim</option>
+                            <option value="Strength">Strength</option>
+                            <option value="Rest">Rest</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-theme-muted uppercase mb-1">Title / Description</label>
+                    <input type="text" id="edit-workout-desc" class="w-full p-3 border border-theme-border rounded-xl text-xs bg-theme-bg">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-theme-muted uppercase mb-1">Est. Spark Stress</label>
+                    <input type="number" id="edit-workout-spark" readonly class="w-full p-3 border border-theme-border rounded-xl text-xs bg-theme-bg text-theme-muted">
+                </div>
+                <div id="wb-steps-container" class="space-y-2"></div>
+            </div>
+            <div class="p-4 sm:p-6 border-t border-theme-border flex items-center justify-between gap-3 bg-theme-bg/50">
+                <button id="btn-edit-workout-delete" class="px-4 py-2 bg-theme-purple-soft text-theme-purple text-xs font-bold rounded-xl">Delete</button>
+                <div class="flex gap-2">
+                    <button id="btn-edit-workout-garmin" class="px-4 py-2 bg-theme-accent-soft text-theme-accent text-xs font-bold rounded-xl hidden">Garmin</button>
+                    <button onclick="closeEditWorkoutModal()" class="px-4 py-2 border border-theme-border text-xs font-bold rounded-xl">Cancel</button>
+                    <button id="btn-edit-workout-save" class="px-5 py-2 bg-theme-accent text-white dark:text-slate-950 font-bold text-xs rounded-xl shadow-soft-glow">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIVITY TELEMETRY MODAL -->
+    <div id="activity-modal" class="fixed inset-0 z-[10000] hidden flex items-center justify-center p-2 sm:p-6 backdrop-blur-xl bg-slate-950/75">
+        <div id="activity-modal-content" class="w-full max-w-4xl bg-theme-card border border-theme-border rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+            <div class="p-4 border-b border-theme-border flex items-center justify-between bg-theme-bg/50 shrink-0">
+                <h2 id="modal-title" class="text-sm font-bold text-theme-text truncate">Activity Details</h2>
+                <button onclick="closeActivityModal()" class="text-theme-muted hover:text-theme-text font-bold p-1">✕</button>
+            </div>
+            <div id="modal-loader" class="p-12 text-center text-xs text-theme-muted">Loading telemetry...</div>
+            <div id="modal-content" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                <div id="modal-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+                <div class="h-64 sm:h-80 w-full relative rounded-2xl overflow-hidden border border-theme-border">
+                    <div id="actual-map" class="absolute inset-0"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMAGE PREVIEW MODAL -->
+    <div id="image-modal" class="fixed inset-0 z-[10000] hidden flex items-center justify-center bg-black/80" onclick="this.classList.add('hidden')"></div>
+
+    <!-- MAIN SCRIPT REQUIREMENT -->
+    <script src="/script.js"></script>
+
+</body>
+</html>
