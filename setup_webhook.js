@@ -1,4 +1,3 @@
-const fetch = require('node-fetch'); // Ensure node-fetch is available or use native fetch if Node 18+
 require('dotenv').config();
 
 const CLIENT_ID = process.env.STRAVA_CLIENT_ID;
