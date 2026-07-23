@@ -2765,13 +2765,38 @@ function getCoachAvatar(mood) {
     const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
     const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
 
-    // Try to load the local image; if you haven't uploaded it yet, it will fail silently in the browser 
-    // and you can use an onerror attribute in the HTML, but for now we'll just return the path.
-    // When you create the images, uncomment the imagePath return!
-
     return imagePath;
-    return fallbackUrl;
 }
+
+// Global error handler to catch broken avatar images and replace them with fallbacks
+document.addEventListener('error', function(event) {
+    if (event.target.tagName && event.target.tagName.toLowerCase() === 'img') {
+        const src = event.target.getAttribute('src');
+        if (src && src.includes('/avatars/') && !event.target.dataset.fallbackAttempted) {
+            event.target.dataset.fallbackAttempted = 'true';
+            
+            // Extract persona and mood from the filename (e.g., /avatars/liana-default.png)
+            const match = src.match(/\/avatars\/([^-]+)-([^.]+)\.png/);
+            let c = '374151'; // Default gray
+            
+            if (match) {
+                const persona = match[1];
+                const moodKey = match[2];
+                const fallbackColors = {
+                    'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e', horny: '10b981' },
+                    'strict': { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626', horny: '2563eb' },
+                    'cheer': { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e', horny: 'd946ef' },
+                    'liana': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' },
+                    'old': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' }
+                };
+                if (fallbackColors[persona]) {
+                    c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
+                }
+            }
+            event.target.src = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
+        }
+    }
+}, true);
 
 let chatHistoryLoaded = false;
 async function loadChatHistory() {

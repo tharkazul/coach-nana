@@ -375,7 +375,8 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     2. NEVER repeat your previous greetings, praises, or paragraphs verbatim. Do not bring up old topics unless the athlete explicitly mentions them.
                     3. Always use metric measurements exclusively (meters for distance, km/h for speed, min/km for pace). Never use imperial units.
                     4. Respond directly with your conversational text. Do not wrap your main reply in JSON.
-                    5. INJURY GUARDRAILS: The athlete has active injuries listed above. You MUST alter the training plan and your advice based on this data to prevent further injury.
+                    5. CRITICAL DATE CONTEXT: If an activity in the user's recent history is tagged with [TODAY], you MUST refer to it as happening "today". NEVER refer to a [TODAY] activity as "yesterday" or "last night".
+                    6. INJURY GUARDRAILS: The athlete has active injuries listed above. You MUST alter the training plan and your advice based on this data to prevent further injury.
                        - If an injury is Lower Body (Severity 3+): Strictly avoid high-impact running. Substitute required aerobic load with swimming or indoor cycling.
                        - If an injury affects Grip/Hands: Substitute swimming or heavy upper-body strength with running or indoor cycling.
                        - If Severity is 5: Schedule complete rest for the affected area.

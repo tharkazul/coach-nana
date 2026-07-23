@@ -36,6 +36,18 @@ router.post("/api/admin/simulate-24h", authenticateToken, async (req, res) => {
   );
 });
 
+router.post("/api/admin/trigger-morning", authenticateToken, async (req, res) => {
+  const { sendMorningMessage } = require("../services/utils");
+  console.log(`🤖 Admin triggering morning message job...`);
+  try {
+    await sendMorningMessage();
+    res.json({ success: true, message: "Morning message job triggered!" });
+  } catch (e) {
+    console.error("Admin trigger morning failed:", e);
+    res.status(500).json({ error: "Failed" });
+  }
+});
+
 router.get("/api/admin/usage", authenticateToken, (req, res) => {
   const isRutger =
     req.user.username && req.user.username.toLowerCase().includes("rutger");

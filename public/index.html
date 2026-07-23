@@ -601,21 +601,23 @@
                     class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-7xl mx-auto w-full space-y-5 md:space-y-6">
 
                     <!-- SUB NAVIGATION MENU -->
-                    <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border mb-2 md:mb-4">
-                        <nav id="dashboard-sub-nav" class="flex w-full relative">
-                            <button onclick="switchDashboardTab('dash')" id="dash-tab-dash"
-                                class="dash-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-accent transition-colors">
-                                Dashboard
-                            </button>
-                            <button onclick="switchDashboardTab('planning')" id="dash-tab-planning"
-                                class="dash-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
-                                Planning
-                            </button>
-                            <!-- Animated Underline Indicator -->
-                            <div id="dash-tab-indicator"
-                                class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10"
-                                style="left: 0; width: 50%;"></div>
-                        </nav>
+                    <div class="sticky -top-4 md:-top-8 pt-4 md:pt-8 pb-2 bg-theme-bg z-40 mb-2 md:mb-4">
+                        <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border">
+                            <nav id="dashboard-sub-nav" class="flex w-full relative">
+                                <button onclick="switchDashboardTab('dash')" id="dash-tab-dash"
+                                    class="dash-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-accent transition-colors">
+                                    Dashboard
+                                </button>
+                                <button onclick="switchDashboardTab('planning')" id="dash-tab-planning"
+                                    class="dash-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                    Planning
+                                </button>
+                                <!-- Animated Underline Indicator -->
+                                <div id="dash-tab-indicator"
+                                    class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10"
+                                    style="left: 0; width: 50%;"></div>
+                            </nav>
+                        </div>
                     </div>
 
                     <div id="dashboard-subtab-dash" class="space-y-5 md:space-y-6">
@@ -1082,35 +1084,36 @@
                 <!-- PHYSIQUE VIEW -->
                 <div id="view-physique"
                     class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
-                    <div>
-                        <h2 class="text-xl font-bold text-theme-text font-barlow">Progress</h2>
-                        <p class="text-xs text-theme-muted mt-1">Track your overall progress and readiness.</p>
-                    </div>
-
-                    <!-- SUB NAVIGATION MENU -->
-                    <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border mb-6">
-                        <nav id="progress-sub-nav" class="flex w-full relative">
-                            <button onclick="switchProgressTab('spark')" id="prog-tab-spark"
-                                class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-accent transition-colors">
-                                Spark
-                            </button>
-                            <button onclick="switchProgressTab('nutrition')" id="prog-tab-nutrition"
-                                class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
-                                Nutrition
-                            </button>
-                            <button onclick="switchProgressTab('health')" id="prog-tab-health"
-                                class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
-                                Health
-                            </button>
-                            <button onclick="switchProgressTab('dailylog')" id="prog-tab-dailylog"
-                                class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
-                                Daily Log
-                            </button>
-                            <!-- Animated Underline Indicator -->
-                            <div id="prog-tab-indicator"
-                                class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10"
-                                style="left: 0; width: 25%;"></div>
-                        </nav>
+                    <!-- HEADER & SUB NAVIGATION MENU -->
+                    <div class="sticky -top-4 md:-top-8 pt-4 md:pt-8 pb-2 bg-theme-bg z-40 mb-4 -mt-6">
+                        <div class="mb-4">
+                            <h2 class="text-xl font-bold text-theme-text font-barlow">Progress</h2>
+                            <p class="text-xs text-theme-muted mt-1">Track your overall progress and readiness.</p>
+                        </div>
+                        <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border">
+                            <nav id="progress-sub-nav" class="flex w-full relative">
+                                <button onclick="switchProgressTab('spark')" id="prog-tab-spark"
+                                    class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-accent transition-colors">
+                                    Spark
+                                </button>
+                                <button onclick="switchProgressTab('nutrition')" id="prog-tab-nutrition"
+                                    class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                    Nutrition
+                                </button>
+                                <button onclick="switchProgressTab('health')" id="prog-tab-health"
+                                    class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                    Health
+                                </button>
+                                <button onclick="switchProgressTab('dailylog')" id="prog-tab-dailylog"
+                                    class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                    Daily Log
+                                </button>
+                                <!-- Animated Underline Indicator -->
+                                <div id="progress-tab-indicator"
+                                    class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10"
+                                    style="left: 0; width: 25%;"></div>
+                            </nav>
+                        </div>
                     </div>
 
                     <!-- SPARK SUB-TAB -->
@@ -1527,35 +1530,36 @@
                 <!-- PROFILE VIEW -->
                 <div id="view-profile"
                     class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
-                    <div>
-                        <h2 class="text-xl font-bold text-theme-text font-barlow">Athlete Profile</h2>
-                        <p class="text-xs text-theme-muted mt-1">Your Configuration and Connections.</p>
-                    </div>
-
-                    <!-- SUB NAVIGATION MENU -->
-                    <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border mb-2 md:mb-4">
-                        <nav id="profile-sub-nav" class="flex w-full relative">
-                            <button onclick="switchProfileTab('profile')" id="profile-tab-profile"
-                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-accent transition-colors">
-                                Profile
-                            </button>
-                            <button onclick="switchProfileTab('goals')" id="profile-tab-goals"
-                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
-                                Goals
-                            </button>
-                            <button onclick="switchProfileTab('connections')" id="profile-tab-connections"
-                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
-                                Connections
-                            </button>
-                            <button onclick="switchProfileTab('account')" id="profile-tab-account"
-                                class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
-                                Account
-                            </button>
-                            <!-- Animated Underline Indicator -->
-                            <div id="profile-tab-indicator"
-                                class="absolute bottom-0 left-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-20">
-                            </div>
-                        </nav>
+                    <!-- HEADER & SUB NAVIGATION MENU -->
+                    <div class="sticky -top-4 md:-top-8 pt-4 md:pt-8 pb-2 bg-theme-bg z-40 mb-4 -mt-6">
+                        <div class="mb-4">
+                            <h2 class="text-xl font-bold text-theme-text font-barlow">Athlete Profile</h2>
+                            <p class="text-xs text-theme-muted mt-1">Your Configuration and Connections.</p>
+                        </div>
+                        <div class="relative overflow-x-auto hide-scrollbar border-b border-theme-border">
+                            <nav id="profile-sub-nav" class="flex w-full relative">
+                                <button onclick="switchProfileTab('profile')" id="profile-tab-profile"
+                                    class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-accent transition-colors">
+                                    Profile
+                                </button>
+                                <button onclick="switchProfileTab('goals')" id="profile-tab-goals"
+                                    class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                    Goals
+                                </button>
+                                <button onclick="switchProfileTab('connections')" id="profile-tab-connections"
+                                    class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                    Connections
+                                </button>
+                                <button onclick="switchProfileTab('account')" id="profile-tab-account"
+                                    class="profile-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
+                                    Account
+                                </button>
+                                <!-- Animated Underline Indicator -->
+                                <div id="profile-tab-indicator"
+                                    class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10"
+                                    style="left: 0; width: 25%;"></div>
+                            </nav>
+                        </div>
                     </div>
 
                     <!-- PROFILE TAB -->

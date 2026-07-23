@@ -863,8 +863,8 @@ async function getStravaActivity(stravaAthleteId, activityId) {
         }
 
         db.get(
-          "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND LOWER(sport) = LOWER(?)",
-          [internalUserId, activityDate, sparkSport],
+          "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND (LOWER(sport) = LOWER(?) OR LOWER(sport) LIKE '%' || LOWER(?) || '%')",
+          [internalUserId, activityDate, sparkSport, sparkSport.slice(0, 5)],
           async (err, plan) => {
             // Fetch the coach tone
             db.get(
@@ -1291,9 +1291,24 @@ async function evaluateQuestsAgainstActivity(userId, activityData) {
         let completedQuests = [];
 
         for (const q of quests) {
-          const targetSports = q.target_sport
+          let targetSports = q.target_sport
             ? q.target_sport.split(",").map((s) => s.trim().toLowerCase())
             : ["any"];
+            
+          // Add Strava sport variations to ensure activities like VirtualRide count towards Ride quests
+          const sportsSet = new Set(targetSports);
+          if (sportsSet.has("ride")) {
+            sportsSet.add("virtualride");
+            sportsSet.add("ebikeride");
+            sportsSet.add("mountainbikeride");
+            sportsSet.add("gravelride");
+          }
+          if (sportsSet.has("run")) {
+            sportsSet.add("virtualrun");
+            sportsSet.add("trailrun");
+          }
+          targetSports = Array.from(sportsSet);
+
           const isAnySport = targetSports.includes("any");
 
           let achievedValue = 0;
@@ -1396,4 +1411,54 @@ module.exports = {
   triggerLevelUpCoachPrompt,
   generateQuestForUser,
   evaluateQuestsAgainstActivity,
+  sendMorningMessage: async () => {
+    console.log("🌞 Running scheduled morning message job...");
+    const todayStr = getAMSDateString();
+    
+    // Find all users who have a workout planned for today
+    db.all(
+      `SELECT u.id, u.coach_tone FROM users u 
+       JOIN micro_plan m ON u.id = m.user_id 
+       WHERE m.date = ?`,
+      [todayStr],
+      async (err, rows) => {
+        if (err || !rows) return;
+        
+        // Remove duplicates if they have multiple workouts today
+        const uniqueUsers = [];
+        const seen = new Set();
+        for (const r of rows) {
+          if (!seen.has(r.id)) {
+            seen.add(r.id);
+            uniqueUsers.push(r);
+          }
+        }
+
+        for (const user of uniqueUsers) {
+          try {
+            const prompt = `It is morning (${todayStr}). Look at the athlete's planned workouts for today and write a short, proactive, energetic morning message to get them pumped up. Acknowledge their recent work if applicable. Keep it under 3 sentences. DO NOT wrap it in JSON.`;
+            const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${user.coach_tone || "Friendly"}. Act like a real human in a continuous text message thread.`;
+            
+            // Generate the message
+            const aiReply = await generateWithFallback(prompt, systemPrompt);
+            
+            // Insert into history
+            db.run(
+              `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`,
+              [user.id, aiReply]
+            );
+            
+            // Push notification bubble to frontend
+            sendSSEEvent(user.id, "unread_message", {
+              message: aiReply,
+              mood: "hype"
+            });
+            console.log(`Sent morning message to user ${user.id}`);
+          } catch (e) {
+            console.error(`Failed to send morning message to user ${user.id}:`, e);
+          }
+        }
+      }
+    );
+  }
 };

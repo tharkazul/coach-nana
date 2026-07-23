@@ -36,9 +36,11 @@ const {
   syncAllStravaUsersOnStartup,
   calculateGlobalMaxStats,
   generateAllPublicProfiles,
+  sendMorningMessage,
 } = require("./services/utils");
 
 const { sseClients } = require("./services/sse");
+const cron = require('node-cron');
 
 // Startup setup
 db.serialize(() => {
@@ -52,6 +54,14 @@ db.serialize(() => {
 });
 
 // Periodic Jobs
+// Schedule morning message to run every day at 08:00 AM (Europe/Amsterdam timezone)
+cron.schedule('0 8 * * *', () => {
+  sendMorningMessage();
+}, {
+  scheduled: true,
+  timezone: "Europe/Amsterdam"
+});
+
 setInterval(() => {
   // Sync all Strava users every 2 hours
   syncAllStravaUsersOnStartup();
