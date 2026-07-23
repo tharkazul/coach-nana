@@ -1004,6 +1004,7 @@ function switchTab(t) {
         }, 50);
     }
     if (t === 'coach') {
+        chatHistoryLoaded = false;
         loadChatHistory();
         setTimeout(() => {
             const chatWindow = document.getElementById('chat-window');

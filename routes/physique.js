@@ -346,34 +346,7 @@ router.delete("/api/physique/:id", authenticateToken, (req, res) => {
   );
 });
 
-router.delete("/api/physique/:id", authenticateToken, (req, res) => {
-  // First find the date so we can optionally remove the biometric weight log for that day
-  db.get(
-    `SELECT date FROM physique_logs WHERE id = ? AND user_id = ?`,
-    [req.params.id, req.user.id],
-    (err, row) => {
-      if (!row) return res.status(404).json({ error: "Log not found." });
 
-      db.run(
-        `DELETE FROM physique_logs WHERE id = ? AND user_id = ?`,
-        [req.params.id, req.user.id],
-        (err) => {
-          if (err)
-            return res.status(500).json({ error: "Failed to delete log." });
-
-          // Also nullify/remove weight from biometrics for this date if we are deleting the physique log
-          // (Assuming weight_kg was the primary entry method for that date)
-          db.run(`DELETE FROM biometrics WHERE user_id = ? AND date = ?`, [
-            req.user.id,
-            row.date,
-          ]);
-
-          res.json({ success: true });
-        },
-      );
-    },
-  );
-});
 
 router.get("/api/physique/nutrition", authenticateToken, async (req, res) => {
   const todayStr = new Date().toISOString().split("T")[0];

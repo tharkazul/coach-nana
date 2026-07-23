@@ -314,38 +314,6 @@ router.post("/api/user/disconnect/strava", authenticateToken, (req, res) => {
   );
 });
 
-router.post("/api/user/disconnect/strava", authenticateToken, (req, res) => {
-  db.get(
-    `SELECT access_token FROM strava_tokens WHERE user_id = ?`,
-    [req.user.id],
-    async (err, row) => {
-      if (row && row.access_token) {
-        try {
-          await fetch("https://www.strava.com/oauth/deauthorize", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${row.access_token}` },
-          });
-        } catch (e) {
-          console.error("Failed to deauthorize Strava:", e);
-        }
-      }
-      db.run(`UPDATE users SET strava_refresh_token = NULL WHERE id = ?`, [
-        req.user.id,
-      ]);
-      db.run(
-        `DELETE FROM strava_tokens WHERE user_id = ?`,
-        [req.user.id],
-        (err) => {
-          if (err)
-            return res
-              .status(500)
-              .json({ error: "Failed to disconnect Strava from database." });
-          res.json({ message: "Strava disconnected successfully!" });
-        },
-      );
-    },
-  );
-});
 
 router.post("/api/user/disconnect/garmin", authenticateToken, (req, res) => {
   db.run(

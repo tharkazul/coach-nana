@@ -214,44 +214,7 @@ router.post("/api/gamification/evaluate_quests", authenticateToken, (req, res) =
   );
 });
 
-router.post("/api/gamification/evaluate_quests", authenticateToken, (req, res) => {
-  const userId = req.user.id;
 
-  // Evaluate the latest activity against active quests
-  db.get(
-    `SELECT * FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 1`,
-    [userId],
-    async (err, latestActivity) => {
-      if (err || !latestActivity) {
-        return res.json({
-          success: true,
-          message: "No activities found to evaluate against.",
-        });
-      }
-
-      try {
-        const completed = await evaluateQuestsAgainstActivity(
-          userId,
-          latestActivity,
-        );
-        if (completed.length > 0) {
-          res.json({
-            success: true,
-            message: `Evaluated and completed ${completed.length} quests based on your latest activity!`,
-          });
-        } else {
-          res.json({
-            success: true,
-            message:
-              "Evaluated your latest activity, but no quests were completed.",
-          });
-        }
-      } catch (e) {
-        res.status(500).json({ error: "Failed to evaluate quests." });
-      }
-    },
-  );
-});
 
 router.post(
   "/api/gamification/generate_title",
