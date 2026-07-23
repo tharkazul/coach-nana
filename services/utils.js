@@ -597,10 +597,13 @@ function calculateSparkScore(movingTimeMin, avgHr) {
   let bonus = 0;
 
   if (avgHr) {
-    if (avgHr >= 180) bonus = 0.4;
-    else if (avgHr >= 160) bonus = 0.3;
-    else if (avgHr >= 140) bonus = 0.2;
-    else if (avgHr >= 120) bonus = 0.1;
+    if (avgHr >= 180) bonus = 1.0;
+    else if (avgHr >= 160) bonus = 0.4;
+    else if (avgHr >= 140) bonus = 0.3;
+    else if (avgHr >= 120) bonus = 0.2;
+    else if (avgHr >= 100) bonus = 0.0;
+    else if (avgHr >= 80) bonus = -0.2;
+    else bonus = -0.5;
   }
 
   return baseScore + baseScore * bonus;
