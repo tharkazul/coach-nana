@@ -1396,6 +1396,13 @@ async function evaluateQuestsAgainstActivity(userId, activityData) {
   });
 }
 
+function getEffectiveTokenLimit(user) {
+  let expectedLimit = user.subscription_tier === 'spark_plus' ? 50000 : 10000;
+  let dbLimit = user.daily_token_limit;
+  if (dbLimit === 50000 && expectedLimit === 10000) dbLimit = 10000;
+  return dbLimit || expectedLimit;
+}
+
 module.exports = {
   matchGarminExercise,
   getAMSDateString,
@@ -1421,6 +1428,7 @@ module.exports = {
   triggerLevelUpCoachPrompt,
   generateQuestForUser,
   evaluateQuestsAgainstActivity,
+  getEffectiveTokenLimit,
   sendMorningMessage: async () => {
     console.log("🌞 Running scheduled morning message job...");
     const todayStr = getAMSDateString();

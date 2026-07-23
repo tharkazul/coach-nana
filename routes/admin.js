@@ -77,7 +77,12 @@ router.get("/api/admin/usage", authenticateToken, (req, res) => {
     `;
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: "Database error" });
-    res.json(rows);
+    const { getEffectiveTokenLimit } = require('../services/utils');
+    const enrichedRows = rows.map(r => {
+      r.effective_limit = getEffectiveTokenLimit(r);
+      return r;
+    });
+    res.json(enrichedRows);
   });
 });
 

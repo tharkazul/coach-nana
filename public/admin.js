@@ -43,12 +43,7 @@ function renderTable(users) {
         const personalTokens = u.daily_token_usage || 0;
         const commonTokens = u.common_token_usage || 0;
         
-        let expectedLimit = u.subscription_tier === 'spark_plus' ? 50000 : 10000;
-        // Handle legacy DB default where it's 50000
-        let dbLimit = u.daily_token_limit;
-        if (dbLimit === 50000 && expectedLimit === 10000) dbLimit = 10000;
-
-        const currentLimit = dbLimit || expectedLimit;
+        const currentLimit = u.effective_limit || 10000;
         let personalTokenClass = "text-gray-900";
         if (personalTokens >= currentLimit) personalTokenClass = "text-red-600 font-bold";
         else if (personalTokens > currentLimit * 0.8) personalTokenClass = "text-orange-500 font-semibold";

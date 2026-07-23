@@ -18,7 +18,7 @@ db.serialize(() => {
         search_privacy INTEGER DEFAULT 0,
         profile_picture_url TEXT,
         common_token_usage INTEGER DEFAULT 0,
-        daily_token_limit INTEGER DEFAULT 50000,
+        daily_token_limit INTEGER DEFAULT 10000,
         subscription_tier TEXT DEFAULT 'free',
         spark_plus_clicks INTEGER DEFAULT 0
     )`);

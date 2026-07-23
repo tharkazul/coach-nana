@@ -59,7 +59,8 @@ const {
   updateUserSparkAndCheckLevel,
   triggerLevelUpCoachPrompt,
   generateQuestForUser,
-  evaluateQuestsAgainstActivity
+  evaluateQuestsAgainstActivity,
+  getEffectiveTokenLimit
 } = require('../services/utils');
 
 router.get("/api/events", authenticateToken, (req, res) => {
@@ -159,15 +160,12 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
       // Token limit logic
       const todayStr = new Date().toISOString().split("T")[0];
       let currentDailyUsage = user.daily_token_usage || 0;
-      
-      let expectedLimit = user.subscription_tier === 'spark_plus' ? 50000 : 10000;
-      let dbLimit = user.daily_token_limit;
-      if (dbLimit === 50000 && expectedLimit === 10000) dbLimit = 10000;
-      let currentDailyLimit = dbLimit || expectedLimit;
+      let currentDailyLimit = getEffectiveTokenLimit(user);
 
       if (user.last_token_reset_date !== todayStr) {
         currentDailyUsage = 0;
-        currentDailyLimit = expectedLimit; // Reset to their tier default limit on a new day
+        // Reset to their tier default limit on a new day
+        currentDailyLimit = user.subscription_tier === 'spark_plus' ? 50000 : 10000;
         db.run(
           `UPDATE users SET daily_token_usage = 0, common_token_usage = 0, daily_token_limit = ?, last_token_reset_date = ? WHERE id = ?`,
           [currentDailyLimit, todayStr, req.user.id],

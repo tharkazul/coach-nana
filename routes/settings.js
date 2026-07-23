@@ -30,10 +30,8 @@ router.get("/api/user/settings", authenticateToken, (req, res) => {
       }
       const sparkLevelInfo = getSparkLevelInfo(row.total_spark);
       
-      let expectedLimit = row.subscription_tier === 'spark_plus' ? 50000 : 10000;
-      let dbLimit = row.daily_token_limit;
-      if (dbLimit === 50000 && expectedLimit === 10000) dbLimit = 10000;
-      const currentLimit = dbLimit || expectedLimit;
+      const { getEffectiveTokenLimit } = require('../services/utils');
+      const currentLimit = getEffectiveTokenLimit(row);
 
       res.json({
         id: row.id,
