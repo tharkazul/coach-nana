@@ -1221,7 +1221,7 @@ function triggerLevelUpCoachPrompt(userId, newLevel) {
   );
 }
 
-async function generateQuestForUser(userId) {
+async function generateQuestForUser(userId, poolType = "personal") {
   return new Promise((resolve, reject) => {
     db.all(
       `SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 5`,
@@ -1258,6 +1258,7 @@ async function generateQuestForUser(userId) {
             null,
             null,
             userId,
+            poolType
           );
           const jsonStr = aiReply
             .replace(/\`\`\`json/g, "")

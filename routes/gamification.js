@@ -111,65 +111,13 @@ router.post(
             });
         }
 
-        db.all(
-          `SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 5`,
-          [userId],
-          async (err, recentActivities) => {
-            const activitiesStr =
-              recentActivities && recentActivities.length > 0
-                ? recentActivities
-                    .map(
-                      (a) =>
-                        `- ${a.start_date}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min`,
-                    )
-                    .join("\n")
-                : "No recent activities logged.";
-
-            const prompt = `Based on the following recent activities of the user, generate a personalized, motivating micro-challenge (Quest) for them to complete in the next 3 days. 
-            Recent activities:
-            ${activitiesStr}
-            
-            Return ONLY a JSON object with this exact structure:
-            {
-            "description": "Short description of the quest (e.g. Run 5k this weekend)",
-            "target_metric": "distance_km", // or moving_time_min, etc.
-            "target_value": 5,
-            "reward_points": 50 // Keep it between 10 and 100
-            }`;
-
-            try {
-              const aiReply = await generateWithFallback(
-                prompt,
-                "You are a JSON-only API that outputs valid JSON.",
-                null,
-                null,
-                userId,
-                "common"
-              );
-              const jsonStr = aiReply
-                .replace(/\`\`\`json/g, "")
-                .replace(/\`\`\`/g, "")
-                .trim();
-              const questData = JSON.parse(jsonStr);
-
-              db.run(
-                `INSERT INTO user_quests (user_id, description, target_metric, target_value, reward_points) VALUES (?, ?, ?, ?, ?)`,
-                [
-                  userId,
-                  questData.description,
-                  questData.target_metric,
-                  questData.target_value,
-                  questData.reward_points,
-                ],
-              );
-
-              res.json({ success: true, quest: questData });
-            } catch (e) {
-              console.error("Failed to generate quest:", e);
-              res.status(500).json({ error: "Failed to generate quest" });
-            }
-          },
-        );
+        try {
+          const questData = await generateQuestForUser(userId, "common");
+          res.json({ success: true, quest: questData });
+        } catch (e) {
+          console.error("Failed to generate quest:", e);
+          res.status(500).json({ error: "Failed to generate quest" });
+        }
       },
     );
   },
