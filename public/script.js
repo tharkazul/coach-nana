@@ -448,7 +448,7 @@ function initSSE() {
         console.log("Real-time sync complete received:", e.data);
         // Silently refresh the dashboard data if the user is logged in
         if (document.getElementById('login-overlay').style.display === 'none') {
-            fetchDashboardData();
+            buildDashboard();
         }
     });
 
@@ -465,6 +465,7 @@ function initSSE() {
             localStorage.setItem('lastMsgTimestamp', Date.now());
         } else {
             // Already on Coach tab, reload the chat to show the new message
+            chatHistoryLoaded = false;
             loadChatHistory();
         }
     });
