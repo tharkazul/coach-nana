@@ -2803,7 +2803,7 @@ let chatHistoryLoaded = false;
 async function loadChatHistory() {
     if (chatHistoryLoaded) return;
     try {
-        const res = await fetch('/api/chat/history', { headers: getAuthHeaders() });
+        const res = await fetch(`/api/chat/history?t=${Date.now()}`, { headers: getAuthHeaders() });
         if (!res.ok) return;
         chatHistoryLoaded = true;
         const history = await res.json();
