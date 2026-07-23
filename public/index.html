@@ -1035,7 +1035,13 @@
 
                             <!-- Chat Input -->
                             <div
-                                class="flex items-end space-x-2 md:space-x-3 bg-theme-bg border border-theme-border rounded-2xl p-1 shadow-inner focus-within:border-theme-accent transition-colors">
+                                class="relative flex items-end space-x-2 md:space-x-3 bg-theme-bg border border-theme-border rounded-2xl p-1 shadow-inner focus-within:border-theme-accent transition-colors">
+                                
+                                <!-- Scroll to Bottom Button -->
+                                <button id="scroll-to-bottom-btn" onclick="forceScrollToBottom()"
+                                    class="hidden absolute right-0 -top-12 bg-theme-accent text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg hover:opacity-90 transition-all z-50 flex items-center gap-1">
+                                    <span>↓</span> Scroll to last
+                                </button>
 
                                 <button id="voice-btn" onclick="toggleRecording()"
                                     class="p-2 text-theme-muted hover:text-red-500 transition rounded-xl ml-1 mb-0.5 shrink-0">

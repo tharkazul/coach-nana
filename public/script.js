@@ -4918,3 +4918,28 @@ async function generateTitle() {
         console.error(e);
     }
 }
+
+// --- CHAT SCROLL TO BOTTOM LOGIC ---
+function forceScrollToBottom() {
+    const chatWindow = document.getElementById('chat-window');
+    if (chatWindow) {
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const chatWindow = document.getElementById('chat-window');
+    const scrollBtn = document.getElementById('scroll-to-bottom-btn');
+    
+    if (chatWindow && scrollBtn) {
+        chatWindow.addEventListener('scroll', () => {
+            // Check if we are near the bottom (within 150px)
+            const isNearBottom = (chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight) < 150;
+            if (isNearBottom) {
+                scrollBtn.classList.add('hidden');
+            } else {
+                scrollBtn.classList.remove('hidden');
+            }
+        });
+    }
+});
