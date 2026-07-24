@@ -37,6 +37,7 @@ const {
   calculateGlobalMaxStats,
   generateAllPublicProfiles,
   sendMorningMessage,
+  runDailyRecoveryJob,
 } = require("./services/utils");
 
 const { sseClients } = require("./services/sse");
@@ -57,6 +58,14 @@ db.serialize(() => {
 // Schedule morning message to run every day at 08:00 AM (Europe/Amsterdam timezone)
 cron.schedule('0 8 * * *', () => {
   sendMorningMessage();
+}, {
+  scheduled: true,
+  timezone: "Europe/Amsterdam"
+});
+
+// Schedule daily recovery & degradation job to run every day at 00:05 AM (Europe/Amsterdam timezone)
+cron.schedule('5 0 * * *', () => {
+  runDailyRecoveryJob();
 }, {
   scheduled: true,
   timezone: "Europe/Amsterdam"

@@ -159,13 +159,35 @@ router.post("/api/niggles", authenticateToken, (req, res) => {
 router.put("/api/niggles/:id/resolve", authenticateToken, (req, res) => {
   const niggleId = req.params.id;
   db.run(
-    `UPDATE athlete_niggles SET status = 'resolved' WHERE id = ? AND user_id = ?`,
+    `UPDATE athlete_niggles SET status = 'resolved', resolved_date = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
     [niggleId, req.user.id],
     (err) => {
       if (err)
         return res.status(500).json({ error: "Failed to resolve niggle." });
       res.json({ success: true });
     },
+  );
+});
+
+router.get("/api/fatigue", authenticateToken, (req, res) => {
+  db.all(
+    `SELECT date, body_part, fatigue_score FROM athlete_fatigue_log WHERE user_id = ? ORDER BY date DESC LIMIT 100`,
+    [req.user.id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch fatigue log." });
+      res.json(rows || []);
+    }
+  );
+});
+
+router.get("/api/niggles/history", authenticateToken, (req, res) => {
+  db.all(
+    `SELECT id, body_part, severity, notes, status, reported_date, resolved_date FROM athlete_niggles WHERE user_id = ? ORDER BY reported_date DESC`,
+    [req.user.id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch niggles history." });
+      res.json(rows || []);
+    }
   );
 });
 
@@ -371,46 +393,59 @@ router.get("/api/physique/nutrition", authenticateToken, async (req, res) => {
           const weight = weightRow ? weightRow.weight_kg : 75; // Default to 75kg if unknown
           const phase = await getUserMacroPhase(req.user.id);
 
-          // Fetch today's completed activities (if any)
-          db.all(
-            `SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`,
-            [req.user.id, todayStr],
-            (err, actualAct) => {
-              const actualSpark =
-                actualAct && actualAct.length > 0 && actualAct[0].total_score
-                  ? actualAct[0].total_score
-                  : 0;
+          db.get(
+            `SELECT athlete_context, long_term_memory FROM users WHERE id = ?`,
+            [req.user.id],
+            (err, userRow) => {
+              const athleteContext = userRow ? userRow.athlete_context : "";
+              const longTermMemory = userRow ? userRow.long_term_memory : "";
 
+              // Fetch today's completed activities (if any)
               db.all(
-                `SELECT date, target_spark, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`,
+                `SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`,
                 [req.user.id, todayStr],
-                async (err, todayPlan) => {
-                  let todaySpark =
-                    todayPlan && todayPlan.length > 0
-                      ? todayPlan[0].target_spark
+                (err, actualAct) => {
+                  const actualSpark =
+                    actualAct && actualAct.length > 0 && actualAct[0].total_score
+                      ? actualAct[0].total_score
                       : 0;
-                  let todayDesc =
-                    todayPlan && todayPlan.length > 0
-                      ? todayPlan[0].description
-                      : "Rest day";
 
-                  // If they already trained harder than planned (or trained on a rest day), update the prompt
-                  if (
-                    actualSpark > todaySpark ||
-                    (actualSpark > 0 && todayDesc === "Rest day")
-                  ) {
-                    todaySpark = actualSpark;
-                    todayDesc = "Completed Workout / Training Day";
-                  }
+                  db.all(
+                    `SELECT date, target_spark, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`,
+                    [req.user.id, todayStr],
+                    async (err, todayPlan) => {
+                      let todaySpark =
+                        todayPlan && todayPlan.length > 0
+                          ? todayPlan[0].target_spark
+                          : 0;
+                      let todayDesc =
+                        todayPlan && todayPlan.length > 0
+                          ? todayPlan[0].description
+                          : "Rest day";
 
-                  const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
+                      // If they already trained harder than planned (or trained on a rest day), update the prompt
+                      if (
+                        actualSpark > todaySpark ||
+                        (actualSpark > 0 && todayDesc === "Rest day")
+                      ) {
+                        todaySpark = actualSpark;
+                        todayDesc = "Completed Workout / Training Day";
+                      }
+
+                      const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
 Their latest weight is ${weight}kg.
 Today's training load/plan: ${todayDesc} (Spark Points: ${todaySpark}).
 
-Based on today's training load and their current macro phase, recommend a daily macro nutrition target.
+Athlete Context:
+${athleteContext}
+
+Coach/Long Term Memory Notes (IMPORTANT for goals/injuries/deficits):
+${longTermMemory}
+
+Based on today's training load, their current macro phase, and their specific goals/context, recommend a daily macro nutrition target.
 - For high Spark Points / intense days, prescribe higher carbohydrates.
 - For rest / low Spark Points days, prescribe lower carbohydrates and higher protein/fat.
-- Ensure total calories make sense for an endurance athlete of their weight.
+- Ensure total calories make sense for an endurance athlete of their weight and align with any weight loss/gain goals mentioned in their notes.
 
 You MUST respond with ONLY a raw JSON object containing exactly these keys:
 {
@@ -464,6 +499,8 @@ You MUST respond with ONLY a raw JSON object containing exactly these keys:
           );
         },
       );
+    },
+  );
     },
   );
 });

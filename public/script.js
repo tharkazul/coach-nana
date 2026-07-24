@@ -1095,7 +1095,7 @@ function switchProgressTab(subtab) {
         }
     });
 
-    const indicator = document.getElementById('prog-tab-indicator');
+    const indicator = document.getElementById('progress-tab-indicator');
     const activeBtn = document.getElementById(`prog-tab-${subtab}`);
     if (indicator && activeBtn) {
         indicator.style.left = `${activeBtn.offsetLeft}px`;
@@ -3265,13 +3265,19 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
         const data = await res.json();
 
         if (res.status === 429) {
+            window.failedMessages = window.failedMessages || {};
+            window.failedMessages[loadId] = { message, imageToUse };
+            
             document.getElementById(loadId).outerHTML = `
-                <div class="flex items-end gap-2 md:gap-3 animate-msg">
+                <div class="flex items-end gap-2 md:gap-3 animate-msg" id="err-${loadId}">
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
                         <img src="${getCoachAvatar('disappointed')}" alt="Coach" class="w-full h-full object-cover">
                     </div>
-                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative">
+                    <div class="bg-theme-card border border-theme-border text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-bl-none max-w-[85%] md:max-w-[75%] shadow-sm text-theme-text relative flex items-center pr-10">
                         <div class="whitespace-pre-wrap leading-relaxed text-theme-accent font-bold">${data.error || "Daily token limit reached. Please try again tomorrow!"}</div>
+                        <button onclick="resendFailedMessage('${loadId}')" class="absolute -right-3 md:-right-4 top-1/2 -translate-y-1/2 p-1.5 text-theme-muted hover:text-theme-accent transition rounded-full bg-theme-bg border border-theme-border shadow-sm" title="Retry">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
                     </div>
                 </div>`;
             chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -3383,10 +3389,12 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
 
             loadEl.outerHTML = `
                 <div class="flex justify-center my-4" id="err-${loadId}">
-                    <div class="bg-red-50 text-red-500 text-xs px-4 py-2 rounded-full border border-red-100 flex items-center gap-2 shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Connection interrupted.
-                        <button onclick="resendFailedMessage('${loadId}')" class="ml-2 font-bold underline hover:text-red-700 cursor-pointer">Resend</button>
+                    <div class="bg-red-50 text-red-500 text-xs px-4 py-2 rounded-full border border-red-100 flex items-center gap-2 shadow-sm relative pr-10">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Connection interrupted.</span>
+                        <button onclick="resendFailedMessage('${loadId}')" class="absolute -right-3 md:-right-4 top-1/2 -translate-y-1/2 p-1.5 text-red-500 hover:text-red-700 transition rounded-full bg-red-50 border border-red-200 shadow-sm hover:bg-red-100" title="Retry">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
                     </div>
                 </div>
             `;

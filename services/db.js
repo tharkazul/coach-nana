@@ -299,6 +299,17 @@ db.serialize(() => {
         reported_date DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
+
+  db.run(`ALTER TABLE athlete_niggles ADD COLUMN resolved_date DATETIME`, (err) => {});
+
+  db.run(`CREATE TABLE IF NOT EXISTS athlete_fatigue_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        date TEXT,
+        body_part TEXT,
+        fatigue_score REAL DEFAULT 0,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )`);
 });
 
 module.exports = db;

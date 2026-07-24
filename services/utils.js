@@ -927,6 +927,13 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                   );
                 }
 
+                // AI MUSCLE IMPACT ANALYSIS
+                try {
+                   analyzeMuscleImpact(internalUserId, data, sparkSport, activityDate);
+                } catch(e) {
+                   console.error("AI Muscle Impact Analysis failed:", e);
+                }
+
                 // 1. Generate AI Coach Response
                 try {
                   const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
@@ -1397,6 +1404,104 @@ async function evaluateQuestsAgainstActivity(userId, activityData) {
   });
 }
 
+async function analyzeMuscleImpact(userId, activityData, sparkSport, activityDate) {
+  const prompt = `The athlete completed a ${sparkSport} activity: ${activityData.name}. 
+  Distance: ${(activityData.distance / 1000).toFixed(1)}km
+  Time: ${Math.round(activityData.moving_time / 60)} min.
+  Sets: ${activityData.sets_json ? JSON.stringify(activityData.sets_json) : "None"}
+  
+  Based on this, which muscle groups are fatigued? Output ONLY a JSON array mapping body parts to a fatigue score (1-100). 
+  Use standard naming (e.g. "quads", "calves", "shoulders", "lower-back", "chest", "lats", "glutes", "hamstrings", "core").
+  Example format:
+  [{"body_part": "quads", "fatigue_score": 30}, {"body_part": "shoulders", "fatigue_score": 15}]
+  `;
+
+  const systemPrompt = `You are a sports science AI. Output ONLY valid JSON, no markdown formatting, no preamble.`;
+
+  try {
+    // Import here to avoid circular dependency issues if any, though it's likely already imported
+    const { generateWithFallback } = require('./ai'); 
+    let result = await generateWithFallback(prompt, systemPrompt);
+    result = result.replace(/```json/g, "").replace(/```/g, "").trim();
+    const fatigueArray = JSON.parse(result);
+    
+    if (Array.isArray(fatigueArray)) {
+      const stmt = db.prepare(`INSERT INTO athlete_fatigue_log (user_id, date, body_part, fatigue_score) VALUES (?, ?, ?, ?)`);
+      fatigueArray.forEach(f => {
+        if(f.body_part && f.fatigue_score) {
+          stmt.run(userId, activityDate, f.body_part, f.fatigue_score);
+        }
+      });
+      stmt.finalize();
+      console.log(`✅ Saved muscle fatigue for ${activityData.name}`);
+    }
+  } catch(e) {
+    console.error("Failed to parse muscle impact JSON", e);
+  }
+}
+
+async function runDailyRecoveryJob() {
+  console.log("🌙 Running daily recovery & degradation job...");
+
+  // 1. Fatigue Recovery
+  // Reduce all active fatigue scores by 40% (x 0.6)
+  db.run(`UPDATE athlete_fatigue_log SET fatigue_score = fatigue_score * 0.6 WHERE fatigue_score > 0`, (err) => {
+      if (err) console.error("Fatigue recovery error:", err);
+  });
+
+  // Delete fatigue logs that have dropped below 1 to keep DB clean
+  db.run(`DELETE FROM athlete_fatigue_log WHERE fatigue_score < 1`);
+
+  // 2. Niggle Auto-Degradation
+  // If an injury has been active for a multiple of 3 days, reduce severity.
+  db.all(`SELECT id, user_id, body_part, severity, reported_date FROM athlete_niggles WHERE status = 'active' AND severity > 0`, async (err, niggles) => {
+      if (err || !niggles) return;
+
+      const now = new Date();
+      for (const niggle of niggles) {
+          const reported = new Date(niggle.reported_date);
+          const diffTime = Math.abs(now - reported);
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays > 0 && diffDays % 3 === 0) {
+              const newSeverity = niggle.severity - 1;
+              
+              if (newSeverity <= 0) {
+                  // Injury Resolved!
+                  db.run(`UPDATE athlete_niggles SET severity = 0, status = 'resolved', resolved_date = CURRENT_TIMESTAMP WHERE id = ?`, [niggle.id]);
+                  
+                  // Notify the user via AI coach
+                  db.get(`SELECT coach_tone FROM users WHERE id = ?`, [niggle.user_id], async (err, user) => {
+                      const tone = user ? user.coach_tone : "Friendly";
+                      const prompt = `The athlete's ${niggle.body_part} injury has automatically fully healed and been marked as resolved after ${diffDays} days. Send a proactive, encouraging message (1-2 sentences) letting them know their ${niggle.body_part} is now cleared for full activity, but they should still listen to their body. DO NOT use JSON.`;
+                      const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
+                      
+                      try {
+                          const aiReply = await generateWithFallback(prompt, systemPrompt);
+                          
+                          db.run(
+                              `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`,
+                              [niggle.user_id, aiReply]
+                          );
+                          
+                          sendSSEEvent(niggle.user_id, "unread_message", {
+                              message: aiReply,
+                              mood: "hype"
+                          });
+                      } catch(e) {
+                          console.error("AI Coach Recovery message failed:", e);
+                      }
+                  });
+
+              } else {
+                  // Injury recovering but not resolved
+                  db.run(`UPDATE athlete_niggles SET severity = ? WHERE id = ?`, [newSeverity, niggle.id]);
+              }
+          }
+      }
+  });
+}
+
 function getEffectiveTokenLimit(user) {
   let expectedLimit = user.subscription_tier === 'spark_plus' ? 50000 : 10000;
   let dbLimit = user.daily_token_limit;
@@ -1405,6 +1510,8 @@ function getEffectiveTokenLimit(user) {
 }
 
 module.exports = {
+  runDailyRecoveryJob,
+  analyzeMuscleImpact,
   matchGarminExercise,
   getAMSDateString,
   getAMSWeekday,
@@ -1434,28 +1541,45 @@ module.exports = {
     console.log("🌞 Running scheduled morning message job...");
     const todayStr = getAMSDateString();
     
-    // Find all users who have a workout planned for today
+    // Find all users and any workouts they have planned for today
     db.all(
-      `SELECT u.id, u.coach_tone FROM users u 
-       JOIN micro_plan m ON u.id = m.user_id 
-       WHERE m.date = ?`,
+      `SELECT u.id, u.coach_tone, m.sport, m.description, m.details 
+       FROM users u 
+       LEFT JOIN micro_plan m ON u.id = m.user_id AND m.date = ?`,
       [todayStr],
       async (err, rows) => {
         if (err || !rows) return;
         
-        // Remove duplicates if they have multiple workouts today
-        const uniqueUsers = [];
-        const seen = new Set();
+        // Group by user
+        const usersMap = new Map();
         for (const r of rows) {
-          if (!seen.has(r.id)) {
-            seen.add(r.id);
-            uniqueUsers.push(r);
+          if (!usersMap.has(r.id)) {
+            usersMap.set(r.id, {
+              id: r.id,
+              coach_tone: r.coach_tone,
+              workouts: []
+            });
+          }
+          if (r.sport) {
+            usersMap.get(r.id).workouts.push({
+              sport: r.sport,
+              description: r.description,
+              details: r.details
+            });
           }
         }
 
-        for (const user of uniqueUsers) {
+        for (const user of usersMap.values()) {
           try {
-            const prompt = `It is morning (${todayStr}). Look at the athlete's planned workouts for today and write a short, proactive, energetic morning message to get them pumped up. Acknowledge their recent work if applicable. Keep it under 3 sentences. DO NOT wrap it in JSON.`;
+            let prompt = `It is morning (${todayStr}). You are the athlete's coach. Write a short, proactive, energetic morning message. Acknowledge their recent work if applicable. `;
+            
+            if (user.workouts.length > 0) {
+              prompt += `They have the following workouts planned for today: ${JSON.stringify(user.workouts)}. Get them pumped up for it! `;
+            } else {
+              prompt += `They have a REST DAY today (no workouts planned). Encourage them to recover well and enjoy the day. `;
+            }
+            prompt += `Keep it under 3 sentences. DO NOT wrap it in JSON.`;
+            
             const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${user.coach_tone || "Friendly"}. Act like a real human in a continuous text message thread.`;
             
             // Generate the message
