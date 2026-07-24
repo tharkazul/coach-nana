@@ -584,14 +584,7 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <div class="text-[10px] md:text-xs text-theme-muted font-mono" id="header-date"></div>
-                    <button onclick="switchTab('profile')"
-                        class="text-theme-muted hover:text-theme-accent transition flex items-center gap-1.5 group">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 transition-transform duration-300" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                    </button>
+                </div>
             </header>
 
             <div class="flex-1 flex flex-col overflow-hidden relative min-h-0">
@@ -678,45 +671,63 @@
 
                         <!-- TODAY'S PLAN -->
                         <div id="dash-today-plan-container" class="hidden flex-col gap-4">
-                            <h3 class="text-sm uppercase tracking-widest font-bold text-theme-text flex items-center gap-2"><span class="text-xl">📅</span> Today's Plan</h3>
+                            <h3
+                                class="text-sm uppercase tracking-widest font-bold text-theme-text flex items-center gap-2">
+                                <span class="text-xl">📅</span> Today's Plan
+                            </h3>
                             <div id="dash-today-plan-content" class="w-full"></div>
                         </div>
 
                         <!-- DASHBOARD NUTRITION PROTOCOL -->
-                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 relative">
-                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-theme-accent to-purple-500">
+                        <div
+                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 relative">
+                            <div
+                                class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-theme-accent to-purple-500">
                             </div>
-                            <div class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
+                            <div
+                                class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
                                 <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
                                     <span class="text-lg">🥗</span> Daily AI Nutrition Protocol
                                 </h3>
-                                <span id="dash-nutrition-loading" class="text-xs text-theme-muted animate-pulse">Generating...</span>
+                                <span id="dash-nutrition-loading"
+                                    class="text-xs text-theme-muted animate-pulse">Generating...</span>
                             </div>
                             <div id="dash-nutrition-content" class="p-6 hidden">
                                 <div class="flex flex-col md:flex-row gap-6 items-center">
                                     <div class="flex-1 space-y-2">
-                                        <h4 id="dash-nutrition-focus-title" class="text-md font-bold text-theme-text">--</h4>
-                                        <p id="dash-nutrition-rationale" class="text-sm text-theme-muted leading-relaxed">--
+                                        <h4 id="dash-nutrition-focus-title" class="text-md font-bold text-theme-text">--
+                                        </h4>
+                                        <p id="dash-nutrition-rationale"
+                                            class="text-sm text-theme-muted leading-relaxed">--
                                         </p>
                                     </div>
                                     <div class="flex gap-4 md:gap-6 justify-center">
                                         <div class="text-center">
-                                            <div class="w-16 h-16 rounded-full border-4 border-blue-500 flex items-center justify-center mb-2">
-                                                <span id="dash-macro-carbs" class="font-bold text-theme-text text-sm">--g</span>
+                                            <div
+                                                class="w-16 h-16 rounded-full border-4 border-blue-500 flex items-center justify-center mb-2">
+                                                <span id="dash-macro-carbs"
+                                                    class="font-bold text-theme-text text-sm">--g</span>
                                             </div>
-                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
+                                            <span
+                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
                                         </div>
                                         <div class="text-center">
-                                            <div class="w-16 h-16 rounded-full border-4 border-red-500 flex items-center justify-center mb-2">
-                                                <span id="dash-macro-protein" class="font-bold text-theme-text text-sm">--g</span>
+                                            <div
+                                                class="w-16 h-16 rounded-full border-4 border-red-500 flex items-center justify-center mb-2">
+                                                <span id="dash-macro-protein"
+                                                    class="font-bold text-theme-text text-sm">--g</span>
                                             </div>
-                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
+                                            <span
+                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
                                         </div>
                                         <div class="text-center">
-                                            <div class="w-16 h-16 rounded-full border-4 border-yellow-500 flex items-center justify-center mb-2">
-                                                <span id="dash-macro-fat" class="font-bold text-theme-text text-sm">--g</span>
+                                            <div
+                                                class="w-16 h-16 rounded-full border-4 border-yellow-500 flex items-center justify-center mb-2">
+                                                <span id="dash-macro-fat"
+                                                    class="font-bold text-theme-text text-sm">--g</span>
                                             </div>
-                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
+                                            <span
+                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
                                         </div>
                                     </div>
                                 </div>
@@ -856,7 +867,8 @@
                                     <div>
                                         <h2 class="text-xs md:text-sm font-bold text-theme-text">Macro Periodization
                                             <span class="text-theme-muted font-normal ml-1 hidden md:inline">| 16-Week
-                                                Block</span></h2>
+                                                Block</span>
+                                        </h2>
                                         <div id="macro-fueling" class="text-[10px] text-theme-muted mt-1 hidden"></div>
                                     </div>
                                     <span id="macro-countdown"
@@ -932,52 +944,8 @@
                     </div>
                 </div>
 
-                <!-- HISTORY VIEW -->
-                <div id="view-history"
-                    class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-6">
-                    <div class="flex justify-between items-end mb-2 px-1">
-                        <div>
-                            <h2 class="text-xl font-bold text-theme-text font-barlow">Activity Log</h2>
-                            <p class="text-xs text-theme-muted mt-1">Tap any activity to view map and telemetry.</p>
-                        </div>
-                        <button onclick="downloadSelectedCSV()"
-                            class="text-theme-accent hover:bg-theme-accent-soft text-[10px] md:text-xs font-semibold px-4 py-2 border border-theme-accent-border bg-theme-card rounded-lg shadow-sm transition flex items-center gap-2">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                            </svg>
-                            Export CSV
-                        </button>
-                    </div>
-                    <div
-                        class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-                        <div
-                            class="px-4 md:px-6 py-3 border-b border-theme-border bg-theme-bg flex justify-between items-center shrink-0">
-                            <h2 class="text-xs md:text-sm font-bold text-theme-text">Training Load History</h2>
-                            <button onclick="resetChartZoom()"
-                                class="text-[10px] md:text-xs text-theme-accent hover:bg-theme-accent-soft px-2 py-1 rounded border border-theme-accent-border transition">Reset
-                                Zoom</button>
-                        </div>
-                        <div class="p-3 md:p-5 relative w-full flex-1">
-                            <div class="h-[200px] md:h-64 w-full relative"><canvas id="pmcChart"></canvas></div>
-                        </div>
-                    </div>
-
-                    <div
-                        class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-                        <div
-                            class="px-4 py-3 border-b border-theme-border bg-theme-bg flex items-center justify-between shrink-0">
-                            <div class="flex items-center gap-3">
-                                <input type="checkbox" id="selectAllLog" onclick="toggleAllLog(this)"
-                                    class="w-4 h-4 text-theme-accent bg-theme-card border-theme-border rounded cursor-pointer accent-theme-accent">
-                                <label for="selectAllLog"
-                                    class="text-xs font-semibold text-theme-muted uppercase tracking-wider cursor-pointer">Select
-                                    All</label>
-                            </div>
-                        </div>
-                        <div id="history-list-container" class="divide-y divide-theme-border flex-1"></div>
-                    </div>
-                </div>
+                <!-- HISTORY VIEW (Replaced by merged Activities & Community view) -->
+                <div id="view-history" class="hidden"></div>
 
                 <!-- COACH VIEW -->
                 <div id="view-coach"
@@ -1036,7 +1004,7 @@
                             <!-- Chat Input -->
                             <div
                                 class="relative flex items-end space-x-2 md:space-x-3 bg-theme-bg border border-theme-border rounded-2xl p-1 shadow-inner focus-within:border-theme-accent transition-colors">
-                                
+
                                 <!-- Scroll to Bottom Button -->
                                 <button id="scroll-to-bottom-btn" onclick="forceScrollToBottom()"
                                     class="hidden absolute right-0 -top-12 bg-theme-accent text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg hover:opacity-90 transition-all z-50 flex items-center gap-1">
@@ -1486,17 +1454,22 @@
                         </div>
                     </div>
                 </div>
-                <!-- SOCIAL VIEW -->
+                <!-- ACTIVITIES & COMMUNITY VIEW (Merged Social & Activity Log) -->
                 <div id="view-social"
-                    class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
+                    class="hidden flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-24 md:pb-24 max-w-4xl mx-auto w-full space-y-5 md:space-y-6">
 
-                    <!-- Social Header & Segmented Control -->
+                    <!-- Header & Segmented Control -->
                     <div
                         class="flex flex-col gap-4 sticky top-0 bg-theme-bg z-10 pt-2 pb-4 border-b border-theme-border">
                         <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-bold text-theme-text font-barlow">Social</h2>
+                            <div>
+                                <h2 class="text-xl font-bold text-theme-text font-barlow">Activities & Community</h2>
+                                <p class="text-xs text-theme-muted mt-0.5">Community efforts, personal activity logs &
+                                    rankings.</p>
+                            </div>
                             <button onclick="openAddPersonModal()"
-                                class="relative text-theme-muted hover:text-theme-accent transition">
+                                class="relative text-theme-muted hover:text-theme-accent transition"
+                                title="Add Connections">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
@@ -1507,12 +1480,15 @@
                             </button>
                         </div>
 
-                        <!-- Segmented Control -->
+                        <!-- 3-Segment Control -->
                         <div class="flex bg-theme-card border border-theme-border rounded-full p-1 shadow-sm">
                             <button onclick="toggleSocialTab('feed')" id="social-tab-feed"
-                                class="flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300">Feed</button>
+                                class="flex-1 text-xs md:text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300">Feed</button>
+                            <button onclick="toggleSocialTab('mylog')" id="social-tab-mylog"
+                                class="flex-1 text-xs md:text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300">My
+                                Log</button>
                             <button onclick="toggleSocialTab('leaderboard')" id="social-tab-leaderboard"
-                                class="flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300">Leaderboard</button>
+                                class="flex-1 text-xs md:text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300">Leaderboard</button>
                         </div>
                     </div>
 
@@ -1522,6 +1498,56 @@
                             <div
                                 class="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin">
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Activity Log Container -->
+                    <div id="social-mylog-container" class="hidden space-y-6">
+                        <div class="flex justify-between items-center mb-2 px-1">
+                            <div>
+                                <h3 class="text-sm font-bold text-theme-text font-barlow">Personal Workout History</h3>
+                                <p class="text-xs text-theme-muted">Tap any activity to view map and telemetry.</p>
+                            </div>
+                            <button onclick="downloadSelectedCSV()"
+                                class="text-theme-accent hover:bg-theme-accent-soft text-[10px] md:text-xs font-semibold px-4 py-2 border border-theme-accent-border bg-theme-card rounded-lg shadow-sm transition flex items-center gap-2">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                                Export CSV
+                            </button>
+                        </div>
+
+                        <!-- Training Load History PMC Chart -->
+                        <div
+                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                            <div
+                                class="px-4 md:px-6 py-3 border-b border-theme-border bg-theme-bg flex justify-between items-center shrink-0">
+                                <h3 class="text-xs md:text-sm font-bold text-theme-text">Training Load History (PMC)
+                                </h3>
+                                <button onclick="resetChartZoom()"
+                                    class="text-[10px] md:text-xs text-theme-accent hover:bg-theme-accent-soft px-2 py-1 rounded border border-theme-accent-border transition">Reset
+                                    Zoom</button>
+                            </div>
+                            <div class="p-3 md:p-5 relative w-full flex-1">
+                                <div class="h-[200px] md:h-64 w-full relative"><canvas id="pmcChart"></canvas></div>
+                            </div>
+                        </div>
+
+                        <!-- Activity History List -->
+                        <div
+                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                            <div
+                                class="px-4 py-3 border-b border-theme-border bg-theme-bg flex items-center justify-between shrink-0">
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" id="selectAllLog" onclick="toggleAllLog(this)"
+                                        class="w-4 h-4 text-theme-accent bg-theme-card border-theme-border rounded cursor-pointer accent-theme-accent">
+                                    <label for="selectAllLog"
+                                        class="text-xs font-semibold text-theme-muted uppercase tracking-wider cursor-pointer">Select
+                                        All</label>
+                                </div>
+                            </div>
+                            <div id="history-list-container" class="divide-y divide-theme-border flex-1"></div>
                         </div>
                     </div>
 
@@ -1572,156 +1598,161 @@
                     <div id="profile-subtab-profile" class="space-y-6">
 
 
-                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
-                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
-                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Profile Picture
-                            </h3>
-                        </div>
-                        <div class="p-6 flex items-center gap-6">
-                            <div id="settings-avatar-preview"
-                                class="w-20 h-20 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-bg flex items-center justify-center text-theme-muted font-bold text-2xl">
-                                <!-- JS will populate with img or initial -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Profile Picture
+                                </h3>
                             </div>
-                            <div>
-                                <label for="profile-picture-upload"
-                                    class="cursor-pointer text-sm font-bold bg-theme-accent text-white px-4 py-2 rounded-md hover:bg-opacity-90 transition inline-block">
-                                    Upload Photo
-                                </label>
-                                <input type="file" id="profile-picture-upload" accept="image/*" class="hidden"
-                                    onchange="uploadProfilePicture(event)">
-                                <p class="text-xs text-theme-muted mt-2">Recommended: Square image, max 2MB.</p>
-                                <p id="profile-picture-status" class="text-xs text-theme-accent mt-1 hidden"></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
-                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Coach Persona
-                            </h3>
-                        </div>
-                        <div class="p-6 space-y-5">
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach
-                                    Tone & Style</label>
-                                <select id="set-coach-tone"
-                                    class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text">
-                                    <option value="Empathetic but demanding elite endurance coach.">Empathetic but
-                                        Demanding
-                                        (Default)</option>
-                                    <option value="Strict with data, but with a dry, snarky British sense of humor.">
-                                        Strict
-                                        Data Nerd
-                                    </option>
-                                    <option value="Enthusiastic cheerleader, extremely positive and forgiving.">
-                                        Enthusiastic
-                                        Cheerleader</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Gender</label>
-                                <select id="set-gender"
-                                    class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text mb-4">
-                                    <option value="Prefer not to say">Prefer not to say</option>
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                </select>
-                            </div>
-                            <div id="set-cycle-container" class="hidden">
-                                <label
-                                    class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Last
-                                    Cycle Start</label>
-                                <input type="date" id="set-last-cycle-start"
-                                    class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text mb-2">
-                                <p class="text-[10px] text-theme-muted mb-4">Log the start of your last cycle to
-                                    personalize your training load.</p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">My
-                                    Background (AI Context)</label>
-                                <textarea id="set-athlete-context"
-                                    class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[100px]"
-                                    placeholder="e.g. Training for Gouda half-ironman, has a 1.5 year old daughter..."></textarea>
-                                <p class="text-[10px] text-theme-muted mt-1">Spark will memorize this to personalize
-                                    your
-                                    advice.</p>
-                            </div>
-
-                            <!-- SCHEDULE BOUNDARIES -->
-                            <div class="pt-2">
-                                <label
-                                    class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Schedule
-                                    Boundaries</label>
-                                <p class="text-[10px] text-theme-muted mb-4">Set your availability matrix. The AI will
-                                    intelligently distribute your required weekly training load across these
-                                    constraints.</p>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2"
-                                    id="schedule-boundaries-container">
-                                    <!-- JS will render the 7 days here -->
+                            <div class="p-6 flex items-center gap-6">
+                                <div id="settings-avatar-preview"
+                                    class="w-20 h-20 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-bg flex items-center justify-center text-theme-muted font-bold text-2xl">
+                                    <!-- JS will populate with img or initial -->
+                                </div>
+                                <div>
+                                    <label for="profile-picture-upload"
+                                        class="cursor-pointer text-sm font-bold bg-theme-accent text-white px-4 py-2 rounded-md hover:bg-opacity-90 transition inline-block">
+                                        Upload Photo
+                                    </label>
+                                    <input type="file" id="profile-picture-upload" accept="image/*" class="hidden"
+                                        onchange="uploadProfilePicture(event)">
+                                    <p class="text-xs text-theme-muted mt-2">Recommended: Square image, max 2MB.</p>
+                                    <p id="profile-picture-status" class="text-xs text-theme-accent mt-1 hidden"></p>
                                 </div>
                             </div>
+                        </div>
 
-                            <button onclick="saveSettings('coach')"
-                                class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save
-                                Persona</button>
-                            <div id="settings-status"
-                                class="hidden text-center text-xs font-bold text-theme-accent bg-theme-accent-soft p-2 rounded border border-theme-accent-border mt-4">
-                                Settings saved successfully!
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Coach Persona
+                                </h3>
                             </div>
-                        </div>
-                    </div>
+                            <div class="p-6 space-y-5">
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach
+                                        Tone & Style</label>
+                                    <select id="set-coach-tone"
+                                        class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text">
+                                        <option value="Empathetic but demanding elite endurance coach.">Empathetic but
+                                            Demanding
+                                            (Default)</option>
+                                        <option
+                                            value="Strict with data, but with a dry, snarky British sense of humor.">
+                                            Strict
+                                            Data Nerd
+                                        </option>
+                                        <option value="Enthusiastic cheerleader, extremely positive and forgiving.">
+                                            Enthusiastic
+                                            Cheerleader</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Gender</label>
+                                    <select id="set-gender"
+                                        class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text mb-4">
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                                <div id="set-cycle-container" class="hidden">
+                                    <label
+                                        class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Last
+                                        Cycle Start</label>
+                                    <input type="date" id="set-last-cycle-start"
+                                        class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text mb-2">
+                                    <p class="text-[10px] text-theme-muted mb-4">Log the start of your last cycle to
+                                        personalize your training load.</p>
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">My
+                                        Background (AI Context)</label>
+                                    <textarea id="set-athlete-context"
+                                        class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[100px]"
+                                        placeholder="e.g. Training for Gouda half-ironman, has a 1.5 year old daughter..."></textarea>
+                                    <p class="text-[10px] text-theme-muted mt-1">Spark will memorize this to personalize
+                                        your
+                                        advice.</p>
+                                </div>
 
-                    <!-- KEY PHYSIOLOGICAL METRICS -->
-                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
-                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
-                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-blue-500"></span> Key Physiological Metrics
-                            </h3>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <p class="text-xs text-theme-muted">Spark automatically remembers key metrics (e.g. FTP, 5K
-                                PB,
-                                Max HR) when you mention them. You can also manually add or update them below.</p>
+                                <!-- SCHEDULE BOUNDARIES -->
+                                <div class="pt-2">
+                                    <label
+                                        class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Schedule
+                                        Boundaries</label>
+                                    <p class="text-[10px] text-theme-muted mb-4">Set your availability matrix. The AI
+                                        will
+                                        intelligently distribute your required weekly training load across these
+                                        constraints.</p>
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2"
+                                        id="schedule-boundaries-container">
+                                        <!-- JS will render the 7 days here -->
+                                    </div>
+                                </div>
 
-                            <div id="metrics-container" class="space-y-3">
-                                <!-- Dynamic metric rows injected by JS -->
-                            </div>
-                            <div class="pt-4 border-t border-theme-border flex gap-3">
-                                <button onclick="addMetricRow()"
-                                    class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-2 rounded hover:opacity-80 transition">+
-                                    Add Metric</button>
-                                <button onclick="saveMetrics()"
-                                    class="bg-theme-text text-theme-card text-[10px] font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save
-                                    Metrics</button>
-                            </div>
-                            <div id="metrics-status"
-                                class="hidden text-center text-xs font-bold text-theme-accent bg-theme-accent-soft p-2 rounded border border-theme-accent-border mt-2">
-                                Metrics saved successfully!
+                                <button onclick="saveSettings('coach')"
+                                    class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save
+                                    Persona</button>
+                                <div id="settings-status"
+                                    class="hidden text-center text-xs font-bold text-theme-accent bg-theme-accent-soft p-2 rounded border border-theme-accent-border mt-4">
+                                    Settings saved successfully!
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- STRAVA AUTOMATIONS -->
-                    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
-                        <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
-                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-[#ff6b6b]"></span> Strava Automations
-                            </h3>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <p class="text-xs text-theme-muted mb-2">Select which activities Spark should proactively
-                                analyze and update in Strava with plan comparisons and Spark scores.</p>
-                            <div id="strava-automations-container" class="space-y-3">
-                                <!-- Dynamic toggles injected by JS -->
-                                <div class="text-[10px] font-bold text-theme-muted animate-pulse">LOADING ACTIVITY
-                                    HISTORY...</div>
+                        <!-- KEY PHYSIOLOGICAL METRICS -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> Key Physiological Metrics
+                                </h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <p class="text-xs text-theme-muted">Spark automatically remembers key metrics (e.g. FTP,
+                                    5K
+                                    PB,
+                                    Max HR) when you mention them. You can also manually add or update them below.</p>
+
+                                <div id="metrics-container" class="space-y-3">
+                                    <!-- Dynamic metric rows injected by JS -->
+                                </div>
+                                <div class="pt-4 border-t border-theme-border flex gap-3">
+                                    <button onclick="addMetricRow()"
+                                        class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-2 rounded hover:opacity-80 transition">+
+                                        Add Metric</button>
+                                    <button onclick="saveMetrics()"
+                                        class="bg-theme-text text-theme-card text-[10px] font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save
+                                        Metrics</button>
+                                </div>
+                                <div id="metrics-status"
+                                    class="hidden text-center text-xs font-bold text-theme-accent bg-theme-accent-soft p-2 rounded border border-theme-accent-border mt-2">
+                                    Metrics saved successfully!
+                                </div>
                             </div>
                         </div>
-                    </div>
+
+                        <!-- STRAVA AUTOMATIONS -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-[#ff6b6b]"></span> Strava Automations
+                                </h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <p class="text-xs text-theme-muted mb-2">Select which activities Spark should
+                                    proactively
+                                    analyze and update in Strava with plan comparisons and Spark scores.</p>
+                                <div id="strava-automations-container" class="space-y-3">
+                                    <!-- Dynamic toggles injected by JS -->
+                                    <div class="text-[10px] font-bold text-theme-muted animate-pulse">LOADING ACTIVITY
+                                        HISTORY...</div>
+                                </div>
+                            </div>
+                        </div>
 
                     </div> <!-- END PROFILE TAB -->
 
@@ -1729,79 +1760,86 @@
                     <div id="profile-subtab-goals" class="hidden space-y-6">
                         <!-- RACE CALENDAR & MILESTONES -->
                         <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
-                        <div
-                            class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
-                            <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Race Calendar & Goals
-                            </h3>
-                            <button onclick="addMilestoneRow()"
-                                class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-2 py-1 rounded hover:opacity-80 transition">+
-                                Add Race</button>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <!-- NEW: Collapsible CTL Reference Guide -->
-                            <details
-                                class="text-xs text-theme-muted bg-theme-bg p-3 rounded border border-theme-border cursor-pointer group">
-                                <summary
-                                    class="font-bold flex items-center gap-1 select-none hover:text-theme-accent transition">
-                                    <svg class="w-4 h-4 text-theme-accent" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    CTL Target Reference Guide
-                                </summary>
-                                <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] sm:text-xs">
-                                    <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
-                                            class="text-theme-text block">5K Run / Sprint Tri</strong> Target: 30 - 45
-                                        CTL
+                            <div
+                                class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Race Calendar & Goals
+                                </h3>
+                                <button onclick="addMilestoneRow()"
+                                    class="text-[10px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-2 py-1 rounded hover:opacity-80 transition">+
+                                    Add Race</button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <!-- NEW: Collapsible CTL Reference Guide -->
+                                <details
+                                    class="text-xs text-theme-muted bg-theme-bg p-3 rounded border border-theme-border cursor-pointer group">
+                                    <summary
+                                        class="font-bold flex items-center gap-1 select-none hover:text-theme-accent transition">
+                                        <svg class="w-4 h-4 text-theme-accent" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        CTL Target Reference Guide
+                                    </summary>
+                                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] sm:text-xs">
+                                        <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
+                                                class="text-theme-text block">5K Run / Sprint Tri</strong> Target: 30 -
+                                            45
+                                            CTL
+                                        </div>
+                                        <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
+                                                class="text-theme-text block">10K Run / Olympic Tri</strong> Target: 45
+                                            - 60
+                                            CTL
+                                        </div>
+                                        <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
+                                                class="text-theme-text block">Half Marathon (21.1km)</strong> Target: 60
+                                            -
+                                            80
+                                            CTL</div>
+                                        <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
+                                                class="text-theme-text block">Half Ironman (70.3)</strong> Target: 80 -
+                                            110
+                                            CTL
+                                        </div>
+                                        <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
+                                                class="text-theme-text block">Marathon (42.2km)</strong> Target: 80 -
+                                            100+
+                                            CTL
+                                        </div>
+                                        <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
+                                                class="text-theme-text block">Full Ironman (140.6)</strong> Target: 110
+                                            -
+                                            150+
+                                            CTL</div>
                                     </div>
-                                    <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
-                                            class="text-theme-text block">10K Run / Olympic Tri</strong> Target: 45 - 60
-                                        CTL
-                                    </div>
-                                    <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
-                                            class="text-theme-text block">Half Marathon (21.1km)</strong> Target: 60 -
-                                        80
-                                        CTL</div>
-                                    <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
-                                            class="text-theme-text block">Half Ironman (70.3)</strong> Target: 80 - 110
-                                        CTL
-                                    </div>
-                                    <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
-                                            class="text-theme-text block">Marathon (42.2km)</strong> Target: 80 - 100+
-                                        CTL
-                                    </div>
-                                    <div class="p-2 border border-theme-border rounded bg-theme-card"><strong
-                                            class="text-theme-text block">Full Ironman (140.6)</strong> Target: 110 -
-                                        150+
-                                        CTL</div>
-                                </div>
-                                <p class="mt-3 text-[10px] italic leading-relaxed">
-                                    *CTL (Fitness) is a rolling 42-day average of your daily Spark (Training Stress
-                                    Score).
-                                    Higher targets require more weekly training hours. Beginners should aim for the
-                                    lower
-                                    end of the range.
-                                </p>
-                            </details>
+                                    <p class="mt-3 text-[10px] italic leading-relaxed">
+                                        *CTL (Fitness) is a rolling 42-day average of your daily Spark (Training Stress
+                                        Score).
+                                        Higher targets require more weekly training hours. Beginners should aim for the
+                                        lower
+                                        end of the range.
+                                    </p>
+                                </details>
 
-                            <!-- Existing Table Headers & Editor -->
-                            <p class="text-[10px] text-theme-muted uppercase tracking-wider font-bold mt-4 mb-2">A-Race
-                                (Main) | Date | Event Name | Target Fitness (CTL)</p>
-                            <div id="milestones-container" class="space-y-3">
-                                <!-- Rows injected by JS -->
-                            </div>
-                            <div class="pt-4 border-t border-theme-border">
-                                <button onclick="saveMilestones()"
-                                    class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save
-                                    Calendar</button>
-                                <div id="settings-status"
-                                    class="hidden text-center text-xs font-bold text-theme-accent bg-theme-accent-soft p-2 rounded border border-theme-accent-border mt-4">
-                                    Calendar saved successfully!
+                                <!-- Existing Table Headers & Editor -->
+                                <p class="text-[10px] text-theme-muted uppercase tracking-wider font-bold mt-4 mb-2">
+                                    A-Race
+                                    (Main) | Date | Event Name | Target Fitness (CTL)</p>
+                                <div id="milestones-container" class="space-y-3">
+                                    <!-- Rows injected by JS -->
+                                </div>
+                                <div class="pt-4 border-t border-theme-border">
+                                    <button onclick="saveMilestones()"
+                                        class="bg-theme-text text-theme-card text-xs font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">Save
+                                        Calendar</button>
+                                    <div id="settings-status"
+                                        class="hidden text-center text-xs font-bold text-theme-accent bg-theme-accent-soft p-2 rounded border border-theme-accent-border mt-4">
+                                        Calendar saved successfully!
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         </div> <!-- END RACE CALENDAR -->
                     </div> <!-- END GOALS TAB -->
 
@@ -1917,10 +1955,13 @@
                                 </h3>
                             </div>
                             <div class="p-6">
-                                <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-theme-bg rounded-lg border border-theme-border gap-4 md:gap-0">
+                                <div
+                                    class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-theme-bg rounded-lg border border-theme-border gap-4 md:gap-0">
                                     <div>
-                                        <p class="text-xs font-bold text-theme-muted uppercase tracking-wider">Personal Daily Token Use Rate</p>
-                                        <p class="text-xs text-theme-muted mt-1">Tokens consumed today by AI Coach interactions</p>
+                                        <p class="text-xs font-bold text-theme-muted uppercase tracking-wider">Personal
+                                            Daily Token Use Rate</p>
+                                        <p class="text-xs text-theme-muted mt-1">Tokens consumed today by AI Coach
+                                            interactions</p>
                                     </div>
                                     <div class="text-xl font-bold text-theme-accent">
                                         <span id="daily-token-usage-display">0</span>
@@ -1930,13 +1971,19 @@
                         </div>
 
                         <!-- SPARK+ UPGRADE PLACEHOLDER -->
-                        <div class="bg-gradient-to-r from-theme-accent to-purple-600 rounded-xl shadow-md overflow-hidden mb-6 text-white p-6 flex flex-col items-center text-center cursor-pointer transition-transform hover:scale-[1.02]" onclick="trackSparkPlusClick()">
+                        <div class="bg-gradient-to-r from-theme-accent to-purple-600 rounded-xl shadow-md overflow-hidden mb-6 text-white p-6 flex flex-col items-center text-center cursor-pointer transition-transform hover:scale-[1.02]"
+                            onclick="trackSparkPlusClick()">
                             <h3 class="text-xl font-bold mb-2 flex items-center gap-2">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
                                 Upgrade to Spark+
                             </h3>
-                            <p class="text-sm opacity-90 mb-4">Unlock 50,000 daily coach tokens, priority analysis, and deeper athletic insights.</p>
-                            <button class="bg-white text-theme-accent font-bold py-2 px-6 rounded-full text-sm shadow-sm">
+                            <p class="text-sm opacity-90 mb-4">Unlock 50,000 daily coach tokens, priority analysis, and
+                                deeper athletic insights.</p>
+                            <button
+                                class="bg-white text-theme-accent font-bold py-2 px-6 rounded-full text-sm shadow-sm">
                                 View Premium Benefits
                             </button>
                         </div>
@@ -1960,55 +2007,63 @@
             </div> <!-- END VIEW PROFILE -->
 
             <nav id="main-nav"
-                    class="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/90 backdrop-blur-md border border-theme-border rounded-[2rem] flex justify-between items-center px-6 py-1.5 shadow-2xl z-50 transition-all duration-300">
-                    <button onclick="switchTab('dashboard')" id="nav-btn-dashboard"
-                        class="nav-btn p-2 text-theme-accent transition relative">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
-                            </path>
-                        </svg>
-                    </button>
-                    <button onclick="switchTab('history')" id="nav-btn-history"
-                        class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
-                            </path>
-                        </svg>
-                    </button>
+                class="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/90 backdrop-blur-md border border-theme-border rounded-[2rem] flex justify-between items-center px-6 py-1.5 shadow-2xl z-50 transition-all duration-300">
+                <!-- Slot 1: Dashboard -->
+                <button onclick="switchTab('dashboard')" id="nav-btn-dashboard"
+                    class="nav-btn p-2 text-theme-accent transition relative" title="Dashboard">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                        </path>
+                    </svg>
+                </button>
 
-                    <!-- Center Protruding Button -->
-                    <div class="relative -mt-12 mb-3">
-                        <button onclick="switchTab('coach')" id="nav-btn-coach"
-                            class="nav-btn flex items-center justify-center w-[72px] h-[72px] bg-theme-accent text-white rounded-full shadow-lg border-[6px] border-theme-bg hover:scale-105 transition transform relative">
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
-                                </path>
-                            </svg>
-                            <span id="coach-badge"
-                                class="absolute top-0 right-1 w-4 h-4 bg-[#ff6b6b] rounded-full text-[9px] font-bold text-white flex items-center justify-center border-2 border-theme-bg transform translate-x-1 -translate-y-1 hidden">1</span>
-                        </button>
-                    </div>
+                <!-- Slot 2: Progress -->
+                <button onclick="switchTab('physique')" id="nav-btn-physique"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative"
+                    title="Progress & Health">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 16v5M12 11v10M17 6v15">
+                        </path>
+                    </svg>
+                </button>
 
-                    <button onclick="switchTab('physique')" id="nav-btn-physique"
-                        class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative"
-                        title="Progress">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 16v5M12 11v10M17 6v15">
-                            </path>
-                        </svg>
-                    </button>
-                    <button onclick="switchTab('social')" id="nav-btn-social"
-                        class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <!-- Slot 3: Center Protruding AI Coach Button -->
+                <div class="relative -mt-12 mb-3">
+                    <button onclick="switchTab('coach')" id="nav-btn-coach"
+                        class="nav-btn flex items-center justify-center w-[72px] h-[72px] bg-theme-accent text-white rounded-full shadow-lg border-[6px] border-theme-bg hover:scale-105 transition transform relative"
+                        title="AI Coach">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
                             </path>
                         </svg>
+                        <span id="coach-badge"
+                            class="absolute top-0 right-1 w-4 h-4 bg-[#ff6b6b] rounded-full text-[9px] font-bold text-white flex items-center justify-center border-2 border-theme-bg transform translate-x-1 -translate-y-1 hidden">1</span>
                     </button>
-                </nav>
+                </div>
+
+                <!-- Slot 4: Activities & Community -->
+                <button onclick="switchTab('social')" id="nav-btn-social"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative" title="Activities">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                        </path>
+                    </svg>
+                </button>
+
+                <!-- Slot 5: Athlete Profile -->
+                <button onclick="switchTab('profile')" id="nav-btn-profile"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative"
+                    title="Athlete Profile">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
+                        </path>
+                    </svg>
+                </button>
+            </nav>
 
         </main>
     </div>

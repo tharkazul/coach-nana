@@ -973,7 +973,13 @@ function switchTab(t) {
         if (badge) badge.classList.add('hidden');
     }
 
-    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'profile': 'Athlete Profile', 'history': 'Log', 'physique': 'Progress', 'social': 'Social' }[t];
+    if (t === 'history') {
+        switchTab('social');
+        toggleSocialTab('mylog');
+        return;
+    }
+
+    document.getElementById('current-tab-title').innerText = { 'dashboard': 'Dashboard', 'coach': 'AI Coach', 'profile': 'Athlete Profile', 'history': 'Activities & Community', 'physique': 'Progress', 'social': 'Activities & Community' }[t] || 'Dashboard';
 
     views.forEach(tab => {
         const btn = document.getElementById(`nav-btn-${tab}`);
@@ -990,7 +996,6 @@ function switchTab(t) {
     if (t === 'profile') {
         loadSettings();
     }
-    if (t === 'history') loadHistory();
     if (t === 'social') loadSocialFeed();
     if (t === 'physique') {
         loadPhysiqueLogs();
@@ -3941,21 +3946,29 @@ function toggleSocialTab(tab) {
 
 function updateSocialTabUI(tab) {
     const feedBtn = document.getElementById('social-tab-feed');
+    const mylogBtn = document.getElementById('social-tab-mylog');
     const leadBtn = document.getElementById('social-tab-leaderboard');
+
     const feedCont = document.getElementById('social-feed-container');
+    const mylogCont = document.getElementById('social-mylog-container');
     const leadCont = document.getElementById('social-leaderboard-container');
 
+    const activeClass = "flex-1 text-xs md:text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300";
+    const inactiveClass = "flex-1 text-xs md:text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300";
+
+    if (feedBtn) feedBtn.className = tab === 'feed' ? activeClass : inactiveClass;
+    if (mylogBtn) mylogBtn.className = tab === 'mylog' ? activeClass : inactiveClass;
+    if (leadBtn) leadBtn.className = tab === 'leaderboard' ? activeClass : inactiveClass;
+
+    if (feedCont) feedCont.classList.toggle('hidden', tab !== 'feed');
+    if (mylogCont) mylogCont.classList.toggle('hidden', tab !== 'mylog');
+    if (leadCont) leadCont.classList.toggle('hidden', tab !== 'leaderboard');
+
     if (tab === 'feed') {
-        feedBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300";
-        leadBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300";
-        feedCont.classList.remove('hidden');
-        leadCont.classList.add('hidden');
         loadSocialFeed();
-    } else {
-        leadBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full bg-blue-500 text-white shadow transition-all duration-300";
-        feedBtn.className = "flex-1 text-sm font-bold py-1.5 rounded-full text-theme-muted hover:text-theme-text transition-all duration-300";
-        leadCont.classList.remove('hidden');
-        feedCont.classList.add('hidden');
+    } else if (tab === 'mylog') {
+        loadHistory();
+    } else if (tab === 'leaderboard') {
         loadLeaderboard();
     }
 }
