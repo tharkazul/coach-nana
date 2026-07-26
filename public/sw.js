@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coach-nana-v17';
+const CACHE_NAME = 'coach-nana-v18';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -11,7 +11,7 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('Opened cache');
+                console.log('Opened cache v18');
                 return cache.addAll(STATIC_ASSETS);
             })
     );
@@ -35,7 +35,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch event - network first for API, cache first for static
+// Fetch event - network first strategy so new code updates are immediately served
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
@@ -53,36 +53,22 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // For static assets, try cache first, then network
+    // Network-first strategy for static assets
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                if (response) {
-                    return response; // Return from cache
-                }
-                
-                // Clone the request because it's a one-time use stream
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest).then((networkResponse) => {
-                    // Check if we received a valid response
-                    if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                        return networkResponse;
-                    }
-
-                    // Clone the response because we need to put one copy in cache and return the other
+        fetch(event.request)
+            .then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic' && event.request.method === 'GET') {
                     const responseToCache = networkResponse.clone();
-                    
-                    // Only cache GET requests
-                    if (event.request.method === 'GET') {
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
-                    }
-
-                    return networkResponse;
-                }).catch(() => {
-                    // If both cache and network fail (offline and not cached), fallback to index.html for navigation
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                return networkResponse;
+            })
+            .catch(() => {
+                // Fallback to cache if network fails
+                return caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) return cachedResponse;
                     if (event.request.mode === 'navigate') {
                         return caches.match('/index.html');
                     }

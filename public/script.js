@@ -2855,8 +2855,30 @@ async function loadChatHistory() {
                 }
 
                 if (msg.role === 'user') {
-                    const tokenSuffix = msg.image_path && msg.image_path.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
-                    let imgHtml = msg.image_path ? `<img src="${msg.image_path}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full rounded-xl mb-1 object-cover">` : '';
+                    let imgHtml = '';
+                    if (msg.image_path) {
+                        try {
+                            const paths = JSON.parse(msg.image_path);
+                            if (Array.isArray(paths) && paths.length > 0) {
+                                if (paths.length === 1) {
+                                    const tokenSuffix = paths[0].startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
+                                    imgHtml = `<img src="${paths[0]}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
+                                } else {
+                                    imgHtml = `<div class="grid grid-cols-2 gap-1 mb-1">`;
+                                    paths.forEach(p => {
+                                        const tokenSuffix = p.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
+                                        imgHtml += `<img src="${p}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full aspect-square rounded-xl object-cover animate-pop">`;
+                                    });
+                                    imgHtml += `</div>`;
+                                }
+                            } else {
+                                throw new Error('Not array');
+                            }
+                        } catch(e) {
+                            const tokenSuffix = msg.image_path.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
+                            imgHtml = `<img src="${msg.image_path}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
+                        }
+                    }
                     html += `
                                 <div class="flex justify-end">
                                     <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
@@ -3092,52 +3114,93 @@ function enlargeAvatar(src) {
     }
 }
 
-let currentImageBase64 = null;
+let currentImagesBase64 = [];
 
 function handleImageSelection(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const img = new Image();
-        img.onload = function () {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1024;
-            const MAX_HEIGHT = 1024;
-            let width = img.width;
-            let height = img.height;
+    let filesToProcess = Array.from(files);
+    if (filesToProcess.length > 4) {
+        alert("You can only upload a maximum of 4 images at a time.");
+        filesToProcess = filesToProcess.slice(0, 4);
+    }
 
-            if (width > height) {
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
+    const previewList = document.getElementById('image-preview-list');
+    
+    // Clear previous if we want to replace or we can append. The prompt says "clear old".
+    // Wait, the user didn't specify. Standard behavior is file input replaces.
+    currentImagesBase64 = [];
+    previewList.innerHTML = '';
+
+    let processedCount = 0;
+
+    filesToProcess.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1024;
+                const MAX_HEIGHT = 1024;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        width = MAX_WIDTH; // wait, let's keep original ratio logic
+                    }
                 }
-            } else {
-                if (height > MAX_HEIGHT) {
-                    width *= MAX_HEIGHT / height;
-                    height = MAX_HEIGHT;
+                
+                // Let's re-write the exact original ratio logic
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                
+                currentImagesBase64.push(base64);
+                
+                const thumb = document.createElement('img');
+                thumb.src = base64;
+                thumb.className = "h-16 rounded-md border border-theme-border shadow-sm object-cover";
+                previewList.appendChild(thumb);
+
+                processedCount++;
+                if (processedCount === filesToProcess.length) {
+                    document.getElementById('image-preview-container').classList.remove('hidden');
                 }
             }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            currentImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
-
-            document.getElementById('image-preview').src = currentImageBase64;
-            document.getElementById('image-preview-container').classList.remove('hidden');
+            img.src = e.target.result;
         }
-        img.src = e.target.result;
-    }
-    reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+    });
 }
 
 function clearImageSelection() {
-    currentImageBase64 = null;
+    currentImagesBase64 = [];
     document.getElementById('image-upload').value = '';
     document.getElementById('image-preview-container').classList.add('hidden');
-    document.getElementById('image-preview').src = '';
+    const previewList = document.getElementById('image-preview-list');
+    if (previewList) previewList.innerHTML = '';
 }
 
 function renderQuickActions(planMap, sparkMap) {
@@ -3184,12 +3247,12 @@ async function sendQuickAction(msg) {
     sendMessage();
 }
 
-async function sendMessage(retryMessage = null, retryImage = null, errorBubbleToRemove = null) {
+async function sendMessage(retryMessage = null, retryImages = null, errorBubbleToRemove = null) {
     const input = document.getElementById('chat-input');
     const message = retryMessage !== null ? retryMessage : input.value.trim();
-    const imageToUse = retryMessage !== null ? retryImage : currentImageBase64;
+    const imagesToUse = retryImages !== null ? retryImages : [...currentImagesBase64];
 
-    if (!message && !imageToUse) return;
+    if (!message && (!imagesToUse || imagesToUse.length === 0)) return;
 
     if (navigator.vibrate) navigator.vibrate(50);
 
@@ -3202,8 +3265,16 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
     if (retryMessage === null) {
         let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         let userImgHtml = '';
-        if (currentImageBase64) {
-            userImgHtml = `<img src="${currentImageBase64}" class="w-full rounded-xl mb-1 object-cover animate-pop">`;
+        if (currentImagesBase64 && currentImagesBase64.length > 0) {
+            if (currentImagesBase64.length === 1) {
+                userImgHtml = `<img src="${currentImagesBase64[0]}" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
+            } else {
+                userImgHtml = `<div class="grid grid-cols-2 gap-1 mb-1">`;
+                currentImagesBase64.forEach(imgB64 => {
+                    userImgHtml += `<img src="${imgB64}" class="w-full aspect-square rounded-xl object-cover animate-pop">`;
+                });
+                userImgHtml += `</div>`;
+            }
         }
         chatWindow.insertAdjacentHTML('beforeend', `
                     <div class="flex justify-end animate-msg">
@@ -3219,7 +3290,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
         clearImageSelection();
     }
 
-    const payload = { message, imageBase64: imageToUse };
+    const payload = { message, imagesBase64: imagesToUse };
     chatWindow.scrollTop = chatWindow.scrollHeight;
 
     const loadId = 'loading-' + Date.now();
@@ -3271,7 +3342,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
 
         if (res.status === 429) {
             window.failedMessages = window.failedMessages || {};
-            window.failedMessages[loadId] = { message, imageToUse };
+            window.failedMessages[loadId] = { message, imagesToUse };
             
             document.getElementById(loadId).outerHTML = `
                 <div class="flex items-end gap-2 md:gap-3 animate-msg" id="err-${loadId}">
@@ -3390,7 +3461,7 @@ async function sendMessage(retryMessage = null, retryImage = null, errorBubbleTo
         const loadEl = document.getElementById(loadId);
         if (loadEl) {
             window.failedMessages = window.failedMessages || {};
-            window.failedMessages[loadId] = { message, imageToUse };
+            window.failedMessages[loadId] = { message, imagesToUse };
 
             loadEl.outerHTML = `
                 <div class="flex justify-center my-4" id="err-${loadId}">
@@ -3411,7 +3482,7 @@ function resendFailedMessage(loadId) {
     const data = window.failedMessages[loadId];
     if (!data) return;
     const errBubble = document.getElementById('err-' + loadId);
-    sendMessage(data.message, data.imageToUse, errBubble);
+    sendMessage(data.message, data.imagesToUse, errBubble);
 }
 
 // --- MANUAL WEIGHT LOGGING (UPDATED FOR COMMAS) ---
@@ -4259,7 +4330,7 @@ function updateAppHeight() {
         if (nav) {
             nav.style.opacity = '0';
             nav.style.pointerEvents = 'none';
-            nav.style.transform = 'translate(-50%, 150%)'; // slide down and hide
+            nav.style.transform = 'translateY(150%)'; // slide down and hide
         }
         if (coachInput) {
             coachInput.classList.remove('pb-24', 'md:pb-24');
@@ -4275,7 +4346,7 @@ function updateAppHeight() {
         if (nav) {
             nav.style.opacity = '1';
             nav.style.pointerEvents = 'auto';
-            nav.style.transform = 'translate(-50%, 0)'; // restore
+            nav.style.transform = 'translateY(0)'; // restore
         }
         if (coachInput) {
             coachInput.classList.add('pb-24', 'md:pb-24');

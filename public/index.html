@@ -103,6 +103,20 @@
             }
         }
 
+        .nav-bubble-bg {
+            background-color: rgba(255, 255, 255, 0.98) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .nav-bubble-bg {
+                background-color: rgba(28, 33, 36, 0.98) !important;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+            }
+        }
+
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -994,11 +1008,10 @@
                             </div>
 
                             <!-- Image Preview Container -->
-                            <div id="image-preview-container" class="hidden mb-2 relative inline-block">
-                                <img id="image-preview" src=""
-                                    class="h-16 rounded-md border border-theme-border shadow-sm">
+                            <div id="image-preview-container" class="hidden mb-2 relative">
+                                <div id="image-preview-list" class="flex flex-wrap gap-2"></div>
                                 <button onclick="clearImageSelection()"
-                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600">&times;</button>
+                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600 z-10">&times;</button>
                             </div>
 
                             <!-- Chat Input -->
@@ -1036,7 +1049,7 @@
                                         </path>
                                     </svg>
                                 </button>
-                                <input type="file" id="image-upload" accept="image/*" class="hidden"
+                                <input type="file" id="image-upload" accept="image/*" class="hidden" multiple
                                     onchange="handleImageSelection(event)">
 
                                 <textarea
@@ -2007,10 +2020,10 @@
             </div> <!-- END VIEW PROFILE -->
 
             <nav id="main-nav"
-                class="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-theme-bg/90 backdrop-blur-md border border-theme-border rounded-[2rem] flex justify-between items-center px-6 py-1.5 shadow-2xl z-50 transition-all duration-300">
+                class="fixed bottom-4 md:bottom-6 inset-x-0 mx-auto w-[calc(100%-2rem)] max-w-md border border-theme-border rounded-[2rem] grid grid-cols-5 place-items-center px-4 py-1.5 shadow-2xl z-50 transition-all duration-300 nav-bubble-bg">
                 <!-- Slot 1: Dashboard -->
                 <button onclick="switchTab('dashboard')" id="nav-btn-dashboard"
-                    class="nav-btn p-2 text-theme-accent transition relative" title="Dashboard">
+                    class="nav-btn p-2 text-theme-accent transition relative flex items-center justify-center" title="Dashboard">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
@@ -2020,7 +2033,7 @@
 
                 <!-- Slot 2: Progress -->
                 <button onclick="switchTab('physique')" id="nav-btn-physique"
-                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative flex items-center justify-center"
                     title="Progress & Health">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 16v5M12 11v10M17 6v15">
@@ -2029,9 +2042,9 @@
                 </button>
 
                 <!-- Slot 3: Center Protruding AI Coach Button -->
-                <div class="relative -mt-12 mb-3">
+                <div class="relative -mt-8 flex items-center justify-center">
                     <button onclick="switchTab('coach')" id="nav-btn-coach"
-                        class="nav-btn flex items-center justify-center w-[72px] h-[72px] bg-theme-accent text-white rounded-full shadow-lg border-[6px] border-theme-bg hover:scale-105 transition transform relative"
+                        class="nav-btn flex items-center justify-center w-[68px] h-[68px] bg-theme-accent text-white rounded-full shadow-lg border-[5px] border-theme-bg hover:scale-105 transition transform relative"
                         title="AI Coach">
                         <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -2045,7 +2058,7 @@
 
                 <!-- Slot 4: Activities & Community -->
                 <button onclick="switchTab('social')" id="nav-btn-social"
-                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative" title="Activities">
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative flex items-center justify-center" title="Activities">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
@@ -2055,7 +2068,7 @@
 
                 <!-- Slot 5: Athlete Profile -->
                 <button onclick="switchTab('profile')" id="nav-btn-profile"
-                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative"
+                    class="nav-btn p-2 text-theme-muted hover:text-theme-accent transition relative flex items-center justify-center"
                     title="Athlete Profile">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -2450,7 +2463,7 @@
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- App Logic -->
-    <script src="/script.js?v=75"></script>
+    <script src="/script.js?v=76"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

@@ -1,0 +1,2 @@
+ssh -p 8022 u0_a76@192.168.2.42
+ssh -p 8022 u0_a76@ssh.amsterdamtriathlonassociation.uk

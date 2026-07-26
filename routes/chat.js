@@ -114,32 +114,34 @@ router.get("/api/chat/history", authenticateToken, (req, res) => {
 });
 
 router.post("/api/chat", authenticateToken, async (req, res) => {
-  const { message, imageBase64 } = req.body;
+  const { message, imagesBase64 } = req.body;
   db.run(`UPDATE users SET chat_count = chat_count + 1 WHERE id = ?`, [
     req.user.id,
   ]);
 
-  let imagePathDB = null;
-  let base64Data = null;
+  let base64DataArray = [];
+  let imagePathsDB = [];
 
-  if (imageBase64) {
-    try {
-      // imageBase64 is expected to look like "data:image/jpeg;base64,/9j/4AAQSk..."
-      const matches = imageBase64.match(
-        /^data:image\/([A-Za-z-+\/]+);base64,(.+)$/,
-      );
-      if (matches && matches.length === 3) {
-        const ext = matches[1];
-        base64Data = matches[2];
-        const fileName = `img_${req.user.id}_${crypto.randomUUID()}.${ext}`;
-        const dir = path.join(__dirname, "secure_uploads/chat_images");
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        const savePath = path.join(dir, fileName);
-        fs.writeFileSync(savePath, base64Data, "base64");
-        imagePathDB = `/api/images/chat/${fileName}`;
+  if (imagesBase64 && Array.isArray(imagesBase64)) {
+    for (const b64 of imagesBase64) {
+      try {
+        const matches = b64.match(
+          /^data:image\/([A-Za-z-+\/]+);base64,(.+)$/,
+        );
+        if (matches && matches.length === 3) {
+          const ext = matches[1];
+          const base64Data = matches[2];
+          const fileName = `img_${req.user.id}_${crypto.randomUUID()}.${ext}`;
+          const dir = path.join(__dirname, "secure_uploads/chat_images");
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          const savePath = path.join(dir, fileName);
+          fs.writeFileSync(savePath, base64Data, "base64");
+          imagePathsDB.push(`/api/images/chat/${fileName}`);
+          base64DataArray.push(base64Data);
+        }
+      } catch (e) {
+        console.error("Image saving error:", e);
       }
-    } catch (e) {
-      console.error("Image saving error:", e);
     }
   }
 
@@ -460,11 +462,13 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     }
                     \`\`\``;
 
+
+
                                       let aiReply = await generateWithFallback(
                                         message,
                                         systemPrompt,
                                         cleanHistory,
-                                        base64Data,
+                                        base64DataArray,
                                         req.user.id,
                                       );
                                       let planUpdated = false;
@@ -615,6 +619,8 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                                   await generateWithFallback(
                                                     appendPrompt,
                                                     "You are a motivating elite coach.",
+                                                    null,
+                                                    base64DataArray,
                                                   );
                                                 aiReply +=
                                                   "\n\n" + coachAddendum;
@@ -741,7 +747,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
 
                                       db.run(
                                         `INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`,
-                                        [req.user.id, message, imagePathDB],
+                                        [req.user.id, message, JSON.stringify(imagePathsDB)],
                                       );
                                       db.run(
                                         `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`,

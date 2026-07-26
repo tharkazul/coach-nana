@@ -86,7 +86,7 @@ async function generateWithFallback(
   prompt,
   systemInstruction = null,
   chatHistory = null,
-  imageBase64 = null,
+  imagesBase64 = null,
   userId = null,
   poolType = "personal",
 ) {
@@ -113,11 +113,11 @@ async function generateWithFallback(
       let result;
 
       let promptContent = prompt;
-      if (imageBase64) {
-        promptContent = [
-          { text: prompt },
-          { inlineData: { data: imageBase64, mimeType: "image/jpeg" } },
-        ];
+      if (imagesBase64 && Array.isArray(imagesBase64) && imagesBase64.length > 0) {
+        promptContent = [{ text: prompt }];
+        for (const img of imagesBase64) {
+          promptContent.push({ inlineData: { data: img, mimeType: "image/jpeg" } });
+        }
       }
 
       if (chatHistory) {
