@@ -5102,7 +5102,7 @@ function getQuestProgressHtml(q) {
     const current = typeof q.current_value === 'number' ? q.current_value : 0;
     const target = parseFloat(q.target_value) || 1;
     const pct = Math.min(100, Math.max(0, Math.round((current / target) * 100)));
-
+    
     let unit = '';
     if (q.target_metric === 'distance_km') unit = 'km';
     else if (q.target_metric === 'moving_time_min') unit = 'min';
@@ -5110,15 +5110,15 @@ function getQuestProgressHtml(q) {
     else if (q.target_metric === 'spark_score') unit = 'Spark';
 
     const barColor = q.status === 'completed' ? 'bg-green-500' : 'bg-theme-accent';
-
+    
     return `
-        <div class="mt-2 text-xs">
-            <div class="flex justify-between text-[11px] font-semibold mb-1 text-theme-text">
+        <div class="mt-3.5 text-xs">
+            <div class="flex justify-between text-xs font-bold mb-1.5 text-theme-text">
                 <span>Progress: ${current} / ${target} ${unit}</span>
                 <span class="${q.status === 'completed' ? 'text-green-500' : 'text-theme-accent'}">${pct}%</span>
             </div>
-            <div class="w-full bg-theme-border h-2 rounded-full overflow-hidden">
-                <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            <div class="w-full bg-theme-border/60 h-2.5 rounded-full overflow-hidden p-0.5 border border-theme-border/30">
+                <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
             </div>
         </div>
     `;
@@ -5128,20 +5128,59 @@ function getQuestCountdownHtml(q) {
     if (q.status !== 'active' || !q.expires_at) return '';
     const expiresIso = q.expires_at.replace(" ", "T") + (q.expires_at.includes("Z") ? "" : "Z");
     const diffMs = new Date(expiresIso).getTime() - Date.now();
-    if (diffMs <= 0) return `<span class="text-[10px] font-bold text-red-500 ml-2">⏳ Expired</span>`;
+    if (diffMs <= 0) return `<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">⏳ Expired</span>`;
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const days = Math.floor(diffHrs / 24);
     const hrs = diffHrs % 24;
     let timeStr = days > 0 ? `${days}d ${hrs}h` : `${hrs}h`;
-    return `<span class="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded ml-2">⏳ ${timeStr} left</span>`;
+    return `<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">⏳ ${timeStr} left</span>`;
 }
 
 function getQuestRefreshButtonHtml(q) {
     if (q.status !== 'active') return '';
     return `
-        <button onclick="refreshQuest(${q.id}, this)" class="mt-2.5 text-[11px] font-bold text-theme-muted hover:text-theme-accent bg-theme-bg px-2.5 py-1 rounded border border-theme-border hover:border-theme-accent transition flex items-center gap-1.5 w-max shadow-sm" title="Replace with an easier quest yielding lower Spark points">
-            <span>🔄</span> <span>New Quest</span>
-        </button>
+        <div class="mt-4 pt-3 border-t border-theme-border/30 flex justify-end">
+            <button onclick="refreshQuest(${q.id}, this)" class="text-xs font-bold text-theme-text bg-theme-bg hover:bg-theme-accent/10 hover:text-theme-accent hover:border-theme-accent active:scale-95 px-3.5 py-1.5 rounded-lg border border-theme-border transition-all duration-150 flex items-center justify-center gap-1.5 w-full sm:w-auto shadow-xs" title="Replace with a new quest (easier target, lower Spark reward)">
+                <span>🔄</span> <span>New Quest</span>
+            </button>
+        </div>
+    `;
+}
+
+function renderQuestCard(q) {
+    const isActive = q.status === 'active';
+    const isCompleted = q.status === 'completed';
+    const isVoid = q.status === 'void';
+
+    const statusText = isActive ? 'Active' : (isCompleted ? 'Completed 🏆' : 'Expired ⏳');
+    const statusBg = isActive ? 'bg-theme-accent/10 border border-theme-accent/30 text-theme-accent' : (isCompleted ? 'bg-green-500/10 border border-green-500/30 text-green-500 font-bold' : 'bg-gray-500/10 border border-gray-500/30 text-gray-400 font-semibold');
+    const dotColor = isActive ? 'bg-theme-accent animate-pulse' : (isCompleted ? 'bg-green-500' : 'bg-gray-400');
+
+    const cardOpacity = isActive ? 'opacity-100 shadow-sm hover:border-theme-border/80' : 'opacity-80';
+
+    return `
+        <div class="p-4 bg-theme-bg rounded-xl border border-theme-border flex flex-col justify-between ${cardOpacity} transition-all duration-200">
+            <!-- Top Metadata Row -->
+            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-theme-border/30 flex-wrap sm:flex-nowrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full ${statusBg} whitespace-nowrap shrink-0">
+                        <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+                        <span>${statusText}</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                        <span>✨</span> <span>${q.reward_points} Spark</span>
+                    </span>
+                </div>
+                ${getQuestCountdownHtml(q)}
+            </div>
+
+            <!-- Full-width Description -->
+            <p class="text-sm sm:text-base font-bold text-theme-text leading-relaxed my-0.5">${q.description}</p>
+
+            <!-- Progress & Actions -->
+            ${getQuestProgressHtml(q)}
+            ${getQuestRefreshButtonHtml(q)}
+        </div>
     `;
 }
 
@@ -5160,26 +5199,13 @@ async function fetchGamificationData() {
             if (data.quests && data.quests.length > 0) {
                 const activeQuests = data.quests.filter(q => q.status === 'active');
                 if (activeQuests.length > 0) {
-                    questsList.innerHTML = activeQuests.map(q => `
-                        <div class="p-3.5 bg-theme-bg rounded-lg border border-theme-border flex flex-col justify-between">
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-theme-accent animate-pulse"></div>
-                                    <p class="text-sm font-bold text-theme-text">${q.description}</p>
-                                </div>
-                                ${getQuestCountdownHtml(q)}
-                            </div>
-                            <p class="text-[11px] text-theme-muted mt-1 font-semibold">Reward: <span class="text-theme-accent">${q.reward_points} Spark</span></p>
-                            ${getQuestProgressHtml(q)}
-                            ${getQuestRefreshButtonHtml(q)}
-                        </div>
-                    `).join('');
+                    questsList.innerHTML = activeQuests.map(q => renderQuestCard(q)).join('');
                 } else {
-                    questsList.innerHTML = '<button onclick="generateQuest()" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1.5 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition w-full">Ask Coach for a Quest</button>';
+                    questsList.innerHTML = '<button onclick="generateQuest()" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-2 rounded-lg border border-theme-accent hover:bg-theme-accent hover:text-white transition w-full shadow-sm">Ask Coach for a Quest</button>';
                 }
             } else {
                 // Generate a quest if they have none
-                questsList.innerHTML = '<button onclick="generateQuest()" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1.5 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition w-full">Ask Coach for a Quest</button>';
+                questsList.innerHTML = '<button onclick="generateQuest()" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-2 rounded-lg border border-theme-accent hover:bg-theme-accent hover:text-white transition w-full shadow-sm">Ask Coach for a Quest</button>';
             }
         }
 
@@ -5189,33 +5215,9 @@ async function fetchGamificationData() {
         if (questsLogContainer && questsLogList) {
             questsLogContainer.classList.remove('hidden');
             if (data.quests && data.quests.length > 0) {
-                questsLogList.innerHTML = data.quests.map(q => {
-                    const isActive = q.status === 'active';
-                    const isCompleted = q.status === 'completed';
-                    const iconColor = isActive ? 'bg-theme-accent animate-pulse' : (isCompleted ? 'bg-green-500' : 'bg-gray-400');
-                    const opacity = isActive ? 'opacity-100' : 'opacity-80';
-                    const statusText = isActive ? 'Active' : (isCompleted ? 'Completed 🏆' : 'Void ⏳');
-                    const statusColor = isActive ? 'text-theme-accent' : (isCompleted ? 'text-green-500 font-bold' : 'text-gray-400 font-semibold');
-                    return `
-                        <div class="p-3.5 bg-theme-bg rounded-lg border border-theme-border flex flex-col justify-between ${opacity}">
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full ${iconColor}"></div>
-                                    <p class="text-sm font-bold text-theme-text">${q.description}</p>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="text-[11px] ${statusColor}">${statusText}</span>
-                                    ${getQuestCountdownHtml(q)}
-                                </div>
-                            </div>
-                            <p class="text-[11px] text-theme-muted mt-1">Reward: ${q.reward_points} Spark</p>
-                            ${getQuestProgressHtml(q)}
-                            ${getQuestRefreshButtonHtml(q)}
-                        </div>
-                    `;
-                }).join('');
+                questsLogList.innerHTML = data.quests.map(q => renderQuestCard(q)).join('');
             } else {
-                questsLogList.innerHTML = '<p class="text-xs text-theme-muted text-center italic">No quests found. Start an active quest to see it here!</p>';
+                questsLogList.innerHTML = '<p class="text-xs text-theme-muted text-center italic py-4">No quests found. Start an active quest to see it here!</p>';
             }
         }
 
@@ -5253,7 +5255,7 @@ async function fetchGamificationData() {
 async function generateQuest() {
     try {
         const questsList = document.getElementById('quests-list');
-        if (questsList) questsList.innerHTML = '<p class="text-xs text-theme-muted animate-pulse">Coach is tailoring your challenge...</p>';
+        if (questsList) questsList.innerHTML = '<p class="text-xs text-theme-muted animate-pulse py-2 text-center">Coach is tailoring your challenge...</p>';
         const res = await fetch('/api/gamification/generate_quest', { method: 'POST', headers: getAuthHeaders() });
         if (res.ok) {
             fetchGamificationData();
@@ -5266,7 +5268,7 @@ async function generateQuest() {
 async function refreshQuest(questId, btnEl) {
     if (btnEl) {
         btnEl.disabled = true;
-        btnEl.innerHTML = `<span class="animate-spin inline-block">🔄</span> <span>Coach is tailoring an easier quest...</span>`;
+        btnEl.innerHTML = `<span class="animate-spin inline-block">🔄</span> <span>Coach is creating a new quest...</span>`;
     }
     try {
         const res = await fetch('/api/gamification/refresh_quest', {
@@ -5279,11 +5281,11 @@ async function refreshQuest(questId, btnEl) {
         } else {
             const data = await res.json();
             alert(data.error || 'Failed to refresh quest.');
-            if (btnEl) btnEl.innerHTML = `<span>🔄</span> <span>Refresh for Easier Quest</span>`;
+            if (btnEl) btnEl.innerHTML = `<span>🔄</span> <span>New Quest</span>`;
         }
     } catch (e) {
         console.error(e);
-        if (btnEl) btnEl.innerHTML = `<span>🔄</span> <span>Refresh for Easier Quest</span>`;
+        if (btnEl) btnEl.innerHTML = `<span>🔄</span> <span>New Quest</span>`;
     }
 }
 
