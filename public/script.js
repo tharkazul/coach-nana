@@ -5102,7 +5102,7 @@ function getQuestProgressHtml(q) {
     const current = typeof q.current_value === 'number' ? q.current_value : 0;
     const target = parseFloat(q.target_value) || 1;
     const pct = Math.min(100, Math.max(0, Math.round((current / target) * 100)));
-    
+
     let unit = '';
     if (q.target_metric === 'distance_km') unit = 'km';
     else if (q.target_metric === 'moving_time_min') unit = 'min';
@@ -5110,7 +5110,7 @@ function getQuestProgressHtml(q) {
     else if (q.target_metric === 'spark_score') unit = 'Spark';
 
     const barColor = q.status === 'completed' ? 'bg-green-500' : 'bg-theme-accent';
-    
+
     return `
         <div class="mt-2 text-xs">
             <div class="flex justify-between text-[11px] font-semibold mb-1 text-theme-text">
@@ -5140,7 +5140,7 @@ function getQuestRefreshButtonHtml(q) {
     if (q.status !== 'active') return '';
     return `
         <button onclick="refreshQuest(${q.id}, this)" class="mt-2.5 text-[11px] font-bold text-theme-muted hover:text-theme-accent bg-theme-bg px-2.5 py-1 rounded border border-theme-border hover:border-theme-accent transition flex items-center gap-1.5 w-max shadow-sm" title="Replace with an easier quest yielding lower Spark points">
-            <span>🔄</span> <span>Refresh for Easier Quest</span>
+            <span>🔄</span> <span>New Quest</span>
         </button>
     `;
 }
