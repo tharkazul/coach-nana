@@ -587,7 +587,44 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                                 act.average_heartrate,
                                               );
 
-                                            // QUEST EVALUATION
+                                            await new Promise((resolveInsert) => {
+                                              db.run(
+                                                `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score, sets_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                                [
+                                                  manualId,
+                                                  req.user.id,
+                                                  act.name || "Manual Workout",
+                                                  act.sport_type || "Workout",
+                                                  act.distance_km || 0,
+                                                  act.moving_time_min || 0,
+                                                  startDate,
+                                                  sparkScore,
+                                                  JSON.stringify(act.sets || []),
+                                                ],
+                                                (err) => {
+                                                  if (err)
+                                                    console.error(
+                                                      "Failed to insert manual activity:",
+                                                      err,
+                                                    );
+                                                  else {
+                                                    updateUserSparkAndCheckLevel(
+                                                      req.user.id,
+                                                    );
+                                                    // Invalidate today's nutrition cache so it incorporates the new workout
+                                                    const todayStr =
+                                                      startDate.split("T")[0];
+                                                    db.run(
+                                                      `DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`,
+                                                      [req.user.id, todayStr],
+                                                    );
+                                                  }
+                                                  resolveInsert();
+                                                },
+                                              );
+                                            });
+
+                                            // QUEST EVALUATION AFTER INSERT
                                             try {
                                               const completedQuests =
                                                 await evaluateQuestsAgainstActivity(
@@ -598,6 +635,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                                     moving_time_min:
                                                       act.moving_time_min || 0,
                                                     spark_score: sparkScore,
+                                                    sport_type: act.sport_type || "Workout",
                                                   },
                                                 );
 
@@ -608,6 +646,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                                 const newQuest =
                                                   await generateQuestForUser(
                                                     req.user.id,
+                                                    "common",
                                                   );
                                                 let appendPrompt = `The user just manually logged an activity and ALSO completed their active quest: "${completedQuests[0].description}" earning ${completedQuests[0].reward_points} Spark points! `;
                                                 if (newQuest) {
@@ -631,40 +670,6 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                                 e,
                                               );
                                             }
-
-                                            db.run(
-                                              `INSERT INTO activities (id, user_id, name, sport_type, distance_km, moving_time_min, start_date, spark_score, sets_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                                              [
-                                                manualId,
-                                                req.user.id,
-                                                act.name || "Manual Workout",
-                                                act.sport_type || "Workout",
-                                                act.distance_km || 0,
-                                                act.moving_time_min || 0,
-                                                startDate,
-                                                sparkScore,
-                                                JSON.stringify(act.sets || []),
-                                              ],
-                                              (err) => {
-                                                if (err)
-                                                  console.error(
-                                                    "Failed to insert manual activity:",
-                                                    err,
-                                                  );
-                                                else {
-                                                  updateUserSparkAndCheckLevel(
-                                                    req.user.id,
-                                                  );
-                                                  // Invalidate today's nutrition cache so it incorporates the new workout
-                                                  const todayStr =
-                                                    startDate.split("T")[0];
-                                                  db.run(
-                                                    `DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`,
-                                                    [req.user.id, todayStr],
-                                                  );
-                                                }
-                                              },
-                                            );
                                             planUpdated = true; // Signal frontend to reload data/charts
                                           }
                                         } catch (e) {

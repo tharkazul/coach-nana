@@ -271,6 +271,8 @@ db.serialize(() => {
         status TEXT DEFAULT 'active',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         completed_at DATETIME,
+        expires_at DATETIME,
+        refresh_count INTEGER DEFAULT 0,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
 
@@ -280,6 +282,18 @@ db.serialize(() => {
   );
   db.run(
     `ALTER TABLE user_quests ADD COLUMN is_accumulative INTEGER DEFAULT 0`,
+    (err) => {},
+  );
+  db.run(
+    `ALTER TABLE user_quests ADD COLUMN expires_at DATETIME`,
+    (err) => {},
+  );
+  db.run(
+    `ALTER TABLE user_quests ADD COLUMN refresh_count INTEGER DEFAULT 0`,
+    (err) => {},
+  );
+  db.run(
+    `UPDATE user_quests SET expires_at = datetime(created_at, '+3 days') WHERE expires_at IS NULL AND status = 'active'`,
     (err) => {},
   );
 

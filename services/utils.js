@@ -1301,7 +1301,7 @@ function triggerLevelUpCoachPrompt(userId, newLevel) {
   );
 }
 
-async function generateQuestForUser(userId, poolType = "personal") {
+async function generateQuestForUser(userId, poolType = "personal", previousQuest = null) {
   return new Promise((resolve, reject) => {
     db.all(
       `SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 5`,
@@ -1317,19 +1317,41 @@ async function generateQuestForUser(userId, poolType = "personal") {
                 .join("\n")
             : "No recent activities logged.";
 
-        const prompt = `Based on the following recent activities of the user, generate a personalized, motivating micro-challenge (Quest) for them to complete in the next 3 days. 
+        let prompt;
+        const targetReward = previousQuest
+          ? Math.max(10, Math.floor((previousQuest.reward_points || 50) * 0.75))
+          : 50;
+
+        if (previousQuest) {
+          prompt = `The user wants an easier replacement for their previous Quest: "${previousQuest.description}" (Target: ${previousQuest.target_value} ${previousQuest.target_metric}, Reward: ${previousQuest.reward_points} Spark).
+            Generate a REPLACEMENT Quest for the next 3 days that is SIGNIFICANTLY EASIER (lower distance, shorter duration, or easier target) and yields lower Spark points (around ${targetReward} points, strictly between 10 and ${Math.max(15, (previousQuest.reward_points || 50) - 5)} points).
             Recent activities:
             ${activitiesStr}
             
             Return ONLY a JSON object with this exact structure:
             {
-            "description": "Short description of the quest (e.g. Run 5k this weekend, or Complete 15km total biking and running)",
+            "description": "Short description of the quest (e.g. Run 2k this week, or Complete 20 mins of any activity)",
+            "target_metric": "distance_km", // OR "moving_time_min", "spark_score", or "unique_sports"
+            "target_value": 3,
+            "target_sport": "Run", // Comma-separated list of required sports or 'Any'
+            "is_accumulative": true, // Set to true if workouts should accumulate across 3 days
+            "reward_points": ${targetReward}
+            }`;
+        } else {
+          prompt = `Based on the following recent activities of the user, generate a personalized, motivating micro-challenge (Quest) for them to complete in the next 3 days. 
+            Recent activities:
+            ${activitiesStr}
+            
+            Return ONLY a JSON object with this exact structure:
+            {
+            "description": "Short description of the quest (e.g. Run 5k this weekend, or Complete 15km total biking and running over 3 days)",
             "target_metric": "distance_km", // OR "moving_time_min", "spark_score", or "unique_sports"
             "target_value": 5,
             "target_sport": "Run, Ride", // Comma-separated list of required sports (e.g. Run, Ride, Swim) or 'Any'
-            "is_accumulative": false, // Set to true if the goal should sum across multiple activities, false if it must be done in one activity
-            "reward_points": 50 // Keep it between 10 and 100
+            "is_accumulative": true, // Default to true for multi-day challenges so all matching workouts count toward the target!
+            "reward_points": 50 // Keep it between 20 and 100
             }`;
+        }
 
         try {
           const aiReply = await generateWithFallback(
@@ -1346,24 +1368,48 @@ async function generateQuestForUser(userId, poolType = "personal") {
             .trim();
           const questData = JSON.parse(jsonStr);
 
+          // Ensure progressive reward reduction on refresh
+          if (previousQuest && previousQuest.reward_points) {
+            if (questData.reward_points >= previousQuest.reward_points) {
+              questData.reward_points = Math.max(10, Math.floor(previousQuest.reward_points * 0.75));
+            }
+          }
+
+          const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .replace("T", " ")
+            .substring(0, 19);
+          const refreshCount = previousQuest ? (previousQuest.refresh_count || 0) + 1 : 0;
+          const targetValue = parseFloat(questData.target_value) || 1;
+          const rewardPoints = parseInt(questData.reward_points, 10) || 30;
+
           db.run(
-            `INSERT INTO user_quests (user_id, description, target_metric, target_value, target_sport, is_accumulative, reward_points) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO user_quests (user_id, description, target_metric, target_value, target_sport, is_accumulative, reward_points, expires_at, refresh_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               userId,
-              questData.description,
-              questData.target_metric,
-              questData.target_value,
+              questData.description || "Complete a motivating workout!",
+              questData.target_metric || "distance_km",
+              targetValue,
               questData.target_sport || "Any",
               questData.is_accumulative ? 1 : 0,
-              questData.reward_points,
+              rewardPoints,
+              expiresAt,
+              refreshCount,
             ],
             function (err) {
               if (err) return reject(err);
+              questData.id = this.lastID;
+              questData.target_value = targetValue;
+              questData.reward_points = rewardPoints;
+              questData.expires_at = expiresAt;
+              questData.refresh_count = refreshCount;
+              questData.status = "active";
+              questData.current_value = 0;
               resolve(questData);
             },
           );
         } catch (e) {
-          console.error("Failed to generate background quest:", e);
+          console.error("Failed to generate quest:", e);
           resolve(null);
         }
       },
@@ -1371,110 +1417,166 @@ async function generateQuestForUser(userId, poolType = "personal") {
   });
 }
 
-async function evaluateQuestsAgainstActivity(userId, activityData) {
-  return new Promise((resolve) => {
-    db.all(
-      `SELECT id, reward_points, description, target_metric, target_value, target_sport, is_accumulative, created_at FROM user_quests WHERE user_id = ? AND status = 'active'`,
+async function evaluateAndProgressQuests(userId) {
+  // Ensure existing active quests without expires_at get a default expiration date
+  await new Promise((resolve) => {
+    db.run(
+      `UPDATE user_quests SET expires_at = datetime(created_at, '+3 days') WHERE user_id = ? AND expires_at IS NULL AND status = 'active'`,
       [userId],
-      async (err, quests) => {
-        if (err || !quests || quests.length === 0) return resolve([]);
-
-        let completedQuests = [];
-
-        for (const q of quests) {
-          let targetSports = q.target_sport
-            ? q.target_sport.split(",").map((s) => s.trim().toLowerCase())
-            : ["any"];
-            
-          // Add Strava sport variations to ensure activities like VirtualRide count towards Ride quests
-          const sportsSet = new Set(targetSports);
-          if (sportsSet.has("ride")) {
-            sportsSet.add("virtualride");
-            sportsSet.add("ebikeride");
-            sportsSet.add("mountainbikeride");
-            sportsSet.add("gravelride");
-          }
-          if (sportsSet.has("run")) {
-            sportsSet.add("virtualrun");
-            sportsSet.add("trailrun");
-          }
-          targetSports = Array.from(sportsSet);
-
-          const isAnySport = targetSports.includes("any");
-
-          let achievedValue = 0;
-
-          if (q.is_accumulative) {
-            // Accumulative evaluation (sum across all matching activities since quest created_at)
-            const sumResult = await new Promise((res) => {
-              let sportCondition = "";
-              if (!isAnySport) {
-                const sportIn = targetSports.map((s) => `'${s}'`).join(",");
-                sportCondition = `AND LOWER(sport_type) IN (${sportIn})`;
-              }
-
-              if (q.target_metric === "unique_sports") {
-                db.get(
-                  `SELECT COUNT(DISTINCT LOWER(sport_type)) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
-                  [userId, q.created_at],
-                  (err, row) => res(row ? row.total : 0),
-                );
-              } else {
-                const allowedMetrics = [
-                  "distance_km",
-                  "moving_time_min",
-                  "spark_score",
-                ];
-                const metricCol = allowedMetrics.includes(q.target_metric)
-                  ? q.target_metric
-                  : "distance_km";
-                db.get(
-                  `SELECT SUM(${metricCol}) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
-                  [userId, q.created_at],
-                  (err, row) => res(row ? row.total : 0),
-                );
-              }
-            });
-            achievedValue = sumResult;
-          } else {
-            // Single activity evaluation
-            if (!isAnySport && activityData.sport_type) {
-              if (
-                !targetSports.includes(activityData.sport_type.toLowerCase())
-              ) {
-                continue; // Sport mismatch, skip
-              }
-            }
-
-            // Map the target metric to the actual activity data properties
-            if (q.target_metric === "distance_km")
-              achievedValue = activityData.distance_km;
-            else if (q.target_metric === "moving_time_min")
-              achievedValue = activityData.moving_time_min;
-            else if (q.target_metric === "spark_score")
-              achievedValue = activityData.spark_score;
-            else if (q.target_metric === "unique_sports") achievedValue = 1;
-          }
-
-          if (achievedValue >= q.target_value) {
-            completedQuests.push(q);
-            // Award points
-            db.run(
-              `INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`,
-              [userId, q.reward_points, `Quest Completed: ${q.description}`],
-            );
-            // Mark complete
-            db.run(
-              `UPDATE user_quests SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?`,
-              [q.id],
-            );
-          }
-        }
-
-        resolve(completedQuests);
-      },
+      () => resolve(),
     );
   });
+
+  const quests = await new Promise((resolve) => {
+    db.all(
+      `SELECT * FROM user_quests WHERE user_id = ? ORDER BY created_at DESC`,
+      [userId],
+      (err, rows) => resolve(rows || []),
+    );
+  });
+
+  if (quests.length === 0) {
+    const newQuest = await generateQuestForUser(userId, "common");
+    if (newQuest) {
+      newQuest.current_value = 0;
+      return [newQuest];
+    }
+    return [];
+  }
+
+  const activities = await new Promise((resolve) => {
+    db.all(
+      `SELECT sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC`,
+      [userId],
+      (err, rows) => resolve(rows || []),
+    );
+  });
+
+  let activeCount = 0;
+  const now = Date.now();
+
+  for (const q of quests) {
+    if (q.status === "active") {
+      const expiresAtStr = (q.expires_at || "").trim();
+      let isExpired = false;
+      if (expiresAtStr) {
+        const isoString =
+          expiresAtStr.replace(" ", "T") +
+          (expiresAtStr.includes("Z") || expiresAtStr.includes("+") ? "" : "Z");
+        if (now >= new Date(isoString).getTime()) {
+          isExpired = true;
+        }
+      }
+
+      if (isExpired) {
+        q.status = "void";
+        db.run(`UPDATE user_quests SET status = 'void' WHERE id = ?`, [q.id]);
+        continue;
+      }
+
+      let targetSports = q.target_sport
+        ? q.target_sport.split(",").map((s) => s.trim().toLowerCase())
+        : ["any"];
+      const sportsSet = new Set(targetSports);
+      if (sportsSet.has("ride") || sportsSet.has("bike") || sportsSet.has("cycling")) {
+        sportsSet.add("ride");
+        sportsSet.add("virtualride");
+        sportsSet.add("ebikeride");
+        sportsSet.add("mountainbikeride");
+        sportsSet.add("gravelride");
+      }
+      if (sportsSet.has("run") || sportsSet.has("running")) {
+        sportsSet.add("run");
+        sportsSet.add("virtualrun");
+        sportsSet.add("trailrun");
+        sportsSet.add("treadmill");
+      }
+      if (sportsSet.has("swim") || sportsSet.has("swimming")) {
+        sportsSet.add("swim");
+        sportsSet.add("openwaterswim");
+        sportsSet.add("poolswim");
+      }
+      targetSports = Array.from(sportsSet);
+      const isAnySport = targetSports.includes("any");
+
+      const createdStr = (q.created_at || "").trim();
+      const createdIso =
+        createdStr.replace(" ", "T") +
+        (createdStr.includes("Z") || createdStr.includes("+") ? "" : "Z");
+      const createdTs = new Date(createdIso).getTime() - 60 * 60 * 1000; // 1-hour grace period for timestamps
+
+      const matchingActivities = activities.filter((a) => {
+        if (!a.start_date) return false;
+        const actStr = String(a.start_date).trim();
+        const actIso =
+          actStr.replace(" ", "T") +
+          (actStr.includes("Z") || actStr.includes("+") || actStr.includes("T") ? "" : "Z");
+        const actTs = new Date(actIso).getTime();
+        if (actTs < createdTs) return false;
+
+        if (!isAnySport && a.sport_type) {
+          if (!targetSports.includes(a.sport_type.toLowerCase())) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      let val = 0;
+      if (q.target_metric === "unique_sports") {
+        const unique = new Set(matchingActivities.map((a) => (a.sport_type || "").toLowerCase()));
+        val = unique.size;
+      } else {
+        const metricCol = ["distance_km", "moving_time_min", "spark_score"].includes(q.target_metric)
+          ? q.target_metric
+          : "distance_km";
+        if (q.is_accumulative) {
+          val = matchingActivities.reduce((sum, a) => sum + (parseFloat(a[metricCol]) || 0), 0);
+        } else {
+          val = matchingActivities.reduce((max, a) => Math.max(max, parseFloat(a[metricCol]) || 0), 0);
+        }
+      }
+
+      val = Math.round(val * 100) / 100;
+      q.current_value = val;
+
+      if (val >= q.target_value) {
+        q.status = "completed";
+        const completedAt = new Date().toISOString().replace("T", " ").substring(0, 19);
+        q.completed_at = completedAt;
+        db.run(
+          `INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`,
+          [userId, q.reward_points, `Quest Completed: ${q.description}`],
+        );
+        db.run(
+          `UPDATE user_quests SET status = 'completed', completed_at = ? WHERE id = ?`,
+          [completedAt, q.id],
+        );
+      } else {
+        activeCount++;
+      }
+    } else {
+      if (q.status === "completed" && q.current_value === undefined) {
+        q.current_value = q.target_value;
+      }
+    }
+  }
+
+  // Automatically generate a new quest if no active quest remains
+  if (activeCount === 0) {
+    const newQuest = await generateQuestForUser(userId, "common");
+    if (newQuest) {
+      newQuest.current_value = 0;
+      quests.unshift(newQuest);
+    }
+  }
+
+  return quests;
+}
+
+async function evaluateQuestsAgainstActivity(userId, activityData) {
+  const allQuests = await evaluateAndProgressQuests(userId);
+  return allQuests.filter((q) => q.status === "completed");
 }
 
 async function analyzeMuscleImpact(userId, activityData, sparkSport, activityDate) {
@@ -1632,6 +1734,7 @@ module.exports = {
   triggerLevelUpCoachPrompt,
   generateQuestForUser,
   evaluateQuestsAgainstActivity,
+  evaluateAndProgressQuests,
   getEffectiveTokenLimit,
   sendMorningMessage: async () => {
     console.log("🌞 Running scheduled morning message job...");

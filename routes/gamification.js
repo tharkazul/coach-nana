@@ -33,7 +33,8 @@ const {
   updateUserSparkAndCheckLevel,
   triggerLevelUpCoachPrompt,
   generateQuestForUser,
-  evaluateQuestsAgainstActivity
+  evaluateQuestsAgainstActivity,
+  evaluateAndProgressQuests
 } = require('../services/utils');
 
 router.get("/api/milestones", authenticateToken, (req, res) => {
@@ -64,28 +65,27 @@ router.post("/api/milestones", authenticateToken, (req, res) => {
   });
 });
 
-router.get("/api/gamification", authenticateToken, (req, res) => {
+router.get("/api/gamification", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const responseData = { quests: [], titles: [], bonus_points: [] };
 
+  try {
+    responseData.quests = await evaluateAndProgressQuests(userId);
+  } catch (e) {
+    console.error("Failed to progress quests:", e);
+  }
+
   db.all(
-    `SELECT * FROM user_quests WHERE user_id = ? ORDER BY created_at DESC`,
+    `SELECT * FROM user_titles WHERE user_id = ? ORDER BY created_at DESC`,
     [userId],
-    (err, quests) => {
-      if (!err && quests) responseData.quests = quests;
+    (err, titles) => {
+      if (!err && titles) responseData.titles = titles;
       db.all(
-        `SELECT * FROM user_titles WHERE user_id = ? ORDER BY created_at DESC`,
+        `SELECT * FROM bonus_points WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
         [userId],
-        (err, titles) => {
-          if (!err && titles) responseData.titles = titles;
-          db.all(
-            `SELECT * FROM bonus_points WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
-            [userId],
-            (err, points) => {
-              if (!err && points) responseData.bonus_points = points;
-              res.json(responseData);
-            },
-          );
+        (err, points) => {
+          if (!err && points) responseData.bonus_points = points;
+          res.json(responseData);
         },
       );
     },
@@ -123,43 +123,60 @@ router.post(
   },
 );
 
-router.post("/api/gamification/evaluate_quests", authenticateToken, (req, res) => {
+router.post(
+  "/api/gamification/refresh_quest",
+  authenticateToken,
+  async (req, res) => {
+    const userId = req.user.id;
+    const { quest_id } = req.body;
+
+    db.get(
+      `SELECT * FROM user_quests WHERE id = ? AND user_id = ? AND status = 'active'`,
+      [quest_id, userId],
+      async (err, quest) => {
+        if (err || !quest) {
+          return res.status(404).json({ error: "Active quest not found or already completed." });
+        }
+
+        try {
+          // Mark old quest as replaced/void
+          db.run(`UPDATE user_quests SET status = 'void' WHERE id = ?`, [quest.id]);
+          // Generate easier quest using the common token pool
+          const newQuest = await generateQuestForUser(userId, "common", quest);
+          if (!newQuest) {
+            return res.status(500).json({ error: "Failed to generate easier replacement quest" });
+          }
+          newQuest.current_value = 0;
+          res.json({ success: true, quest: newQuest });
+        } catch (e) {
+          console.error("Failed to refresh quest:", e);
+          res.status(500).json({ error: "Failed to generate easier replacement quest" });
+        }
+      }
+    );
+  },
+);
+
+router.post("/api/gamification/evaluate_quests", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
-  // Evaluate the latest activity against active quests
-  db.get(
-    `SELECT * FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 1`,
-    [userId],
-    async (err, latestActivity) => {
-      if (err || !latestActivity) {
-        return res.json({
-          success: true,
-          message: "No activities found to evaluate against.",
-        });
-      }
-
-      try {
-        const completed = await evaluateQuestsAgainstActivity(
-          userId,
-          latestActivity,
-        );
-        if (completed.length > 0) {
-          res.json({
-            success: true,
-            message: `Evaluated and completed ${completed.length} quests based on your latest activity!`,
-          });
-        } else {
-          res.json({
-            success: true,
-            message:
-              "Evaluated your latest activity, but no quests were completed.",
-          });
-        }
-      } catch (e) {
-        res.status(500).json({ error: "Failed to evaluate quests." });
-      }
-    },
-  );
+  try {
+    const allQuests = await evaluateAndProgressQuests(userId);
+    const completed = allQuests.filter((q) => q.status === "completed");
+    if (completed.length > 0) {
+      res.json({
+        success: true,
+        message: `Evaluated and completed ${completed.length} quests!`,
+      });
+    } else {
+      res.json({
+        success: true,
+        message: "Evaluated your active quests, but no new targets were reached yet.",
+      });
+    }
+  } catch (e) {
+    res.status(500).json({ error: "Failed to evaluate quests." });
+  }
 });
 
 
