@@ -68,6 +68,7 @@ router.get("/api/admin/usage", authenticateToken, (req, res) => {
             u.common_token_usage,
             u.daily_token_limit,
             u.subscription_tier,
+            u.last_token_reset_date,
             u.spark_plus_clicks,
             CASE WHEN u.strava_refresh_token IS NOT NULL AND u.strava_refresh_token != '' THEN 1 ELSE 0 END as strava_connected,
             CASE WHEN u.garmin_username IS NOT NULL AND u.garmin_username != '' THEN 1 ELSE 0 END as garmin_connected,
@@ -77,8 +78,13 @@ router.get("/api/admin/usage", authenticateToken, (req, res) => {
     `;
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: "Database error" });
-    const { getEffectiveTokenLimit } = require('../services/utils');
+    const { getEffectiveTokenLimit, getAMSDateString } = require('../services/utils');
+    const todayStr = getAMSDateString();
     const enrichedRows = rows.map(r => {
+      if (r.last_token_reset_date !== todayStr) {
+        r.daily_token_usage = 0;
+        r.common_token_usage = 0;
+      }
       r.effective_limit = getEffectiveTokenLimit(r);
       return r;
     });

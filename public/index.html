@@ -1565,9 +1565,39 @@
                     </div>
 
                     <!-- Leaderboard Container -->
-                    <div id="social-leaderboard-container" class="hidden space-y-4">
-                        <p class="text-xs text-theme-muted mb-2">This week &middot; total Spark</p>
-                        <div id="social-leaderboard-list" class="space-y-2"></div>
+                    <div id="social-leaderboard-container" class="hidden space-y-8">
+                        <!-- Section 1: Total Spark Leaderboard -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between border-b border-theme-border pb-2">
+                                <h3 class="text-sm md:text-base font-bold text-theme-text font-barlow tracking-wide flex items-center gap-2">
+                                    <span>🔥</span> Total Spark Leaderboard
+                                </h3>
+                                <span class="text-[11px] font-semibold text-theme-muted bg-theme-bg px-2 py-0.5 rounded border border-theme-border">Last 7 Days</span>
+                            </div>
+                            <div id="social-leaderboard-list" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Section 2: Quest Completion Leaderboard -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between border-b border-theme-border pb-2">
+                                <h3 class="text-sm md:text-base font-bold text-theme-text font-barlow tracking-wide flex items-center gap-2">
+                                    <span>🛡️</span> Quest Masters
+                                </h3>
+                                <span class="text-[11px] font-semibold text-theme-muted bg-theme-bg px-2 py-0.5 rounded border border-theme-border">Last 7 Days</span>
+                            </div>
+                            <div id="social-quest-leaderboard-list" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Section 3: Top 3 Highest Grossing Spark Activities -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between border-b border-theme-border pb-2">
+                                <h3 class="text-sm md:text-base font-bold text-theme-text font-barlow tracking-wide flex items-center gap-2">
+                                    <span>🏆</span> Top Spark Activities
+                                </h3>
+                                <span class="text-[11px] font-semibold text-theme-muted bg-theme-bg px-2 py-0.5 rounded border border-theme-border">Last 7 Days</span>
+                            </div>
+                            <div id="social-top-activities-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                        </div>
                     </div>
 
                 </div>
@@ -1756,9 +1786,7 @@
                                 </h3>
                             </div>
                             <div class="p-6 space-y-4">
-                                <p class="text-xs text-theme-muted mb-2">Select which activities Spark should
-                                    proactively
-                                    analyze and update in Strava with plan comparisons and Spark scores.</p>
+                                <p class="text-xs text-theme-muted mb-2">All recorded activities are universally analyzed by your AI Coach, earn quest progress, and inform muscle recovery. Use the controls below to customize what details Spark shares to your Strava activity captions and workout titles.</p>
                                 <div id="strava-automations-container" class="space-y-3">
                                     <!-- Dynamic toggles injected by JS -->
                                     <div class="text-[10px] font-bold text-theme-muted animate-pulse">LOADING ACTIVITY

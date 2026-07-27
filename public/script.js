@@ -248,8 +248,13 @@ async function loadStravaAutomations() {
         const typesRes = await fetch('/api/user/activities/types', { headers: getAuthHeaders() });
         const activityTypes = await typesRes.json();
 
+        let shareSettings = {};
         let optOutList = [];
         if (globalMetrics) {
+            const shareMetric = globalMetrics.find(m => m.metric === 'strava_share_settings');
+            if (shareMetric && shareMetric.value) {
+                try { shareSettings = JSON.parse(shareMetric.value); } catch (e) { }
+            }
             const optOutMetric = globalMetrics.find(m => m.metric === 'strava_opt_out_activities');
             if (optOutMetric && optOutMetric.value) {
                 try { optOutList = JSON.parse(optOutMetric.value); } catch (e) { }
@@ -262,14 +267,81 @@ async function loadStravaAutomations() {
         }
 
         container.innerHTML = activityTypes.map(type => {
-            const isOptedOut = optOutList.includes(type);
+            let settings = { shareName: true, shareScore: true, shareStructure: true, shareLink: true };
+            if (shareSettings && shareSettings[type]) {
+                settings = {
+                    shareName: !!shareSettings[type].shareName,
+                    shareScore: !!shareSettings[type].shareScore,
+                    shareStructure: !!shareSettings[type].shareStructure,
+                    shareLink: !!shareSettings[type].shareLink,
+                };
+            } else if (optOutList.includes(type)) {
+                settings = { shareName: false, shareScore: false, shareStructure: false, shareLink: false };
+            }
+
             return `
-                <div class="flex items-center justify-between p-3 border border-theme-border rounded-md bg-theme-bg">
-                    <span class="text-xs font-bold text-theme-text">${type}</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer strava-opt-toggle" data-type="${type}" ${!isOptedOut ? 'checked' : ''} onchange="saveStravaAutomations()">
-                        <div class="w-9 h-5 bg-theme-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff6b6b]"></div>
-                    </label>
+                <div class="strava-sport-card border border-theme-border rounded-xl p-4 bg-theme-bg/60 backdrop-blur-sm shadow-sm hover:border-theme-accent-border/60 transition-all duration-200 mb-4" data-sport="${type}">
+                    <div class="flex items-center justify-between pb-3 border-b border-theme-border/50 mb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff6b6b] to-[#ff8e53] flex items-center justify-center text-white font-black text-xs shadow-sm">
+                                ${type.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-theme-text tracking-wide">${type}</h4>
+                                <span class="text-[10px] uppercase tracking-wider font-semibold text-theme-muted">Social Controls</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Toggle 4a: Activity Name -->
+                        <div class="flex items-start justify-between p-3 rounded-lg bg-theme-card/80 border border-theme-border/40 hover:bg-theme-card transition-colors">
+                            <div class="pr-3">
+                                <span class="block text-xs font-bold text-theme-text mb-0.5">Workout Title Renaming</span>
+                                <span class="text-[11px] text-theme-muted leading-tight block">Rename activity title to match planned workout name.</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                                <input type="checkbox" class="sr-only peer strava-toggle" data-sport="${type}" data-option="shareName" ${settings.shareName ? 'checked' : ''} onchange="saveStravaAutomations()">
+                                <div class="w-9 h-5 bg-theme-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff6b6b]"></div>
+                            </label>
+                        </div>
+                        
+                        <!-- Toggle 4b: Spark Score -->
+                        <div class="flex items-start justify-between p-3 rounded-lg bg-theme-card/80 border border-theme-border/40 hover:bg-theme-card transition-colors">
+                            <div class="pr-3">
+                                <span class="block text-xs font-bold text-theme-text mb-0.5">Spark Score & Goal</span>
+                                <span class="text-[11px] text-theme-muted leading-tight block">Share earned Spark points and daily target score.</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                                <input type="checkbox" class="sr-only peer strava-toggle" data-sport="${type}" data-option="shareScore" ${settings.shareScore ? 'checked' : ''} onchange="saveStravaAutomations()">
+                                <div class="w-9 h-5 bg-theme-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff6b6b]"></div>
+                            </label>
+                        </div>
+
+                        <!-- Toggle 4c: Workout Structure -->
+                        <div class="flex items-start justify-between p-3 rounded-lg bg-theme-card/80 border border-theme-border/40 hover:bg-theme-card transition-colors">
+                            <div class="pr-3">
+                                <span class="block text-xs font-bold text-theme-text mb-0.5">Workout Structure</span>
+                                <span class="text-[11px] text-theme-muted leading-tight block">Include planned interval steps and training sets.</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                                <input type="checkbox" class="sr-only peer strava-toggle" data-sport="${type}" data-option="shareStructure" ${settings.shareStructure ? 'checked' : ''} onchange="saveStravaAutomations()">
+                                <div class="w-9 h-5 bg-theme-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff6b6b]"></div>
+                            </label>
+                        </div>
+
+                        <!-- Toggle 4d: Spark Link -->
+                        <div class="flex items-start justify-between p-3 rounded-lg bg-theme-card/80 border border-theme-border/40 hover:bg-theme-card transition-colors">
+                            <div class="pr-3">
+                                <span class="block text-xs font-bold text-theme-text mb-0.5">Spark Backlink</span>
+                                <span class="text-[11px] text-theme-muted leading-tight block">Add credit and app link at bottom of description.</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                                <input type="checkbox" class="sr-only peer strava-toggle" data-sport="${type}" data-option="shareLink" ${settings.shareLink ? 'checked' : ''} onchange="saveStravaAutomations()">
+                                <div class="w-9 h-5 bg-theme-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff6b6b]"></div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -280,32 +352,60 @@ async function loadStravaAutomations() {
 }
 
 async function saveStravaAutomations() {
-    const toggles = document.querySelectorAll('.strava-opt-toggle');
+    const toggles = document.querySelectorAll('.strava-toggle');
+    const shareSettings = {};
     const optOutActivities = [];
+
     toggles.forEach(t => {
-        if (!t.checked) optOutActivities.push(t.dataset.type);
+        const sport = t.dataset.sport;
+        const option = t.dataset.option;
+        if (!shareSettings[sport]) {
+            shareSettings[sport] = {};
+        }
+        shareSettings[sport][option] = t.checked;
+    });
+
+    Object.keys(shareSettings).forEach(sport => {
+        const s = shareSettings[sport];
+        if (!s.shareName && !s.shareScore && !s.shareStructure && !s.shareLink) {
+            optOutActivities.push(sport);
+        }
     });
 
     try {
-        const res = await fetch('/api/user/strava-opt-out', {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ optOutActivities })
-        });
+        const [resShare, resOpt] = await Promise.all([
+            fetch('/api/user/strava-share-settings', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ shareSettings })
+            }),
+            fetch('/api/user/strava-opt-out', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ optOutActivities })
+            })
+        ]);
 
-        if (!res.ok) {
-            console.error("Backend failed to save automations:", await res.text());
+        if (!resShare.ok || !resOpt.ok) {
+            console.error("Backend failed to save automations");
             return;
         }
 
         // sync to globalMetrics so UI stays fresh without reload
         if (globalMetrics) {
-            let m = globalMetrics.find(m => m.metric === 'strava_opt_out_activities');
-            if (!m) {
-                m = { metric: 'strava_opt_out_activities' };
-                globalMetrics.push(m);
+            let mShare = globalMetrics.find(m => m.metric === 'strava_share_settings');
+            if (!mShare) {
+                mShare = { metric: 'strava_share_settings' };
+                globalMetrics.push(mShare);
             }
-            m.value = JSON.stringify(optOutActivities);
+            mShare.value = JSON.stringify(shareSettings);
+
+            let mOpt = globalMetrics.find(m => m.metric === 'strava_opt_out_activities');
+            if (!mOpt) {
+                mOpt = { metric: 'strava_opt_out_activities' };
+                globalMetrics.push(mOpt);
+            }
+            mOpt.value = JSON.stringify(optOutActivities);
         }
     } catch (e) {
         console.error("Failed to save automations", e);
@@ -634,10 +734,10 @@ async function loadSettings() {
             const select = document.getElementById('set-coach-tone');
             if (select) {
                 if (isRutger && !select.querySelector('option[value*="Madison"]')) {
-                    select.innerHTML += `<option value="Flirty, slightly erotic, supportive, in the style of Madison Beer.">Coach Liana</option>`;
+                    select.innerHTML += `<option value="Flirty, slightly erotic, slutty, young energy, horny, perverted, loves physical touch, supportive, in the style of Madison Beer.">Coach Liana</option>`;
                 }
                 if ((isRutger || isFelix) && !select.querySelector('option[value*="Jenny"]')) {
-                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, sometimes uses hangulhomewrecker, supportive.">Coach Jenny</option>`;
+                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, perverted, sometimes uses hangulhomewrecker, supportive.">Coach Jenny</option>`;
                 }
             }
         }
@@ -1992,14 +2092,14 @@ function closeEditWorkoutModal() {
 function calculateWbSpark() {
     const isStrength = document.getElementById('edit-workout-sport').value === 'Strength';
     let totalMins = 0;
-    
+
     wbSteps.forEach(step => {
         if (step.type === 'repeat') {
             let repeatMins = 0;
             let iterations = parseInt(step.iterations) || 1;
             (step.steps || []).forEach(sub => {
                 let val = parseFloat(sub.condition_value) || 0;
-                
+
                 if (isStrength && sub.condition_type === 'reps') {
                     repeatMins += 0.5; // Half a minute per set
                 } else {
@@ -2018,7 +2118,7 @@ function calculateWbSpark() {
             totalMins += (repeatMins * iterations);
         } else {
             let val = parseFloat(step.condition_value) || 0;
-            
+
             if (isStrength && step.condition_type === 'reps') {
                 totalMins += 0.5; // Half a minute per set
             } else {
@@ -2788,16 +2888,16 @@ function getCoachAvatar(mood) {
 }
 
 // Global error handler to catch broken avatar images and replace them with fallbacks
-document.addEventListener('error', function(event) {
+document.addEventListener('error', function (event) {
     if (event.target.tagName && event.target.tagName.toLowerCase() === 'img') {
         const src = event.target.getAttribute('src');
         if (src && src.includes('/avatars/') && !event.target.dataset.fallbackAttempted) {
             event.target.dataset.fallbackAttempted = 'true';
-            
+
             // Extract persona and mood from the filename (e.g., /avatars/liana-default.png)
             const match = src.match(/\/avatars\/([^-]+)-([^.]+)\.png/);
             let c = '374151'; // Default gray
-            
+
             if (match) {
                 const persona = match[1];
                 const moodKey = match[2];
@@ -2874,7 +2974,7 @@ async function loadChatHistory() {
                             } else {
                                 throw new Error('Not array');
                             }
-                        } catch(e) {
+                        } catch (e) {
                             const tokenSuffix = msg.image_path.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
                             imgHtml = `<img src="${msg.image_path}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
                         }
@@ -3127,7 +3227,7 @@ function handleImageSelection(event) {
     }
 
     const previewList = document.getElementById('image-preview-list');
-    
+
     // Clear previous if we want to replace or we can append. The prompt says "clear old".
     // Wait, the user didn't specify. Standard behavior is file input replaces.
     currentImagesBase64 = [];
@@ -3157,7 +3257,7 @@ function handleImageSelection(event) {
                         width = MAX_WIDTH; // wait, let's keep original ratio logic
                     }
                 }
-                
+
                 // Let's re-write the exact original ratio logic
                 if (width > height) {
                     if (width > MAX_WIDTH) {
@@ -3170,15 +3270,15 @@ function handleImageSelection(event) {
                         height = MAX_HEIGHT;
                     }
                 }
-                
+
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 const base64 = canvas.toDataURL('image/jpeg', 0.8);
-                
+
                 currentImagesBase64.push(base64);
-                
+
                 const thumb = document.createElement('img');
                 thumb.src = base64;
                 thumb.className = "h-16 rounded-md border border-theme-border shadow-sm object-cover";
@@ -3343,7 +3443,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
         if (res.status === 429) {
             window.failedMessages = window.failedMessages || {};
             window.failedMessages[loadId] = { message, imagesToUse };
-            
+
             document.getElementById(loadId).outerHTML = `
                 <div class="flex items-end gap-2 md:gap-3 animate-msg" id="err-${loadId}">
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card transition-all">
@@ -4104,31 +4204,121 @@ async function loadLeaderboard() {
         const res = await fetch('/api/social/leaderboard', { headers: getAuthHeaders() });
         const data = await res.json();
         const container = document.getElementById('social-leaderboard-list');
+        const questContainer = document.getElementById('social-quest-leaderboard-list');
+        const topActContainer = document.getElementById('social-top-activities-list');
+
         if (!data.leaderboard || data.leaderboard.length === 0) {
-            container.innerHTML = '<p class="text-sm text-theme-muted text-center p-4">No data this week.</p>';
+            if (container) container.innerHTML = '<p class="text-sm text-theme-muted text-center p-4">No data this week.</p>';
+            if (questContainer) questContainer.innerHTML = '<p class="text-sm text-theme-muted text-center p-4">No quests completed this week.</p>';
+            if (topActContainer) topActContainer.innerHTML = '<p class="text-sm text-theme-muted text-center p-4 col-span-1 md:col-span-3">No activities logged yet this week.</p>';
             return;
         }
 
-        container.innerHTML = data.leaderboard.map((u, i) => `
-            <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded p-3">
-                <div class="flex items-center gap-3">
-                    <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
-                    <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
-                        ${u.profile_picture_url
-                ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
-                : u.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div class="flex flex-col">
-                        <div class="flex items-center">
-                            <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
-                            <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded ml-1.5">Lvl ${u.spark_level || 1}</span>
+        if (container) {
+            container.innerHTML = data.leaderboard.map((u, i) => `
+                <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded p-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
+                        <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+                            ${u.profile_picture_url
+                    ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
+                    : u.username.charAt(0).toUpperCase()}
                         </div>
-                        <span class="text-[10px] text-theme-muted">${u.total_activities || 0} activities • ${Math.round((u.total_minutes || 0) / 60 * 2) / 2}h</span>
+                        <div class="flex flex-col">
+                            <div class="flex items-center">
+                                <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
+                                <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded ml-1.5">Lvl ${u.spark_level || 1}</span>
+                            </div>
+                            <span class="text-[10px] text-theme-muted">${u.total_activities || 0} activities • ${Math.round((u.total_minutes || 0) / 60 * 2) / 2}h</span>
+                        </div>
                     </div>
+                    <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_spark_score)} Points</span>
                 </div>
-                <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_spark_score)} Points</span>
-            </div>
-        `).join('');
+            `).join('');
+        }
+
+        if (questContainer) {
+            if (!data.questLeaderboard || data.questLeaderboard.length === 0) {
+                questContainer.innerHTML = '<p class="text-sm text-theme-muted text-center p-4">No quests completed this week.</p>';
+            } else {
+                questContainer.innerHTML = data.questLeaderboard.map((u, i) => {
+                    const badgesHtml = (u.quests && u.quests.length > 0)
+                        ? `<div class="flex flex-wrap gap-1.5 mt-2.5">` + u.quests.map(q => `
+                            <span class="text-[11px] font-medium bg-theme-bg border border-theme-border text-theme-text px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+                                <span>🎯</span> <span>${q.description}</span> <span class="text-theme-accent font-extrabold">+${Math.round(q.points)} Spark</span>
+                            </span>`).join('') + `</div>`
+                        : `<span class="text-[11px] text-theme-muted italic block mt-1">No quests completed yet this week</span>`;
+
+                    return `
+                    <div class="flex flex-col bg-theme-card border border-theme-border rounded p-3.5 transition hover:border-theme-muted">
+                        <div class="flex justify-between items-center w-full">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
+                                <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+                                    ${u.profile_picture_url
+                            ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
+                            : u.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
+                                    <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded ml-1.5">Lvl ${u.spark_level || 1}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="text-xs font-bold text-theme-text bg-theme-bg border border-theme-border px-2.5 py-1 rounded">${u.completed_quests_count} ${u.completed_quests_count === 1 ? 'Quest' : 'Quests'}</span>
+                                <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft border border-theme-accent/20 px-2.5 py-1 rounded">+${Math.round(u.total_quest_spark)} Spark</span>
+                            </div>
+                        </div>
+                        <div class="pl-7 md:pl-7 w-full">
+                            ${badgesHtml}
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        if (topActContainer) {
+            if (!data.topActivities || data.topActivities.length === 0) {
+                topActContainer.innerHTML = '<p class="text-sm text-theme-muted text-center p-4 col-span-1 md:col-span-3">No activities logged yet this week.</p>';
+            } else {
+                const medalColors = [
+                    'text-amber-400 border-amber-400/30 bg-amber-400/10 shadow-sm', // Gold
+                    'text-slate-300 border-slate-300/30 bg-slate-300/10 shadow-sm', // Silver
+                    'text-amber-700 border-amber-700/30 bg-amber-700/10 shadow-sm'  // Bronze
+                ];
+                const medalIcons = ['🥇 1st Place', '🥈 2nd Place', '🥉 3rd Place'];
+
+                topActContainer.innerHTML = data.topActivities.map((a, i) => {
+                    const badgeClass = medalColors[i] || 'text-theme-accent border-theme-accent/30 bg-theme-accent-soft';
+                    const badgeText = medalIcons[i] || `#${i + 1}`;
+
+                    return `
+                    <div onclick="openActivityModal(${a.id})" class="bg-theme-card border border-theme-border rounded-xl p-4 cursor-pointer hover:border-theme-accent hover:shadow-lg transition duration-200 flex flex-col justify-between gap-4 relative overflow-hidden group">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">${badgeText}</span>
+                            <span class="text-xs font-black text-theme-accent bg-theme-accent-soft px-2.5 py-1 rounded-lg border border-theme-accent/20 group-hover:scale-105 transition-transform shrink-0">+${Math.round(a.spark_score)} Spark</span>
+                        </div>
+                        
+                        <div class="my-0.5 space-y-2">
+                            <div>${getSportBadge(a.sport_type)}</div>
+                            <h4 class="text-base font-extrabold text-theme-text group-hover:text-theme-accent transition-colors line-clamp-2 leading-snug">${a.name || 'Workout'}</h4>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-theme-border/60 text-xs text-theme-muted">
+                            <div class="flex items-center gap-2 hover:opacity-80 transition" onclick="event.stopPropagation(); openPublicProfile(${a.user_id})">
+                                <div class="w-6 h-6 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-[10px] overflow-hidden shrink-0 border border-theme-border/50">
+                                    ${a.profile_picture_url
+                            ? `<img src="${a.profile_picture_url}" class="w-full h-full object-cover">`
+                            : (a.username ? a.username.charAt(0).toUpperCase() : '?')}
+                                </div>
+                                <span class="font-semibold text-theme-text hover:underline truncate max-w-[120px]">${a.username || 'Athlete'}</span>
+                            </div>
+                            <span class="font-medium shrink-0 bg-theme-bg px-2 py-0.5 rounded border border-theme-border/50">${a.distance_km && a.distance_km > 0 ? parseFloat(a.distance_km).toFixed(1) + ' km' : Math.round(a.moving_time_min || 0) + ' min'}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        }
     } catch (e) {
         console.error("Failed to load leaderboard", e);
     }
@@ -5034,7 +5224,7 @@ function forceScrollToBottom() {
 document.addEventListener('DOMContentLoaded', () => {
     const chatWindow = document.getElementById('chat-window');
     const scrollBtn = document.getElementById('scroll-to-bottom-btn');
-    
+
     if (chatWindow && scrollBtn) {
         chatWindow.addEventListener('scroll', () => {
             // Check if we are near the bottom (within 150px)

@@ -66,16 +66,19 @@ router.post("/api/user/metrics", authenticateToken, (req, res) => {
 
   db.serialize(() => {
     // We will just clear all custom metrics and re-insert what the user passed, or update them.
-    // But some might have been auto-added by the AI, and we MUST preserve system metrics like strava_opt_out_activities.
+    // But some might have been auto-added by the AI, and we MUST preserve system metrics like strava_opt_out_activities and strava_share_settings.
     db.run(
-      `DELETE FROM athlete_metrics WHERE user_id = ? AND metric != 'strava_opt_out_activities'`,
+      `DELETE FROM athlete_metrics WHERE user_id = ? AND metric NOT IN ('strava_opt_out_activities', 'strava_share_settings')`,
       [req.user.id],
     );
     const stmt = db.prepare(
       `INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, ?, ?)`,
     );
     metrics.forEach((m) => {
-      if (m.metric !== "strava_opt_out_activities") {
+      if (
+        m.metric !== "strava_opt_out_activities" &&
+        m.metric !== "strava_share_settings"
+      ) {
         stmt.run(req.user.id, m.metric, m.value);
       }
     });
@@ -112,6 +115,27 @@ router.post("/api/user/strava-opt-out", authenticateToken, (req, res) => {
     (err) => {
       if (err)
         return res.status(500).json({ error: "Failed to update preferences." });
+      res.json({ success: true });
+    },
+  );
+});
+
+router.post("/api/user/strava-share-settings", authenticateToken, (req, res) => {
+  const { shareSettings } = req.body;
+  if (!shareSettings || typeof shareSettings !== "object") {
+    return res.status(400).json({ error: "shareSettings must be an object" });
+  }
+  const val = JSON.stringify(shareSettings);
+
+  db.run(
+    `INSERT INTO athlete_metrics (user_id, metric, value) VALUES (?, 'strava_share_settings', ?) 
+            ON CONFLICT(user_id, metric) DO UPDATE SET value=excluded.value`,
+    [req.user.id, val],
+    (err) => {
+      if (err)
+        return res
+          .status(500)
+          .json({ error: "Failed to update Strava share settings." });
       res.json({ success: true });
     },
   );

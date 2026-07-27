@@ -202,9 +202,12 @@ router.get("/api/social/feed", authenticateToken, (req, res) => {
   );
 });
 
-router.get("/api/social/leaderboard", authenticateToken, (req, res) => {
-  db.all(
-    `
+router.get("/api/social/leaderboard", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const mainLeaderboard = await new Promise((resolve, reject) => {
+      db.all(
+        `
         SELECT u.id, u.username, u.profile_picture_url, u.total_spark, 
                (COALESCE(SUM(a.spark_score), 0) + COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND created_at >= datetime('now', '-7 days')), 0)) as total_spark_score, 
                SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities
@@ -214,16 +217,94 @@ router.get("/api/social/leaderboard", authenticateToken, (req, res) => {
         GROUP BY u.id
         ORDER BY total_spark_score DESC
     `,
-    [req.user.id, req.user.id],
-    (err, rows) => {
-      if (rows) {
-        rows.forEach(
-          (r) => (r.spark_level = getSparkLevelInfo(r.total_spark).level),
-        );
+        [userId, userId],
+        (err, rows) => {
+          if (err) return reject(err);
+          if (rows) {
+            rows.forEach(
+              (r) => (r.spark_level = getSparkLevelInfo(r.total_spark).level),
+            );
+          }
+          resolve(rows || []);
+        },
+      );
+    });
+
+    const completedQuests = await new Promise((resolve) => {
+      db.all(
+        `
+            SELECT id, user_id, description, reward_points, completed_at, created_at
+            FROM user_quests
+            WHERE status = 'completed'
+              AND (completed_at >= datetime('now', '-7 days') OR (completed_at IS NULL AND created_at >= datetime('now', '-7 days')))
+              AND (user_id = ? OR user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
+        `,
+        [userId, userId],
+        (err, rows) => {
+          if (err) return resolve([]);
+          resolve(rows || []);
+        },
+      );
+    });
+
+    const questLeaderboard = mainLeaderboard.map((user) => {
+      const userQuests = completedQuests.filter((q) => q.user_id === user.id);
+      const total_quest_spark = userQuests.reduce((sum, q) => sum + (q.reward_points || 0), 0);
+      return {
+        id: user.id,
+        username: user.username,
+        profile_picture_url: user.profile_picture_url,
+        spark_level: user.spark_level,
+        completed_quests_count: userQuests.length,
+        total_quest_spark: Math.round(total_quest_spark),
+        quests: userQuests.map((q) => ({ description: q.description, points: q.reward_points })),
+      };
+    });
+
+    questLeaderboard.sort((a, b) => {
+      if (b.completed_quests_count !== a.completed_quests_count) {
+        return b.completed_quests_count - a.completed_quests_count;
       }
-      res.json({ leaderboard: rows || [] });
-    },
-  );
+      if (b.total_quest_spark !== a.total_quest_spark) {
+        return b.total_quest_spark - a.total_quest_spark;
+      }
+      return a.username.localeCompare(b.username);
+    });
+
+    const topActivities = await new Promise((resolve) => {
+      db.all(
+        `
+            SELECT a.id, a.user_id, a.name, a.sport_type, a.distance_km, a.moving_time_min, a.spark_score, a.start_date,
+                   u.username, u.profile_picture_url, u.total_spark
+            FROM activities a
+            JOIN users u ON a.user_id = u.id
+            WHERE (u.id = ? OR u.id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
+              AND a.start_date >= datetime('now', '-7 days')
+            ORDER BY a.spark_score DESC, a.start_date DESC
+            LIMIT 3
+        `,
+        [userId, userId],
+        (err, rows) => {
+          if (err) return resolve([]);
+          if (rows) {
+            rows.forEach(
+              (r) => (r.spark_level = getSparkLevelInfo(r.total_spark).level),
+            );
+          }
+          resolve(rows || []);
+        },
+      );
+    });
+
+    res.json({
+      leaderboard: mainLeaderboard,
+      questLeaderboard,
+      topActivities,
+    });
+  } catch (e) {
+    console.error("Error loading full leaderboard data:", e);
+    res.status(500).json({ error: "Failed to load leaderboard data." });
+  }
 });
 
 router.post("/api/social/kudos", authenticateToken, (req, res) => {

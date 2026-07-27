@@ -69,23 +69,7 @@ db.serialize(() => {
     `ALTER TABLE users ADD COLUMN average_cycle_length INTEGER DEFAULT 28`,
     (err) => {},
   );
-  db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {
-    if (!err) {
-      console.log("Backfilling total_spark for all users...");
-      db.all(
-        `SELECT user_id, SUM(spark_score) as total FROM activities GROUP BY user_id`,
-        (err, rows) => {
-          if (!err && rows) {
-            const stmt = db.prepare(
-              `UPDATE users SET total_spark = ? WHERE id = ?`,
-            );
-            rows.forEach((r) => stmt.run(r.total || 0, r.user_id));
-            stmt.finalize(() => console.log("total_spark backfill complete."));
-          }
-        },
-      );
-    }
-  });
+  db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {});
   db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -98,10 +82,27 @@ db.serialize(() => {
     `CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`,
   );
   db.run(`ALTER TABLE activities ADD COLUMN spark_score REAL`, (err) => {
-    // Automatically backfill any activities that have a NULL spark_score
+    // Automatically backfill any activities that have a NULL or 0 spark_score, then sync total_spark
     db.all(
-      `SELECT id, moving_time_min, average_heartrate FROM activities WHERE spark_score IS NULL`,
+      `SELECT id, moving_time_min, average_heartrate, tss FROM activities WHERE spark_score IS NULL OR spark_score = 0`,
       (err, rows) => {
+        const syncUserSpark = () => {
+          db.all(
+            `SELECT user_id, SUM(spark_score) as total FROM activities GROUP BY user_id`,
+            (err, userRows) => {
+              if (!err && userRows) {
+                const uStmt = db.prepare(
+                  `UPDATE users SET total_spark = ? WHERE id = ?`,
+                );
+                userRows.forEach((r) => uStmt.run(r.total || 0, r.user_id));
+                uStmt.finalize(() =>
+                  console.log("total_spark synchronization complete."),
+                );
+              }
+            },
+          );
+        };
+
         if (!err && rows && rows.length > 0) {
           console.log(
             `Backfilling spark_score for ${rows.length} activities...`,
@@ -112,16 +113,24 @@ db.serialize(() => {
           rows.forEach((row) => {
             let bonus = 0;
             if (row.average_heartrate) {
-              if (row.average_heartrate >= 180) bonus = 0.4;
-              else if (row.average_heartrate >= 160) bonus = 0.3;
-              else if (row.average_heartrate >= 140) bonus = 0.2;
-              else if (row.average_heartrate >= 120) bonus = 0.1;
+              if (row.average_heartrate >= 180) bonus = 1.0;
+              else if (row.average_heartrate >= 160) bonus = 0.4;
+              else if (row.average_heartrate >= 140) bonus = 0.3;
+              else if (row.average_heartrate >= 120) bonus = 0.2;
+              else if (row.average_heartrate >= 100) bonus = 0.0;
+              else if (row.average_heartrate >= 80) bonus = -0.2;
+              else bonus = -0.5;
             }
-            const score =
-              (row.moving_time_min || 0) + (row.moving_time_min || 0) * bonus;
+            const baseScore = row.moving_time_min || row.tss || 0;
+            const score = baseScore > 0 ? baseScore + baseScore * bonus : (row.tss || 0);
             stmt.run(score, row.id);
           });
-          stmt.finalize(() => console.log("Spark Score backfill complete."));
+          stmt.finalize(() => {
+            console.log("Spark Score backfill complete.");
+            syncUserSpark();
+          });
+        } else {
+          syncUserSpark();
         }
       },
     );

@@ -38,6 +38,7 @@ const {
   generateAllPublicProfiles,
   sendMorningMessage,
   runDailyRecoveryJob,
+  resetDailyTokensForAllUsers,
 } = require("./services/utils");
 
 const { sseClients } = require("./services/sse");
@@ -52,9 +53,20 @@ db.serialize(() => {
   
   // Create global leaderboard stats
   calculateGlobalMaxStats();
+
+  // Reset tokens for any overdue accounts on startup
+  resetDailyTokensForAllUsers();
 });
 
 // Periodic Jobs
+// Schedule daily token reset at midnight (Europe/Amsterdam timezone)
+cron.schedule('0 0 * * *', () => {
+  resetDailyTokensForAllUsers();
+}, {
+  scheduled: true,
+  timezone: "Europe/Amsterdam"
+});
+
 // Schedule morning message to run every day at 08:00 AM (Europe/Amsterdam timezone)
 cron.schedule('0 8 * * *', () => {
   sendMorningMessage();

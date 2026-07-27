@@ -173,6 +173,25 @@ router.post("/api/sync-strava", authenticateToken, async (req, res) => {
             "Strava rejected the token. Please check your credentials.",
           );
 
+        if (
+          tokenData.refresh_token &&
+          tokenData.refresh_token !== user.strava_refresh_token
+        ) {
+          db.run(`UPDATE users SET strava_refresh_token = ? WHERE id = ?`, [
+            tokenData.refresh_token,
+            req.user.id,
+          ]);
+          db.run(
+            `UPDATE strava_tokens SET refresh_token = ?, access_token = ?, expires_at = ? WHERE user_id = ?`,
+            [
+              tokenData.refresh_token,
+              tokenData.access_token,
+              tokenData.expires_at || 0,
+              req.user.id,
+            ],
+          );
+        }
+
         const actRes = await fetch(
           "https://www.strava.com/api/v3/athlete/activities?per_page=200",
           {
@@ -188,6 +207,7 @@ router.post("/api/sync-strava", authenticateToken, async (req, res) => {
           const sparkScore = calculateSparkScore(
             act.moving_time / 60,
             act.average_heartrate,
+            tss,
           );
           db.run(
             `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
