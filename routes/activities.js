@@ -144,14 +144,51 @@ router.post("/api/user/strava-share-settings", authenticateToken, (req, res) => 
 router.get("/api/activity/:id", authenticateToken, (req, res) => {
   const activityId = req.params.id;
 
+  const fallbackToLocalDB = (defaultStatus = 404, defaultError = "Activity not found on Strava or local database.") => {
+    db.get(
+      "SELECT * FROM activities WHERE id = ? AND user_id = ?",
+      [activityId, req.user.id],
+      (dbErr, row) => {
+        if (dbErr || !row) {
+          return res.status(defaultStatus).json({ error: defaultError });
+        }
+        let sets = [];
+        if (row.sets_json) {
+          try {
+            sets = typeof row.sets_json === "string" ? JSON.parse(row.sets_json) : row.sets_json;
+          } catch (e) {
+            sets = [];
+          }
+        }
+        const fallbackData = {
+          id: row.id,
+          name: row.name || "Activity Details",
+          type: row.sport_type || "Workout",
+          sport_type: row.sport_type || "Workout",
+          distance: (row.distance_km || 0) * 1000,
+          moving_time: (row.moving_time_min || 0) * 60,
+          elapsed_time: (row.moving_time_min || 0) * 60,
+          total_elevation_gain: row.elevation_m || 0,
+          average_heartrate: row.average_heartrate || 0,
+          has_heartrate: row.average_heartrate > 0,
+          suffer_score: row.tss || null,
+          spark_score: row.spark_score || 0,
+          start_date: row.start_date,
+          start_date_local: row.start_date,
+          sets_json: sets,
+          kudos_count: 0
+        };
+        return res.json(fallbackData);
+      }
+    );
+  };
+
   db.get(
     "SELECT strava_refresh_token FROM users WHERE id = ?",
     [req.user.id],
     async (err, user) => {
       if (err || !user || !user.strava_refresh_token) {
-        return res
-          .status(400)
-          .json({ error: "Strava token missing from settings." });
+        return fallbackToLocalDB(400, "Strava token missing from settings.");
       }
 
       try {
@@ -168,7 +205,7 @@ router.get("/api/activity/:id", authenticateToken, (req, res) => {
 
         const tokenData = await tokenRes.json();
         if (!tokenData.access_token) {
-          return res.status(401).json({ error: "Strava rejected the token." });
+          return fallbackToLocalDB(401, "Strava rejected the token.");
         }
 
         const actRes = await fetch(
@@ -179,9 +216,7 @@ router.get("/api/activity/:id", authenticateToken, (req, res) => {
         );
 
         if (!actRes.ok) {
-          return res
-            .status(actRes.status)
-            .json({ error: "Activity not found on Strava." });
+          return fallbackToLocalDB(actRes.status, "Activity not found on Strava.");
         }
 
         const activityData = await actRes.json();
@@ -216,7 +251,7 @@ router.get("/api/activity/:id", authenticateToken, (req, res) => {
         res.json(activityData);
       } catch (err) {
         console.error("Single Activity Fetch Error:", err);
-        res.status(500).json({ error: "Failed to fetch activity details." });
+        fallbackToLocalDB(500, "Failed to fetch activity details.");
       }
     },
   );

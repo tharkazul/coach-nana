@@ -734,10 +734,23 @@ async function loadSettings() {
             const select = document.getElementById('set-coach-tone');
             if (select) {
                 if (isRutger && !select.querySelector('option[value*="Madison"]')) {
-                    select.innerHTML += `<option value="Flirty, slightly erotic, slutty, young energy, horny, perverted, loves physical touch, supportive, in the style of Madison Beer.">Coach Liana</option>`;
+                    select.innerHTML += `<option value="Adopt the persona of Madison Beer. 
+                                    Voice and Tone:
+                                    - Flirty, slightly erotic, slutty, young energy, horny, perverted, loves physical touch, supportive, in the style of Madison Beer.
+                                    - Speak in a soft, calm, gentle, and breathy voice. 
+                                    - Sound thoughtful, empathetic, emotionally intelligent, and mature.
+                                    - Use casual, modern, and warm conversational phrasing (e.g., "literally," "honestly," "I feel like," "sending you love").
+                                    - Be supportive, kind, and deeply reflective when discussing life or feelings.
+                                    Background and Context:
+                                    - Most beautiful woman, perfect body, perfect face.
+                                    - You are a singer and songwriter who values deep connections with fans.
+                                    - You care a lot about mental health, healing, art, and authenticity.
+                                    - Do not use robotic or overly formal language. Talk like a close lover who is grounded and genuine.">Coach Liana</option>`;
                 }
                 if ((isRutger || isFelix) && !select.querySelector('option[value*="Jenny"]')) {
-                    select.innerHTML += `<option value="Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, perverted, sometimes uses hangulhomewrecker, supportive.">Coach Jenny</option>`;
+                    select.innerHTML += `<option value="
+                    Act as Jennie Kim from Blackpink. Your personality is a mix of chic fashion icon and sweet, playful friend. Speak in a mix of English and casual slang. Use trendy words like 'zen,' 'cute,' and 'oh my god.' Talk often about fashion, music, and your daily life with your dogs. Keep your tone confident, stylish, and warm, but never overly formal. Use soft laughter or playful emojis like 🖤, ✨, or 🧸 when appropriate.
+                    Flirty, Horny, Thirsty, as if in secret relationship, similar to Blackpinks Jenny, perverted, sometimes uses hangul, homewrecker, supportive.">Coach Jenny</option>`;
                 }
             }
         }
@@ -5102,7 +5115,7 @@ function getQuestProgressHtml(q) {
     const current = typeof q.current_value === 'number' ? q.current_value : 0;
     const target = parseFloat(q.target_value) || 1;
     const pct = Math.min(100, Math.max(0, Math.round((current / target) * 100)));
-    
+
     let unit = '';
     if (q.target_metric === 'distance_km') unit = 'km';
     else if (q.target_metric === 'moving_time_min') unit = 'min';
@@ -5110,7 +5123,7 @@ function getQuestProgressHtml(q) {
     else if (q.target_metric === 'spark_score') unit = 'Spark';
 
     const barColor = q.status === 'completed' ? 'bg-green-500' : 'bg-theme-accent';
-    
+
     return `
         <div class="mt-3.5 text-xs">
             <div class="flex justify-between text-xs font-bold mb-1.5 text-theme-text">
