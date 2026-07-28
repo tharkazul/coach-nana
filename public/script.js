@@ -1989,7 +1989,7 @@ async function loadMicroPlan() {
                 const pJson = encodeURIComponent(JSON.stringify(p)).replace(/'/g, "%27");
 
                 dayHtml += `
-                <div class="relative group p-2 rounded-md border ${sportColor} ${isExecuted ? 'ring-1 ring-emerald-500/40 border-emerald-500/50' : ''} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
+                <div class="relative group p-2 rounded-md border ${sportColor} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-[10px] font-bold uppercase tracking-wider">${p.sport}</span>
                         ${isExecuted ? `
