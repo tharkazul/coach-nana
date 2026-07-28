@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const bodyParser = require("body-parser");
 const path = require("path");
 const fs = require("fs");
@@ -7,6 +8,7 @@ const db = require("./services/db");
 
 const app = express();
 
+app.use(cors());
 app.use(bodyParser.json({ limit: "15mb" }));
 app.use(express.static("public"));
 

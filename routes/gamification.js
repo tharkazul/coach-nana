@@ -32,10 +32,21 @@ const {
   triggerBackgroundSummary,
   updateUserSparkAndCheckLevel,
   triggerLevelUpCoachPrompt,
-  generateQuestForUser,
-  evaluateQuestsAgainstActivity,
-  evaluateAndProgressQuests
+  calculateQuestProgress
 } = require('../services/utils');
+
+function getTimeRemainingStr(expiresAt) {
+  if (!expiresAt) return null;
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  if (diffMs <= 0) return "Expired";
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${remainingHours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
+}
 
 router.get("/api/milestones", authenticateToken, (req, res) => {
   db.all(
@@ -69,26 +80,69 @@ router.get("/api/gamification", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const responseData = { quests: [], titles: [], bonus_points: [] };
 
-  try {
-    responseData.quests = await evaluateAndProgressQuests(userId);
-  } catch (e) {
-    console.error("Failed to progress quests:", e);
-  }
-
-  db.all(
-    `SELECT * FROM user_titles WHERE user_id = ? ORDER BY created_at DESC`,
-    [userId],
-    (err, titles) => {
-      if (!err && titles) responseData.titles = titles;
+  // Ensure only 1 active quest per user by closing any older active quests
+  db.run(
+    `UPDATE user_quests SET status = 'closed' WHERE user_id = ? AND status = 'active' AND id NOT IN (SELECT id FROM (SELECT id FROM user_quests WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC, id DESC LIMIT 1))`,
+    [userId, userId],
+    () => {
       db.all(
-        `SELECT * FROM bonus_points WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
+        `SELECT * FROM user_quests WHERE user_id = ? ORDER BY created_at DESC`,
         [userId],
-        (err, points) => {
-          if (!err && points) responseData.bonus_points = points;
-          res.json(responseData);
+        async (err, quests) => {
+          if (!err && quests) {
+            const processedQuests = await Promise.all(
+              quests.map(async (q) => {
+                const qObj = { ...q };
+
+                // Expiry check
+                if (qObj.status === "active" && qObj.expires_at) {
+                  const expiresMs = new Date(qObj.expires_at).getTime();
+                  if (expiresMs <= Date.now()) {
+                    qObj.status = "expired";
+                    db.run(`UPDATE user_quests SET status = 'expired' WHERE id = ?`, [qObj.id]);
+                  }
+                }
+
+                // Calculate progress for active or completed quests
+                const currentVal = await calculateQuestProgress(userId, qObj);
+                qObj.current_value = currentVal;
+                qObj.progress_percent = Math.min(100, Math.round((currentVal / (qObj.target_value || 1)) * 100));
+                qObj.time_remaining_str = qObj.status === "active" ? getTimeRemainingStr(qObj.expires_at) : null;
+
+                // Unit string
+                if (qObj.target_metric === "distance_km") qObj.unit = "km";
+                else if (qObj.target_metric === "moving_time_min") qObj.unit = "min";
+                else if (qObj.target_metric === "spark_score") qObj.unit = "pts";
+                else qObj.unit = "";
+
+                return qObj;
+              })
+            );
+            responseData.quests = processedQuests;
+          }
+
+          db.all(
+            `SELECT * FROM user_titles WHERE user_id = ? ORDER BY created_at DESC`,
+            [userId],
+            (err, titles) => {
+              if (!err && titles) responseData.titles = titles;
+              db.all(
+                `SELECT * FROM bonus_points WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
+                [userId],
+                (err, points) => {
+                  if (!err && points) responseData.bonus_points = points;
+                  res.json(responseData);
+                },
+              );
+            },
+          );
         },
       );
-    },
+    }
+  );
+        },
+      );
+    }
   );
 });
 
@@ -98,28 +152,13 @@ router.post(
   async (req, res) => {
     const userId = req.user.id;
 
-    // Check if user already has an active quest to avoid spamming
-    db.get(
-      `SELECT count(*) as count FROM user_quests WHERE user_id = ? AND status = 'active'`,
-      [userId],
-      async (err, row) => {
-        if (row && row.count >= 3) {
-          return res
-            .status(400)
-            .json({
-              error: "You already have 3 active quests. Complete them first!",
-            });
-        }
-
-        try {
-          const questData = await generateQuestForUser(userId, "common");
-          res.json({ success: true, quest: questData });
-        } catch (e) {
-          console.error("Failed to generate quest:", e);
-          res.status(500).json({ error: "Failed to generate quest" });
-        }
-      },
-    );
+    try {
+      const questData = await generateQuestForUser(userId, "common");
+      res.json({ success: true, quest: questData });
+    } catch (e) {
+      console.error("Failed to generate quest:", e);
+      res.status(500).json({ error: "Failed to generate quest" });
+    }
   },
 );
 

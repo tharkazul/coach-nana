@@ -1473,7 +1473,7 @@
 
                     <!-- Header & Segmented Control -->
                     <div
-                        class="flex flex-col gap-4 sticky top-0 bg-theme-bg z-10 pt-2 pb-4 border-b border-theme-border">
+                        class="flex flex-col gap-4 sticky -top-4 md:-top-8 -mt-4 md:-mt-8 pt-4 md:pt-8 pb-4 bg-theme-bg z-40 border-b border-theme-border">
                         <div class="flex justify-between items-center">
                             <div>
                                 <h2 class="text-xl font-bold text-theme-text font-barlow">Activities & Community</h2>
@@ -1565,39 +1565,13 @@
                     </div>
 
                     <!-- Leaderboard Container -->
-                    <div id="social-leaderboard-container" class="hidden space-y-8">
-                        <!-- Section 1: Total Spark Leaderboard -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between border-b border-theme-border pb-2">
-                                <h3 class="text-sm md:text-base font-bold text-theme-text font-barlow tracking-wide flex items-center gap-2">
-                                    <span>🔥</span> Total Spark Leaderboard
-                                </h3>
-                                <span class="text-[11px] font-semibold text-theme-muted bg-theme-bg px-2 py-0.5 rounded border border-theme-border">Last 7 Days</span>
-                            </div>
-                            <div id="social-leaderboard-list" class="space-y-2"></div>
+                    <div id="social-leaderboard-container" class="hidden space-y-4">
+                        <div class="flex items-center gap-2 bg-theme-card p-1 rounded-xl border border-theme-border w-full max-w-sm mb-3 shadow-sm">
+                            <button onclick="switchLeaderboardTab('spark')" id="lb-tab-spark" class="flex-1 text-xs font-bold py-2 px-3 rounded-lg text-theme-text bg-theme-bg border border-theme-accent/30 shadow transition">⚡ Spark Score</button>
+                            <button onclick="switchLeaderboardTab('quests')" id="lb-tab-quests" class="flex-1 text-xs font-bold py-2 px-3 rounded-lg text-theme-muted hover:text-theme-text transition">⚔️ Quest Champions (7d)</button>
                         </div>
-
-                        <!-- Section 2: Quest Completion Leaderboard -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between border-b border-theme-border pb-2">
-                                <h3 class="text-sm md:text-base font-bold text-theme-text font-barlow tracking-wide flex items-center gap-2">
-                                    <span>🛡️</span> Quest Masters
-                                </h3>
-                                <span class="text-[11px] font-semibold text-theme-muted bg-theme-bg px-2 py-0.5 rounded border border-theme-border">Last 7 Days</span>
-                            </div>
-                            <div id="social-quest-leaderboard-list" class="space-y-2"></div>
-                        </div>
-
-                        <!-- Section 3: Top 3 Highest Grossing Spark Activities -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between border-b border-theme-border pb-2">
-                                <h3 class="text-sm md:text-base font-bold text-theme-text font-barlow tracking-wide flex items-center gap-2">
-                                    <span>🏆</span> Top Spark Activities
-                                </h3>
-                                <span class="text-[11px] font-semibold text-theme-muted bg-theme-bg px-2 py-0.5 rounded border border-theme-border">Last 7 Days</span>
-                            </div>
-                            <div id="social-top-activities-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-                        </div>
+                        <p id="lb-description" class="text-xs text-theme-muted mb-2">Ranked by total 7-day Spark score (activities + bonus)</p>
+                        <div id="social-leaderboard-list" class="space-y-2"></div>
                     </div>
 
                 </div>

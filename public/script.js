@@ -4212,6 +4212,24 @@ async function loadSocialFeed() {
     }
 }
 
+let currentLeaderboardTab = 'spark';
+
+function switchLeaderboardTab(tab) {
+    currentLeaderboardTab = tab;
+    const sparkBtn = document.getElementById('lb-tab-spark');
+    const questsBtn = document.getElementById('lb-tab-quests');
+    const desc = document.getElementById('lb-description');
+
+    const activeClass = "flex-1 text-xs font-bold py-2 px-3 rounded-lg text-theme-text bg-theme-bg border border-theme-accent/30 shadow transition";
+    const inactiveClass = "flex-1 text-xs font-bold py-2 px-3 rounded-lg text-theme-muted hover:text-theme-text transition";
+
+    if (sparkBtn) sparkBtn.className = tab === 'spark' ? activeClass : inactiveClass;
+    if (questsBtn) questsBtn.className = tab === 'quests' ? activeClass : inactiveClass;
+    if (desc) desc.textContent = tab === 'spark' ? "Ranked by total 7-day Spark score (activities + bonus)" : "Ranked by completed quests & quest Spark in the last 7 days";
+
+    loadLeaderboard();
+}
+
 async function loadLeaderboard() {
     try {
         const res = await fetch('/api/social/leaderboard', { headers: getAuthHeaders() });
@@ -4227,110 +4245,60 @@ async function loadLeaderboard() {
             return;
         }
 
-        if (container) {
-            container.innerHTML = data.leaderboard.map((u, i) => `
-                <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded p-3">
+        let sortedList = [...data.leaderboard];
+        if (currentLeaderboardTab === 'quests') {
+            sortedList.sort((a, b) => {
+                if ((b.quests_completed_7d || 0) !== (a.quests_completed_7d || 0)) {
+                    return (b.quests_completed_7d || 0) - (a.quests_completed_7d || 0);
+                }
+                return (b.quest_spark_7d || 0) - (a.quest_spark_7d || 0);
+            });
+
+            container.innerHTML = sortedList.map((u, i) => `
+                <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded-xl p-3.5 shadow-sm">
                     <div class="flex items-center gap-3">
                         <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
-                        <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+                        <div class="w-9 h-9 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
                             ${u.profile_picture_url
                     ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
                     : u.username.charAt(0).toUpperCase()}
                         </div>
                         <div class="flex flex-col">
-                            <div class="flex items-center">
+                            <div class="flex items-center gap-1.5">
                                 <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
-                                <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded ml-1.5">Lvl ${u.spark_level || 1}</span>
+                                <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded">Lvl ${u.spark_level || 1}</span>
+                            </div>
+                            <span class="text-[10px] text-theme-muted">${u.quests_completed_7d || 0} quests completed (7d)</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1">⚔️ +${Math.round(u.quest_spark_7d || 0)} Spark</span>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            sortedList.sort((a, b) => (b.total_spark_score || 0) - (a.total_spark_score || 0));
+
+            container.innerHTML = sortedList.map((u, i) => `
+                <div class="flex justify-between items-center bg-theme-card border border-theme-border rounded-xl p-3.5 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
+                        <div class="w-9 h-9 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+                            ${u.profile_picture_url
+                    ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
+                    : u.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="flex flex-col">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
+                                <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded">Lvl ${u.spark_level || 1}</span>
                             </div>
                             <span class="text-[10px] text-theme-muted">${u.total_activities || 0} activities • ${Math.round((u.total_minutes || 0) / 60 * 2) / 2}h</span>
                         </div>
                     </div>
-                    <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2 py-1 rounded">${Math.round(u.total_spark_score)} Points</span>
+                    <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft px-2.5 py-1 rounded-lg">⚡ ${Math.round(u.total_spark_score)} Points</span>
                 </div>
             `).join('');
-        }
-
-        if (questContainer) {
-            if (!data.questLeaderboard || data.questLeaderboard.length === 0) {
-                questContainer.innerHTML = '<p class="text-sm text-theme-muted text-center p-4">No quests completed this week.</p>';
-            } else {
-                questContainer.innerHTML = data.questLeaderboard.map((u, i) => {
-                    const badgesHtml = (u.quests && u.quests.length > 0)
-                        ? `<div class="flex flex-wrap gap-1.5 mt-2.5">` + u.quests.map(q => `
-                            <span class="text-[11px] font-medium bg-theme-bg border border-theme-border text-theme-text px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
-                                <span>🎯</span> <span>${q.description}</span> <span class="text-theme-accent font-extrabold">+${Math.round(q.points)} Spark</span>
-                            </span>`).join('') + `</div>`
-                        : `<span class="text-[11px] text-theme-muted italic block mt-1">No quests completed yet this week</span>`;
-
-                    return `
-                    <div class="flex flex-col bg-theme-card border border-theme-border rounded p-3.5 transition hover:border-theme-muted">
-                        <div class="flex justify-between items-center w-full">
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs font-bold text-theme-muted w-4 text-center shrink-0">${i + 1}</span>
-                                <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
-                                    ${u.profile_picture_url
-                            ? `<img src="${u.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
-                            : u.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div class="flex items-center">
-                                    <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
-                                    <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded ml-1.5">Lvl ${u.spark_level || 1}</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2 shrink-0">
-                                <span class="text-xs font-bold text-theme-text bg-theme-bg border border-theme-border px-2.5 py-1 rounded">${u.completed_quests_count} ${u.completed_quests_count === 1 ? 'Quest' : 'Quests'}</span>
-                                <span class="text-xs font-bold text-theme-accent bg-theme-accent-soft border border-theme-accent/20 px-2.5 py-1 rounded">+${Math.round(u.total_quest_spark)} Spark</span>
-                            </div>
-                        </div>
-                        <div class="pl-7 md:pl-7 w-full">
-                            ${badgesHtml}
-                        </div>
-                    </div>`;
-                }).join('');
-            }
-        }
-
-        if (topActContainer) {
-            if (!data.topActivities || data.topActivities.length === 0) {
-                topActContainer.innerHTML = '<p class="text-sm text-theme-muted text-center p-4 col-span-1 md:col-span-3">No activities logged yet this week.</p>';
-            } else {
-                const medalColors = [
-                    'text-amber-400 border-amber-400/30 bg-amber-400/10 shadow-sm', // Gold
-                    'text-slate-300 border-slate-300/30 bg-slate-300/10 shadow-sm', // Silver
-                    'text-amber-700 border-amber-700/30 bg-amber-700/10 shadow-sm'  // Bronze
-                ];
-                const medalIcons = ['🥇 1st Place', '🥈 2nd Place', '🥉 3rd Place'];
-
-                topActContainer.innerHTML = data.topActivities.map((a, i) => {
-                    const badgeClass = medalColors[i] || 'text-theme-accent border-theme-accent/30 bg-theme-accent-soft';
-                    const badgeText = medalIcons[i] || `#${i + 1}`;
-
-                    return `
-                    <div onclick="openActivityModal(${a.id})" class="bg-theme-card border border-theme-border rounded-xl p-4 cursor-pointer hover:border-theme-accent hover:shadow-lg transition duration-200 flex flex-col justify-between gap-4 relative overflow-hidden group">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">${badgeText}</span>
-                            <span class="text-xs font-black text-theme-accent bg-theme-accent-soft px-2.5 py-1 rounded-lg border border-theme-accent/20 group-hover:scale-105 transition-transform shrink-0">+${Math.round(a.spark_score)} Spark</span>
-                        </div>
-                        
-                        <div class="my-0.5 space-y-2">
-                            <div>${getSportBadge(a.sport_type)}</div>
-                            <h4 class="text-base font-extrabold text-theme-text group-hover:text-theme-accent transition-colors line-clamp-2 leading-snug">${a.name || 'Workout'}</h4>
-                        </div>
-
-                        <div class="flex items-center justify-between pt-3 border-t border-theme-border/60 text-xs text-theme-muted">
-                            <div class="flex items-center gap-2 hover:opacity-80 transition" onclick="event.stopPropagation(); openPublicProfile(${a.user_id})">
-                                <div class="w-6 h-6 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-[10px] overflow-hidden shrink-0 border border-theme-border/50">
-                                    ${a.profile_picture_url
-                            ? `<img src="${a.profile_picture_url}" class="w-full h-full object-cover">`
-                            : (a.username ? a.username.charAt(0).toUpperCase() : '?')}
-                                </div>
-                                <span class="font-semibold text-theme-text hover:underline truncate max-w-[120px]">${a.username || 'Athlete'}</span>
-                            </div>
-                            <span class="font-medium shrink-0 bg-theme-bg px-2 py-0.5 rounded border border-theme-border/50">${a.distance_km && a.distance_km > 0 ? parseFloat(a.distance_km).toFixed(1) + ' km' : Math.round(a.moving_time_min || 0) + ' min'}</span>
-                        </div>
-                    </div>`;
-                }).join('');
-            }
         }
     } catch (e) {
         console.error("Failed to load leaderboard", e);

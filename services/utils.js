@@ -1317,28 +1317,7 @@ async function generateQuestForUser(userId, poolType = "personal", previousQuest
                 .join("\n")
             : "No recent activities logged.";
 
-        let prompt;
-        const targetReward = previousQuest
-          ? Math.max(10, Math.floor((previousQuest.reward_points || 50) * 0.75))
-          : 50;
-
-        if (previousQuest) {
-          prompt = `The user wants an easier replacement for their previous Quest: "${previousQuest.description}" (Target: ${previousQuest.target_value} ${previousQuest.target_metric}, Reward: ${previousQuest.reward_points} Spark).
-            Generate a REPLACEMENT Quest for the next 3 days that is SIGNIFICANTLY EASIER (lower distance, shorter duration, or easier target) and yields lower Spark points (around ${targetReward} points, strictly between 10 and ${Math.max(15, (previousQuest.reward_points || 50) - 5)} points).
-            Recent activities:
-            ${activitiesStr}
-            
-            Return ONLY a JSON object with this exact structure:
-            {
-            "description": "Short description of the quest (e.g. Run 2k this week, or Complete 20 mins of any activity)",
-            "target_metric": "distance_km", // OR "moving_time_min", "spark_score", or "unique_sports"
-            "target_value": 3,
-            "target_sport": "Run", // Comma-separated list of required sports or 'Any'
-            "is_accumulative": true, // Set to true if workouts should accumulate across 3 days
-            "reward_points": ${targetReward}
-            }`;
-        } else {
-          prompt = `Based on the following recent activities of the user, generate a personalized, motivating micro-challenge (Quest) for them to complete in the next 3 days. 
+        const prompt = `Based on the following recent activities of the user, generate a personalized, motivating micro-challenge (Quest) for them to complete in the next 1 to 7 days. 
             Recent activities:
             ${activitiesStr}
             
@@ -1348,10 +1327,10 @@ async function generateQuestForUser(userId, poolType = "personal", previousQuest
             "target_metric": "distance_km", // OR "moving_time_min", "spark_score", or "unique_sports"
             "target_value": 5,
             "target_sport": "Run, Ride", // Comma-separated list of required sports (e.g. Run, Ride, Swim) or 'Any'
-            "is_accumulative": true, // Default to true for multi-day challenges so all matching workouts count toward the target!
-            "reward_points": 50 // Keep it between 20 and 100
+            "is_accumulative": false, // Set to true if the goal should sum across multiple activities, false if it must be done in one activity
+            "reward_points": 50, // Keep it between 10 and 100
+            "time_limit_days": 3 // Number of days to complete the quest (between 1 and 7)
             }`;
-        }
 
         try {
           const aiReply = await generateWithFallback(
@@ -1367,46 +1346,34 @@ async function generateQuestForUser(userId, poolType = "personal", previousQuest
             .replace(/\`\`\`/g, "")
             .trim();
           const questData = JSON.parse(jsonStr);
+          const daysLimit = Math.max(1, Math.min(7, parseInt(questData.time_limit_days) || 3));
 
-          // Ensure progressive reward reduction on refresh
-          if (previousQuest && previousQuest.reward_points) {
-            if (questData.reward_points >= previousQuest.reward_points) {
-              questData.reward_points = Math.max(10, Math.floor(previousQuest.reward_points * 0.75));
-            }
-          }
-
-          const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .replace("T", " ")
-            .substring(0, 19);
-          const refreshCount = previousQuest ? (previousQuest.refresh_count || 0) + 1 : 0;
-          const targetValue = parseFloat(questData.target_value) || 1;
-          const rewardPoints = parseInt(questData.reward_points, 10) || 30;
-
+          // Close any existing active quest for this user to ensure only one active quest at a time
           db.run(
-            `INSERT INTO user_quests (user_id, description, target_metric, target_value, target_sport, is_accumulative, reward_points, expires_at, refresh_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              userId,
-              questData.description || "Complete a motivating workout!",
-              questData.target_metric || "distance_km",
-              targetValue,
-              questData.target_sport || "Any",
-              questData.is_accumulative ? 1 : 0,
-              rewardPoints,
-              expiresAt,
-              refreshCount,
-            ],
-            function (err) {
-              if (err) return reject(err);
-              questData.id = this.lastID;
-              questData.target_value = targetValue;
-              questData.reward_points = rewardPoints;
-              questData.expires_at = expiresAt;
-              questData.refresh_count = refreshCount;
-              questData.status = "active";
-              questData.current_value = 0;
-              resolve(questData);
-            },
+            `UPDATE user_quests SET status = 'closed' WHERE user_id = ? AND status = 'active'`,
+            [userId],
+            (updateErr) => {
+              if (updateErr) console.error("Error closing existing active quest:", updateErr);
+
+              db.run(
+                `INSERT INTO user_quests (user_id, description, target_metric, target_value, target_sport, is_accumulative, reward_points, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+' || ? || ' days'))`,
+                [
+                  userId,
+                  questData.description,
+                  questData.target_metric,
+                  questData.target_value,
+                  questData.target_sport || "Any",
+                  questData.is_accumulative ? 1 : 0,
+                  questData.reward_points,
+                  daysLimit,
+                ],
+                function (err) {
+                  if (err) return reject(err);
+                  resolve(questData);
+                },
+              );
+            }
+          );
           );
         } catch (e) {
           console.error("Failed to generate quest:", e);
@@ -1579,6 +1546,71 @@ async function evaluateQuestsAgainstActivity(userId, activityData) {
   return allQuests.filter((q) => q.status === "completed");
 }
 
+async function calculateQuestProgress(userId, quest) {
+  return new Promise((resolve) => {
+    let targetSports = quest.target_sport
+      ? quest.target_sport.split(",").map((s) => s.trim().toLowerCase())
+      : ["any"];
+    const sportsSet = new Set(targetSports);
+    if (sportsSet.has("ride")) {
+      sportsSet.add("virtualride");
+      sportsSet.add("ebikeride");
+      sportsSet.add("mountainbikeride");
+      sportsSet.add("gravelride");
+    }
+    if (sportsSet.has("run")) {
+      sportsSet.add("virtualrun");
+      sportsSet.add("trailrun");
+    }
+    targetSports = Array.from(sportsSet);
+    const isAnySport = targetSports.includes("any");
+
+    let sportCondition = "";
+    if (!isAnySport) {
+      const sportIn = targetSports.map((s) => `'${s}'`).join(",");
+      sportCondition = `AND LOWER(sport_type) IN (${sportIn})`;
+    }
+
+    if (quest.is_accumulative) {
+      if (quest.target_metric === "unique_sports") {
+        db.get(
+          `SELECT COUNT(DISTINCT LOWER(sport_type)) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
+          [userId, quest.created_at],
+          (err, row) => resolve(row ? row.total || 0 : 0)
+        );
+      } else {
+        const allowedMetrics = ["distance_km", "moving_time_min", "spark_score"];
+        const metricCol = allowedMetrics.includes(quest.target_metric)
+          ? quest.target_metric
+          : "distance_km";
+        db.get(
+          `SELECT SUM(${metricCol}) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
+          [userId, quest.created_at],
+          (err, row) => resolve(row ? (row.total ? parseFloat(row.total.toFixed(2)) : 0) : 0)
+        );
+      }
+    } else {
+      if (quest.target_metric === "unique_sports") {
+        db.get(
+          `SELECT COUNT(id) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
+          [userId, quest.created_at],
+          (err, row) => resolve(row && row.total > 0 ? 1 : 0)
+        );
+      } else {
+        const allowedMetrics = ["distance_km", "moving_time_min", "spark_score"];
+        const metricCol = allowedMetrics.includes(quest.target_metric)
+          ? quest.target_metric
+          : "distance_km";
+        db.get(
+          `SELECT MAX(${metricCol}) as max_val FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
+          [userId, quest.created_at],
+          (err, row) => resolve(row ? (row.max_val ? parseFloat(row.max_val.toFixed(2)) : 0) : 0)
+        );
+      }
+    }
+  });
+}
+
 async function analyzeMuscleImpact(userId, activityData, sparkSport, activityDate) {
   const prompt = `The athlete completed a ${sparkSport} activity: ${activityData.name}. 
   Distance: ${(activityData.distance / 1000).toFixed(1)}km
@@ -1734,7 +1766,7 @@ module.exports = {
   triggerLevelUpCoachPrompt,
   generateQuestForUser,
   evaluateQuestsAgainstActivity,
-  evaluateAndProgressQuests,
+  calculateQuestProgress,
   getEffectiveTokenLimit,
   sendMorningMessage: async () => {
     console.log("🌞 Running scheduled morning message job...");
