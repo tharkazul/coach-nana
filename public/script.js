@@ -1900,6 +1900,9 @@ async function loadMicroPlan() {
         const actualSparkMap = {};
         actualData.forEach(d => {
             actualSparkMap[`${d.date}_${d.sport_type}`] = Math.round(d.daily_spark);
+            if (d.sport_type) {
+                actualSparkMap[`${d.date}_${d.sport_type.toLowerCase()}`] = Math.round(d.daily_spark);
+            }
         });
         const weatherMap = {};
         if (weatherObj && weatherObj.daily && weatherObj.daily.time) {
@@ -1975,7 +1978,9 @@ async function loadMicroPlan() {
             dayHtml += `<div class="p-2 flex flex-col gap-2 flex-grow">`;
 
             workoutsForDay.forEach((p, wIdx) => {
-                let actualSpark = actualSparkMap[`${dateStr}_${p.sport}`] || 0;
+                let actualSpark = actualSparkMap[`${dateStr}_${p.sport}`] || (p.sport ? actualSparkMap[`${dateStr}_${p.sport.toLowerCase()}`] : 0) || 0;
+                let targetSpark = p.target_spark ? Math.round(p.target_spark) : 0;
+                let isExecuted = (actualSpark > 0 && targetSpark > 0);
 
                 // Color coding
                 let sportColor = getSportCardColor(p.sport);
@@ -1984,13 +1989,18 @@ async function loadMicroPlan() {
                 const pJson = encodeURIComponent(JSON.stringify(p)).replace(/'/g, "%27");
 
                 dayHtml += `
-                <div class="relative group p-2 rounded-md border ${sportColor} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
-                    <div class="flex justify-between items-start mb-1">
+                <div class="relative group p-2 rounded-md border ${sportColor} ${isExecuted ? 'ring-1 ring-emerald-500/40 border-emerald-500/50' : ''} cursor-pointer hover:shadow-sm transition flex flex-col" onclick="openEditWorkoutModal('${pJson}', '${dateStr}')">
+                    <div class="flex justify-between items-center mb-1">
                         <span class="text-[10px] font-bold uppercase tracking-wider">${p.sport}</span>
+                        ${isExecuted ? `
+                        <span class="inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30" title="Plan Executed">
+                            <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                            <span>Done</span>
+                        </span>` : ''}
                     </div>
                     <div class="text-xs font-medium text-theme-text line-clamp-2 leading-tight">${p.description || 'Rest Day'}</div>
                     <div class="flex items-center justify-between mt-2">
-                        <span class="text-[9px] font-mono opacity-80">${actualSpark > 0 ? actualSpark + '/' : ''}${p.target_spark ? Math.round(p.target_spark) : 0} Spark</span>
+                        <span class="text-[9px] font-mono ${isExecuted ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'opacity-80'}">${actualSpark > 0 ? actualSpark + '/' : ''}${targetSpark} Spark</span>
                         <div class="flex items-center text-[9px] opacity-70">
                             <span class="truncate pr-2">${isStructured ? 'Structured' : 'Basic'}</span>
                             ${p.sport !== 'Rest' && dateStr >= todayStr ? `
