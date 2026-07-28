@@ -351,11 +351,15 @@ router.post("/api/social/kudos", authenticateToken, (req, res) => {
                           db.run(
                             `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`,
                             [act.user_id, msg],
+                            (err) => {
+                              if (!err) {
+                                sendSSEEvent(act.user_id, "unread_message", {
+                                  message: msg,
+                                  mood: "hype",
+                                });
+                              }
+                            }
                           );
-                          sendSSEEvent(act.user_id, "unread_message", {
-                            message: msg,
-                            mood: "hype",
-                          });
                         } catch (e) {
                           console.error(e);
                         }

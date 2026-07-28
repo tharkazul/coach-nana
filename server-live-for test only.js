@@ -2482,8 +2482,11 @@ app.post('/api/social/kudos', authenticateToken, (req, res) => {
                                 const sysPrompt = `You are an elite endurance coach. Your tone is: ${coachUser.coach_tone || 'Friendly and motivating'}.`;
                                 try {
                                     const msg = await generateWithFallback(prompt, sysPrompt);
-                                    db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [act.user_id, msg]);
-                                    sendSSEEvent(act.user_id, 'unread_message', { message: msg, mood: 'hype' });
+                                    db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`, [act.user_id, msg], (err) => {
+                                        if (!err) {
+                                            sendSSEEvent(act.user_id, 'unread_message', { message: msg, mood: 'hype' });
+                                        }
+                                    });
                                 } catch (e) { console.error(e); }
                             }
                         });

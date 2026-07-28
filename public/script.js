@@ -556,6 +556,9 @@ function initSSE() {
         console.log("Real-time unread message received:", e.data);
         const data = JSON.parse(e.data);
 
+        // Always invalidate chat history cache so latest message is fetched
+        chatHistoryLoaded = false;
+
         // Show notification bubble if not currently on the coach tab
         const coachTabHidden = document.getElementById('view-coach')?.classList.contains('hidden');
         if (coachTabHidden) {
@@ -565,7 +568,6 @@ function initSSE() {
             localStorage.setItem('lastMsgTimestamp', Date.now());
         } else {
             // Already on Coach tab, reload the chat to show the new message
-            chatHistoryLoaded = false;
             loadChatHistory();
         }
     });
@@ -585,7 +587,6 @@ function initSSE() {
 
     sseConnection.addEventListener('kudos_received', (e) => {
         const data = JSON.parse(e.data);
-        alert(`You got Kudos from ${data.fromUsername} on ${data.activityName}!`);
         if (!document.getElementById('view-social').classList.contains('hidden')) {
             loadSocialFeed();
         }
