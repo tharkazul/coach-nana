@@ -2941,6 +2941,39 @@ document.addEventListener('error', function (event) {
     }
 }, true);
 
+function formatChatTimestamp(timestamp) {
+    if (!timestamp) return '';
+    let dateObj;
+    if (timestamp instanceof Date) {
+        dateObj = timestamp;
+    } else if (typeof timestamp === 'number') {
+        dateObj = new Date(timestamp);
+    } else if (typeof timestamp === 'string') {
+        let str = timestamp.trim();
+        if (!str.endsWith('Z') && !str.includes('+')) {
+            str = str.replace(' ', 'T') + 'Z';
+        }
+        dateObj = new Date(str);
+    } else {
+        dateObj = new Date(timestamp);
+    }
+    if (isNaN(dateObj.getTime())) return '';
+
+    const now = new Date();
+    const isToday = dateObj.getDate() === now.getDate() &&
+                    dateObj.getMonth() === now.getMonth() &&
+                    dateObj.getFullYear() === now.getFullYear();
+
+    const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (isToday) {
+        return timeStr;
+    } else {
+        const dateStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return `${dateStr}, ${timeStr}`;
+    }
+}
+
 let chatHistoryLoaded = false;
 async function loadChatHistory() {
     if (chatHistoryLoaded) return;
@@ -2956,7 +2989,7 @@ async function loadChatHistory() {
         let lastCoachAvatar = getCoachAvatar('default');
 
         if (!history || history.length === 0) {
-            let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let timeStr = formatChatTimestamp(new Date());
             chatWindow.innerHTML = `
                         <div class="flex items-end gap-2 md:gap-3">
                             <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
@@ -2972,11 +3005,7 @@ async function loadChatHistory() {
         } else {
             let html = '';
             history.forEach(msg => {
-                let timeStr = '';
-                if (msg.timestamp) {
-                    let dateObj = new Date(msg.timestamp + 'Z');
-                    timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
+                let timeStr = formatChatTimestamp(msg.timestamp);
 
                 if (msg.role === 'user') {
                     let imgHtml = '';
@@ -3072,7 +3101,7 @@ async function loadChatHistory() {
                 const localMsg = `Hey! ${names} ${isPlural ? 'want' : 'wants'} to connect with you. <a href="#" onclick="switchTab('social'); setTimeout(()=>openAddPersonModal(), 100); return false;" class="text-theme-accent font-bold underline">Accept?</a>`;
 
                 let avatarImg = getCoachAvatar('curious');
-                let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                let timeStr = formatChatTimestamp(new Date());
 
                 chatWindow.innerHTML += `
                     <div class="flex items-end gap-2 md:gap-3 mt-4">
@@ -3387,7 +3416,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
     }
 
     if (retryMessage === null) {
-        let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let timeStr = formatChatTimestamp(new Date());
         let userImgHtml = '';
         if (currentImagesBase64 && currentImagesBase64.length > 0) {
             if (currentImagesBase64.length === 1) {
@@ -3493,7 +3522,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
         formattedContent = formattedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
         formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-xl my-1 shadow-sm object-cover animate-pop">');
 
-        let replyTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let replyTimeStr = formatChatTimestamp(new Date());
         const msgId = 'reply-content-' + Date.now();
         document.getElementById(loadId).outerHTML = `
                     <div class="flex items-end gap-2 md:gap-3 animate-msg">
