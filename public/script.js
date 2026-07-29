@@ -2959,18 +2959,48 @@ function formatChatTimestamp(timestamp) {
     }
     if (isNaN(dateObj.getTime())) return '';
 
+    return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateHeader(dateObj) {
+    if (!dateObj || isNaN(dateObj.getTime())) return '';
     const now = new Date();
-    const isToday = dateObj.getDate() === now.getDate() &&
-                    dateObj.getMonth() === now.getMonth() &&
-                    dateObj.getFullYear() === now.getFullYear();
-
-    const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    if (isToday) {
-        return timeStr;
+    
+    const dDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    const nDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diffDays = Math.round((nDate - dDate) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        return 'Today';
+    } else if (diffDays === 1) {
+        return 'Yesterday';
+    } else if (diffDays > 1 && diffDays < 7) {
+        return dateObj.toLocaleDateString([], { weekday: 'long' });
+    } else if (dateObj.getFullYear() === now.getFullYear()) {
+        return dateObj.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
     } else {
-        const dateStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
-        return `${dateStr}, ${timeStr}`;
+        return dateObj.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    }
+}
+
+function ensureTodayDateDivider(chatWindow) {
+    if (!chatWindow) return;
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    
+    const dateDividers = chatWindow.querySelectorAll('.date-divider');
+    const lastDivider = dateDividers.length > 0 ? dateDividers[dateDividers.length - 1] : null;
+    
+    if (!lastDivider || lastDivider.getAttribute('data-date-key') !== todayKey) {
+        const dateLabel = formatDateHeader(now);
+        const dividerHtml = `
+            <div class="flex justify-center my-3 date-divider" data-date-key="${todayKey}">
+                <span class="text-[10px] md:text-xs font-medium text-theme-muted bg-theme-card/90 border border-theme-border/60 px-3 py-1 rounded-full shadow-2xs select-none">
+                    ${dateLabel}
+                </span>
+            </div>`;
+        chatWindow.insertAdjacentHTML('beforeend', dividerHtml);
     }
 }
 
@@ -2989,8 +3019,10 @@ async function loadChatHistory() {
         let lastCoachAvatar = getCoachAvatar('default');
 
         if (!history || history.length === 0) {
+            chatWindow.innerHTML = '';
+            ensureTodayDateDivider(chatWindow);
             let timeStr = formatChatTimestamp(new Date());
-            chatWindow.innerHTML = `
+            chatWindow.insertAdjacentHTML('beforeend', `
                         <div class="flex items-end gap-2 md:gap-3">
                             <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                                 <img onclick="enlargeAvatar(this.src)" src="${lastCoachAvatar}" alt="Coach" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
@@ -3000,11 +3032,36 @@ async function loadChatHistory() {
                                 <div class="whitespace-pre-wrap leading-relaxed">Systems nominal. I have synchronized your latest profile settings. Ready to get to work?</div>
                                 <div class="text-[9px] text-theme-muted text-right mt-1">${timeStr}</div>
                             </div>
-                        </div>`;
+                        </div>`);
             lastCoachMsg = "Systems nominal. I have synchronized your latest profile settings. Ready to get to work?";
         } else {
             let html = '';
+            let lastDateKey = null;
             history.forEach(msg => {
+                let msgDateObj = null;
+                if (msg.timestamp) {
+                    let str = msg.timestamp.trim();
+                    if (!str.endsWith('Z') && !str.includes('+')) {
+                        str = str.replace(' ', 'T') + 'Z';
+                    }
+                    msgDateObj = new Date(str);
+                    if (isNaN(msgDateObj.getTime())) msgDateObj = null;
+                }
+
+                if (msgDateObj) {
+                    let dateKey = `${msgDateObj.getFullYear()}-${msgDateObj.getMonth()}-${msgDateObj.getDate()}`;
+                    if (dateKey !== lastDateKey) {
+                        lastDateKey = dateKey;
+                        let dateLabel = formatDateHeader(msgDateObj);
+                        html += `
+                            <div class="flex justify-center my-3 date-divider" data-date-key="${dateKey}">
+                                <span class="text-[10px] md:text-xs font-medium text-theme-muted bg-theme-card/90 border border-theme-border/60 px-3 py-1 rounded-full shadow-2xs select-none">
+                                    ${dateLabel}
+                                </span>
+                            </div>`;
+                    }
+                }
+
                 let timeStr = formatChatTimestamp(msg.timestamp);
 
                 if (msg.role === 'user') {
@@ -3103,7 +3160,8 @@ async function loadChatHistory() {
                 let avatarImg = getCoachAvatar('curious');
                 let timeStr = formatChatTimestamp(new Date());
 
-                chatWindow.innerHTML += `
+                ensureTodayDateDivider(chatWindow);
+                chatWindow.insertAdjacentHTML('beforeend', `
                     <div class="flex items-end gap-2 md:gap-3 mt-4">
                         <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                             <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
@@ -3113,7 +3171,7 @@ async function loadChatHistory() {
                             <div class="whitespace-pre-wrap leading-relaxed">${localMsg}</div>
                             <div class="text-[9px] text-theme-muted text-right mt-1">${timeStr}</div>
                         </div>
-                    </div>`;
+                    </div>`);
                 chatWindow.scrollTop = chatWindow.scrollHeight;
 
                 if (!window.pendingAlertShown) {
@@ -3131,6 +3189,7 @@ async function triggerProactiveCheckin() {
     const chatWindow = document.getElementById('chat-window');
     if (!chatWindow) return;
 
+    ensureTodayDateDivider(chatWindow);
     const loadId = 'typing-' + Date.now();
     chatWindow.insertAdjacentHTML('beforeend', `
         <div id="${loadId}" class="flex items-end gap-2 md:gap-3 text-theme-text/50 animate-msg">
@@ -3416,6 +3475,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
     }
 
     if (retryMessage === null) {
+        ensureTodayDateDivider(chatWindow);
         let timeStr = formatChatTimestamp(new Date());
         let userImgHtml = '';
         if (currentImagesBase64 && currentImagesBase64.length > 0) {
