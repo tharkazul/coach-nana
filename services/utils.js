@@ -1766,6 +1766,7 @@ module.exports = {
   triggerLevelUpCoachPrompt,
   generateQuestForUser,
   evaluateQuestsAgainstActivity,
+  evaluateAndProgressQuests,
   calculateQuestProgress,
   getEffectiveTokenLimit,
   sendMorningMessage: async () => {

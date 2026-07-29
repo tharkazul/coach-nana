@@ -205,14 +205,30 @@ router.get("/api/social/feed", authenticateToken, (req, res) => {
 router.get("/api/social/leaderboard", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Evaluate active quests for the current user and their friends before generating leaderboard
+    try {
+      const friends = await new Promise((resolve) => {
+        db.all(
+          `SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'`,
+          [userId],
+          (err, rows) => resolve(rows || []),
+        );
+      });
+      const userIdsToEvaluate = [userId, ...friends.map((f) => f.friend_id)];
+      await Promise.all(userIdsToEvaluate.map((id) => evaluateAndProgressQuests(id)));
+    } catch (e) {
+      console.error("Error evaluating leaderboard user quests:", e);
+    }
+
     const mainLeaderboard = await new Promise((resolve, reject) => {
       db.all(
         `
         SELECT u.id, u.username, u.profile_picture_url, u.total_spark, 
                (COALESCE(SUM(a.spark_score), 0) + COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND created_at >= datetime('now', '-7 days')), 0)) as total_spark_score, 
                SUM(a.moving_time_min) as total_minutes, COUNT(a.id) as total_activities,
-               COALESCE((SELECT COUNT(*) FROM user_quests WHERE user_id = u.id AND status = 'completed' AND completed_at >= datetime('now', '-7 days')), 0) as quests_completed_7d,
-               COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND reason LIKE 'Quest Completed%' AND created_at >= datetime('now', '-7 days')), 0) as quest_spark_7d
+               COALESCE((SELECT COUNT(*) FROM user_quests WHERE user_id = u.id AND status = 'completed' AND (completed_at >= datetime('now', '-7 days') OR (completed_at IS NULL AND created_at >= datetime('now', '-7 days')))), 0) as quests_completed_7d,
+               COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND reason LIKE 'Quest Completed%' AND created_at >= datetime('now', '-7 days')), (SELECT SUM(reward_points) FROM user_quests WHERE user_id = u.id AND status = 'completed' AND (completed_at >= datetime('now', '-7 days') OR (completed_at IS NULL AND created_at >= datetime('now', '-7 days')))), 0) as quest_spark_7d
         FROM users u
         LEFT JOIN activities a ON a.user_id = u.id AND a.start_date >= datetime('now', '-7 days')
         WHERE (u.id = ? OR u.id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))

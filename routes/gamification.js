@@ -32,6 +32,7 @@ const {
   triggerBackgroundSummary,
   updateUserSparkAndCheckLevel,
   triggerLevelUpCoachPrompt,
+  evaluateAndProgressQuests,
   calculateQuestProgress
 } = require('../services/utils');
 
@@ -79,6 +80,12 @@ router.post("/api/milestones", authenticateToken, (req, res) => {
 router.get("/api/gamification", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const responseData = { quests: [], titles: [], bonus_points: [] };
+
+  try {
+    await evaluateAndProgressQuests(userId);
+  } catch (e) {
+    console.error("Error evaluating quests in /api/gamification:", e);
+  }
 
   // Ensure only 1 active quest per user by closing any older active quests
   db.run(
