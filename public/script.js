@@ -2984,24 +2984,27 @@ function formatDateHeader(dateObj) {
     }
 }
 
-function ensureTodayDateDivider(chatWindow) {
-    if (!chatWindow) return;
+function ensureTodayDateGroup(chatWindow) {
+    if (!chatWindow) return null;
     const now = new Date();
     const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
     
-    const dateDividers = chatWindow.querySelectorAll('.date-divider');
-    const lastDivider = dateDividers.length > 0 ? dateDividers[dateDividers.length - 1] : null;
+    let lastGroup = chatWindow.querySelector(`.date-group[data-date-key="${todayKey}"]`);
     
-    if (!lastDivider || lastDivider.getAttribute('data-date-key') !== todayKey) {
+    if (!lastGroup) {
         const dateLabel = formatDateHeader(now);
-        const dividerHtml = `
-            <div class="flex justify-center my-3 date-divider" data-date-key="${todayKey}">
-                <span class="text-[10px] md:text-xs font-medium text-theme-muted bg-theme-card/90 border border-theme-border/60 px-3 py-1 rounded-full shadow-2xs select-none">
-                    ${dateLabel}
-                </span>
+        const groupHtml = `
+            <div class="date-group space-y-4 md:space-y-6" data-date-key="${todayKey}">
+                <div class="sticky top-2 z-10 flex justify-center my-2 date-divider pointer-events-none">
+                    <span class="text-[10px] md:text-xs font-medium text-theme-muted bg-theme-card/95 backdrop-blur-md border border-theme-border/80 px-3 py-1 rounded-full shadow-xs select-none pointer-events-auto">
+                        ${dateLabel}
+                    </span>
+                </div>
             </div>`;
-        chatWindow.insertAdjacentHTML('beforeend', dividerHtml);
+        chatWindow.insertAdjacentHTML('beforeend', groupHtml);
+        lastGroup = chatWindow.querySelector(`.date-group[data-date-key="${todayKey}"]`);
     }
+    return lastGroup;
 }
 
 let chatHistoryLoaded = false;
@@ -3020,9 +3023,9 @@ async function loadChatHistory() {
 
         if (!history || history.length === 0) {
             chatWindow.innerHTML = '';
-            ensureTodayDateDivider(chatWindow);
+            const todayGroup = ensureTodayDateGroup(chatWindow);
             let timeStr = formatChatTimestamp(new Date());
-            chatWindow.insertAdjacentHTML('beforeend', `
+            todayGroup.insertAdjacentHTML('beforeend', `
                         <div class="flex items-end gap-2 md:gap-3">
                             <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                                 <img onclick="enlargeAvatar(this.src)" src="${lastCoachAvatar}" alt="Coach" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
@@ -3036,7 +3039,25 @@ async function loadChatHistory() {
             lastCoachMsg = "Systems nominal. I have synchronized your latest profile settings. Ready to get to work?";
         } else {
             let html = '';
-            let lastDateKey = null;
+            let currentGroupDateKey = null;
+            let currentGroupDateObj = null;
+            let currentGroupHtml = '';
+
+            const finalizeGroup = () => {
+                if (currentGroupDateKey && currentGroupHtml) {
+                    let dateLabel = formatDateHeader(currentGroupDateObj);
+                    html += `
+                        <div class="date-group space-y-4 md:space-y-6" data-date-key="${currentGroupDateKey}">
+                            <div class="sticky top-2 z-10 flex justify-center my-2 date-divider pointer-events-none">
+                                <span class="text-[10px] md:text-xs font-medium text-theme-muted bg-theme-card/95 backdrop-blur-md border border-theme-border/80 px-3 py-1 rounded-full shadow-xs select-none pointer-events-auto">
+                                    ${dateLabel}
+                                </span>
+                            </div>
+                            ${currentGroupHtml}
+                        </div>`;
+                }
+            };
+
             history.forEach(msg => {
                 let msgDateObj = null;
                 if (msg.timestamp) {
@@ -3048,18 +3069,13 @@ async function loadChatHistory() {
                     if (isNaN(msgDateObj.getTime())) msgDateObj = null;
                 }
 
-                if (msgDateObj) {
-                    let dateKey = `${msgDateObj.getFullYear()}-${msgDateObj.getMonth()}-${msgDateObj.getDate()}`;
-                    if (dateKey !== lastDateKey) {
-                        lastDateKey = dateKey;
-                        let dateLabel = formatDateHeader(msgDateObj);
-                        html += `
-                            <div class="flex justify-center my-3 date-divider" data-date-key="${dateKey}">
-                                <span class="text-[10px] md:text-xs font-medium text-theme-muted bg-theme-card/90 border border-theme-border/60 px-3 py-1 rounded-full shadow-2xs select-none">
-                                    ${dateLabel}
-                                </span>
-                            </div>`;
-                    }
+                let dateKey = msgDateObj ? `${msgDateObj.getFullYear()}-${msgDateObj.getMonth()}-${msgDateObj.getDate()}` : 'unknown';
+
+                if (dateKey !== currentGroupDateKey) {
+                    finalizeGroup();
+                    currentGroupDateKey = dateKey;
+                    currentGroupDateObj = msgDateObj || new Date();
+                    currentGroupHtml = '';
                 }
 
                 let timeStr = formatChatTimestamp(msg.timestamp);
@@ -3089,7 +3105,7 @@ async function loadChatHistory() {
                             imgHtml = `<img src="${msg.image_path}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
                         }
                     }
-                    html += `
+                    currentGroupHtml += `
                                 <div class="flex justify-end">
                                     <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
                                         ${imgHtml}
@@ -3104,7 +3120,7 @@ async function loadChatHistory() {
                     formattedContent = formattedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
                     formattedContent = formattedContent.replace(/!\[([^\]]*)\]\((.*?)\)/g, '<img src="$2" alt="$1" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full md:w-3/4 rounded-xl my-1 shadow-sm object-cover">');
                     lastCoachMsg = formattedContent;
-                    html += `
+                    currentGroupHtml += `
                                 <div class="flex items-end gap-2 md:gap-3">
                                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                                         <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
@@ -3117,6 +3133,7 @@ async function loadChatHistory() {
                                 </div>`;
                 }
             });
+            finalizeGroup();
             chatWindow.innerHTML = html;
         }
 
@@ -3160,8 +3177,8 @@ async function loadChatHistory() {
                 let avatarImg = getCoachAvatar('curious');
                 let timeStr = formatChatTimestamp(new Date());
 
-                ensureTodayDateDivider(chatWindow);
-                chatWindow.insertAdjacentHTML('beforeend', `
+                const todayGroup = ensureTodayDateGroup(chatWindow);
+                todayGroup.insertAdjacentHTML('beforeend', `
                     <div class="flex items-end gap-2 md:gap-3 mt-4">
                         <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                             <img src="${avatarImg}" onclick="enlargeAvatar(this.src)" class="cursor-pointer transition hover:scale-105 w-full h-full object-cover">
@@ -3189,9 +3206,9 @@ async function triggerProactiveCheckin() {
     const chatWindow = document.getElementById('chat-window');
     if (!chatWindow) return;
 
-    ensureTodayDateDivider(chatWindow);
+    const todayGroup = ensureTodayDateGroup(chatWindow);
     const loadId = 'typing-' + Date.now();
-    chatWindow.insertAdjacentHTML('beforeend', `
+    todayGroup.insertAdjacentHTML('beforeend', `
         <div id="${loadId}" class="flex items-end gap-2 md:gap-3 text-theme-text/50 animate-msg">
             <span class="text-xs italic">Spark is typing...</span>
         </div>
@@ -3475,7 +3492,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
     }
 
     if (retryMessage === null) {
-        ensureTodayDateDivider(chatWindow);
+        const todayGroup = ensureTodayDateGroup(chatWindow);
         let timeStr = formatChatTimestamp(new Date());
         let userImgHtml = '';
         if (currentImagesBase64 && currentImagesBase64.length > 0) {
@@ -3489,7 +3506,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
                 userImgHtml += `</div>`;
             }
         }
-        chatWindow.insertAdjacentHTML('beforeend', `
+        todayGroup.insertAdjacentHTML('beforeend', `
                     <div class="flex justify-end animate-msg">
                         <div class="bg-theme-accent text-white text-xs md:text-sm px-3 py-2 md:px-4 md:py-3 rounded-2xl rounded-br-none max-w-[85%] md:max-w-[75%] shadow-sm relative">
                             ${userImgHtml}
@@ -3509,7 +3526,8 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
     const loadId = 'loading-' + Date.now();
     let thinkingAvatar = getCoachAvatar('thinking');
 
-    chatWindow.insertAdjacentHTML('beforeend', `
+    const todayGroup = ensureTodayDateGroup(chatWindow);
+    todayGroup.insertAdjacentHTML('beforeend', `
                 <div class="flex items-end gap-2 md:gap-3 animate-msg" id="${loadId}">
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden border border-theme-border shadow-sm bg-theme-card">
                         <img src="${thinkingAvatar}" alt="Coach" class="w-full h-full object-cover opacity-70">
