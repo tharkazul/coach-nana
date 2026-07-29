@@ -147,10 +147,6 @@ router.get("/api/gamification", authenticateToken, async (req, res) => {
       );
     }
   );
-        },
-      );
-    }
-  );
 });
 
 router.post(

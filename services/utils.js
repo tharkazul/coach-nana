@@ -1374,7 +1374,6 @@ async function generateQuestForUser(userId, poolType = "personal", previousQuest
               );
             }
           );
-          );
         } catch (e) {
           console.error("Failed to generate quest:", e);
           resolve(null);
