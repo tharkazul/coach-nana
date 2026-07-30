@@ -4363,13 +4363,16 @@ async function loadLeaderboard() {
             return;
         }
 
-        let sortedList = [...data.leaderboard];
+        let sortedList = currentLeaderboardTab === 'quests' && data.questLeaderboard 
+            ? [...data.questLeaderboard] 
+            : [...data.leaderboard];
+
         if (currentLeaderboardTab === 'quests') {
             sortedList.sort((a, b) => {
-                if ((b.quests_completed_7d || 0) !== (a.quests_completed_7d || 0)) {
-                    return (b.quests_completed_7d || 0) - (a.quests_completed_7d || 0);
+                if ((b.completed_quests_count || 0) !== (a.completed_quests_count || 0)) {
+                    return (b.completed_quests_count || 0) - (a.completed_quests_count || 0);
                 }
-                return (b.quest_spark_7d || 0) - (a.quest_spark_7d || 0);
+                return (b.total_quest_spark || 0) - (a.total_quest_spark || 0);
             });
 
             container.innerHTML = sortedList.map((u, i) => `
@@ -4386,11 +4389,11 @@ async function loadLeaderboard() {
                                 <span class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${u.id})">${u.username}</span>
                                 <span class="text-[9px] font-bold bg-theme-accent-soft text-theme-accent px-1.5 py-0.5 rounded">Lvl ${u.spark_level || 1}</span>
                             </div>
-                            <span class="text-[10px] text-theme-muted">${u.quests_completed_7d || 0} quests completed (7d)</span>
+                            <span class="text-[10px] text-theme-muted">${u.completed_quests_count || 0} quests completed (7d)</span>
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1">⚔️ +${Math.round(u.quest_spark_7d || 0)} Spark</span>
+                        <span class="text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1">⚔️ +${Math.round(u.total_quest_spark || 0)} Spark</span>
                     </div>
                 </div>
             `).join('');
@@ -4608,6 +4611,7 @@ function updateAppHeight() {
     const nav = document.getElementById('main-nav');
     const coachInput = document.getElementById('coach-input-area');
     const shell = document.getElementById('app-shell');
+    const talkToContainer = document.getElementById('talk-to-container');
 
     // Set a global CSS variable for other fixed elements to use
     document.documentElement.style.setProperty('--vv-height', `${vh}px`);
@@ -4621,8 +4625,17 @@ function updateAppHeight() {
             nav.style.pointerEvents = 'none';
             nav.style.transform = 'translateY(150%)'; // slide down and hide
         }
+        if (talkToContainer) {
+            talkToContainer.classList.add('hidden');
+        }
         if (coachInput) {
-            coachInput.classList.remove('pb-24', 'md:pb-24');
+            coachInput.classList.remove('hidden');
+            // We do NOT remove pb-24 here because removing it while the keyboard is animating up
+            // causes the layout to shrink instantly, breaking focus on iOS Safari.
+            // Instead, we just let the fixed shell height naturally handle it or use a separate strategy.
+            // However, we still need to make sure the input isn't pushed too far up.
+            // Since we set the shell height to vh, the layout adapts smoothly.
+            coachInput.classList.remove('pb-24', 'md:pb-24'); 
         }
         // Crucial for iOS: prevent Safari from pushing the fixed document up!
         if (window.visualViewport && window.visualViewport.offsetTop > 0) {
@@ -4637,12 +4650,38 @@ function updateAppHeight() {
             nav.style.pointerEvents = 'auto';
             nav.style.transform = 'translateY(0)'; // restore
         }
+        // If we are on the chat tab, restore the talk to button and hide input when keyboard closes
+        const currentTab = document.querySelector('.nav-btn.text-white'); // rough check for active tab
+        const isCoachTab = currentTab && currentTab.id === 'nav-btn-coach';
+        
         if (coachInput) {
             coachInput.classList.add('pb-24', 'md:pb-24');
+            if (isCoachTab) {
+                coachInput.classList.add('hidden');
+            }
         }
+        if (talkToContainer && isCoachTab) {
+            talkToContainer.classList.remove('hidden');
+        }
+        
         window.scrollTo(0, 0);
     }
 }
+
+function openChatInput() {
+    const btn = document.getElementById('talk-to-container');
+    const inputArea = document.getElementById('coach-input-area');
+    const input = document.getElementById('chat-input');
+    
+    if (btn) btn.classList.add('hidden');
+    if (inputArea) inputArea.classList.remove('hidden');
+    
+    // Slight delay to allow DOM to render before focusing, preventing iOS focus drop
+    setTimeout(() => {
+        if (input) input.focus();
+    }, 50);
+}
+
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
         updateAppHeight();
@@ -5197,7 +5236,6 @@ function updateCycleWidget(gender, lastCycleStart, avgCycleLength) {
 
 // --- GAMIFICATION LOGIC ---
 function getQuestProgressHtml(q) {
-    if (q.status !== 'active' && q.status !== 'completed') return '';
     const current = typeof q.current_value === 'number' ? q.current_value : 0;
     const target = parseFloat(q.target_value) || 1;
     const pct = Math.min(100, Math.max(0, Math.round((current / target) * 100)));
@@ -5208,15 +5246,15 @@ function getQuestProgressHtml(q) {
     else if (q.target_metric === 'unique_sports') unit = 'sports';
     else if (q.target_metric === 'spark_score') unit = 'Spark';
 
-    const barColor = q.status === 'completed' ? 'bg-green-500' : 'bg-theme-accent';
+    const barColor = q.status === 'completed' ? 'bg-emerald-500' : 'bg-theme-accent';
 
     return `
         <div class="mt-3.5 text-xs">
             <div class="flex justify-between text-xs font-bold mb-1.5 text-theme-text">
                 <span>Progress: ${current} / ${target} ${unit}</span>
-                <span class="${q.status === 'completed' ? 'text-green-500' : 'text-theme-accent'}">${pct}%</span>
+                <span class="${q.status === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-theme-accent'}">${pct}%</span>
             </div>
-            <div class="w-full bg-theme-border/60 h-2.5 rounded-full overflow-hidden p-0.5 border border-theme-border/30">
+            <div class="w-full bg-slate-200/80 dark:bg-theme-border/60 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-300/80 dark:border-theme-border/40">
                 <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
             </div>
         </div>
@@ -5227,19 +5265,19 @@ function getQuestCountdownHtml(q) {
     if (q.status !== 'active' || !q.expires_at) return '';
     const expiresIso = q.expires_at.replace(" ", "T") + (q.expires_at.includes("Z") ? "" : "Z");
     const diffMs = new Date(expiresIso).getTime() - Date.now();
-    if (diffMs <= 0) return `<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">⏳ Expired</span>`;
+    if (diffMs <= 0) return `<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-red-700 dark:text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">⏳ Expired</span>`;
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const days = Math.floor(diffHrs / 24);
     const hrs = diffHrs % 24;
     let timeStr = days > 0 ? `${days}d ${hrs}h` : `${hrs}h`;
-    return `<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">⏳ ${timeStr} left</span>`;
+    return `<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">⏳ ${timeStr} left</span>`;
 }
 
 function getQuestRefreshButtonHtml(q) {
     if (q.status !== 'active') return '';
     return `
-        <div class="mt-4 pt-3 border-t border-theme-border/30 flex justify-end">
-            <button onclick="refreshQuest(${q.id}, this)" class="text-xs font-bold text-theme-text bg-theme-bg hover:bg-theme-accent/10 hover:text-theme-accent hover:border-theme-accent active:scale-95 px-3.5 py-1.5 rounded-lg border border-theme-border transition-all duration-150 flex items-center justify-center gap-1.5 w-full sm:w-auto shadow-xs" title="Replace with a new quest (easier target, lower Spark reward)">
+        <div class="mt-4 pt-3 border-t border-slate-200/80 dark:border-theme-border/40 flex justify-end">
+            <button onclick="refreshQuest(${q.id}, this)" class="text-xs font-bold text-theme-text bg-white dark:bg-theme-bg hover:bg-theme-accent-soft hover:text-theme-accent hover:border-theme-accent active:scale-95 px-3.5 py-1.5 rounded-lg border border-slate-300 dark:border-theme-border transition-all duration-150 flex items-center justify-center gap-1.5 w-full sm:w-auto shadow-xs" title="Replace with a new quest (easier target, lower Spark reward)">
                 <span>🔄</span> <span>New Quest</span>
             </button>
         </div>
@@ -5252,21 +5290,21 @@ function renderQuestCard(q) {
     const isVoid = q.status === 'void';
 
     const statusText = isActive ? 'Active' : (isCompleted ? 'Completed 🏆' : 'Expired ⏳');
-    const statusBg = isActive ? 'bg-theme-accent/10 border border-theme-accent/30 text-theme-accent' : (isCompleted ? 'bg-green-500/10 border border-green-500/30 text-green-500 font-bold' : 'bg-gray-500/10 border border-gray-500/30 text-gray-400 font-semibold');
-    const dotColor = isActive ? 'bg-theme-accent animate-pulse' : (isCompleted ? 'bg-green-500' : 'bg-gray-400');
+    const statusBg = isActive ? 'bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-bold' : (isCompleted ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-bold' : 'bg-gray-500/10 border border-gray-500/30 text-gray-500 font-semibold');
+    const dotColor = isActive ? 'bg-red-500 animate-pulse' : (isCompleted ? 'bg-emerald-500' : 'bg-gray-400');
 
-    const cardOpacity = isActive ? 'opacity-100 shadow-sm hover:border-theme-border/80' : 'opacity-80';
+    const cardOpacity = isActive ? 'opacity-100 shadow-sm' : 'opacity-80';
 
     return `
-        <div class="p-4 bg-theme-bg rounded-xl border border-theme-border flex flex-col justify-between ${cardOpacity} transition-all duration-200">
+        <div class="p-4 bg-slate-50 dark:bg-theme-bg/40 rounded-xl border border-slate-200/90 dark:border-theme-border flex flex-col justify-between ${cardOpacity} transition-all duration-200">
             <!-- Top Metadata Row -->
-            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-theme-border/30 flex-wrap sm:flex-nowrap">
+            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/80 dark:border-theme-border/40 flex-wrap sm:flex-nowrap">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full ${statusBg} whitespace-nowrap shrink-0">
                         <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
                         <span>${statusText}</span>
                     </span>
-                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-red-700 dark:text-red-400 bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
                         <span>✨</span> <span>${q.reward_points} Spark</span>
                     </span>
                 </div>

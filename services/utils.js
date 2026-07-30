@@ -1423,6 +1423,13 @@ async function evaluateAndProgressQuests(userId) {
 
   for (const q of quests) {
     if (q.status === "active") {
+      if (activeCount >= 1) {
+        // Enforce maximum of 1 active quest by voiding older ones (array is sorted newest first)
+        q.status = "void";
+        db.run(`UPDATE user_quests SET status = 'void' WHERE id = ?`, [q.id]);
+        continue;
+      }
+      
       const expiresAtStr = (q.expires_at || "").trim();
       let isExpired = false;
       if (expiresAtStr) {

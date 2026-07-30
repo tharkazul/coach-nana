@@ -1,8 +1,27 @@
 const express = require("express");
 const router = express.Router();
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const db = require("../services/db");
 const { authenticateToken } = require("../services/auth");
 const { getSparkLevelInfo } = require("../services/utils");
+
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, "../public/uploads/profiles");
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `profile_${req.user.id}_${Date.now()}${ext}`);
+  },
+});
+const uploadProfile = multer({ storage: profileStorage });
+
 
 router.post("/api/settings/privacy", authenticateToken, (req, res) => {
   const { searchPrivacy } = req.body;
@@ -15,6 +34,29 @@ router.post("/api/settings/privacy", authenticateToken, (req, res) => {
     },
   );
 });
+
+router.post(
+  "/api/settings/profile-picture",
+  authenticateToken,
+  uploadProfile.single("photo"),
+  (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const url = `/uploads/profiles/${req.file.filename}`;
+
+    db.run(
+      `UPDATE users SET profile_picture_url = ? WHERE id = ?`,
+      [url, req.user.id],
+      function (err) {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "DB_ERROR" });
+        }
+        res.json({ success: true, url });
+      },
+    );
+  },
+);
 
 router.get("/api/user/settings", authenticateToken, (req, res) => {
   db.get(

@@ -155,13 +155,24 @@ router.post(
   async (req, res) => {
     const userId = req.user.id;
 
-    try {
-      const questData = await generateQuestForUser(userId, "common");
-      res.json({ success: true, quest: questData });
-    } catch (e) {
-      console.error("Failed to generate quest:", e);
-      res.status(500).json({ error: "Failed to generate quest" });
-    }
+    db.get(
+      `SELECT count(*) as count FROM user_quests WHERE user_id = ? AND status = 'active'`,
+      [userId],
+      async (err, row) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        if (row && row.count > 0) {
+          return res.status(400).json({ error: "You already have an active quest." });
+        }
+        
+        try {
+          const questData = await generateQuestForUser(userId, "common");
+          res.json({ success: true, quest: questData });
+        } catch (e) {
+          console.error("Failed to generate quest:", e);
+          res.status(500).json({ error: "Failed to generate quest" });
+        }
+      }
+    );
   },
 );
 

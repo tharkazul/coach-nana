@@ -69,51 +69,51 @@
     </script>
 
     <style>
-        /* ☀️ DAY PALETTE (Clean Porcelain + 2 Highlights: Cyan & Purple + 2 Soft Supportive Tints) */
+        /* ☀️ PALE SKY DAY PALETTE (LIGHT MODE) */
         :root {
-            --bg-main: #F4F6F9;
-            --bg-card: #FFFFFF;
-            --bg-card-hover: #F8FAFC;
-            --border-color: #E2E8F0;
-            --text-main: #0F172A;
-            --text-muted: #64748B;
+            --bg-main: #C8E0F4;          /* Pale Sky dominant canvas */
+            --bg-card: #FFFFFF;          /* Pure white card pop for legibility */
+            --bg-card-hover: #F0F7FD;
+            --border-color: #A3D2F2;      /* Soft Sky border */
+            --text-main: #031927;        /* Ink Black for high-contrast typography */
+            --text-muted: #487A99;       /* Air Force Blue muted text */
             
-            /* Highlight 1 (Cyan) & Highlight 2 (Purple) */
-            --accent-primary: #0284C7;
-            --accent-hover: #0369A1;
-            --accent-secondary: #7C3AED;
+            /* Highlight 1 (Brick Ember Red Pop) & Highlight 2 (Air Force Blue) */
+            --accent-primary: #BA1200;
+            --accent-hover: #960E00;
+            --accent-secondary: #508AA8;
             
-            /* Supportive Soft Color 1 (Soft Cyan) & Soft Color 2 (Soft Purple) */
-            --soft-cyan: #E0F2FE;
-            --soft-purple: #F3E8FF;
+            /* Supportive Soft Color 1 (Baby Blue) & Soft Color 2 (Pale Sky Soft) */
+            --soft-cyan: #9DD1F1;
+            --soft-purple: #E1F0FC;
             
-            --accent-border: #BAE6FD;
-            --color-focus: #0284C7;
-            --color-metric: #7C3AED;
+            --accent-border: #BA1200;
+            --color-focus: #508AA8;
+            --color-metric: #BA1200;
         }
 
-        /* 🌙 NIGHT PALETTE (Deep Obsidian + 2 Highlights: Electric Cyan & Vibrant Purple + 2 Soft Glow Tints) */
+        /* 🌙 INK BLACK NIGHT PALETTE (DARK MODE) */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-main: #0B0F17;
-                --bg-card: #151C28;
-                --bg-card-hover: #1E293B;
-                --border-color: #243042;
-                --text-main: #F8FAFC;
-                --text-muted: #94A3B8;
+                --bg-main: #031927;      /* Ink Black dominant dark canvas */
+                --bg-card: #0B2538;      /* Rich Ink Black card pop */
+                --bg-card-hover: #14354F;
+                --border-color: #193D59;  /* Subtle dark blue border */
+                --text-main: #FFFFFF;    /* Crisp White text for maximum readability */
+                --text-muted: #9DD1F1;   /* Baby Blue soft muted text */
                 
-                /* Highlight 1 (Electric Cyan) & Highlight 2 (Vibrant Purple) */
-                --accent-primary: #00F0FF;
-                --accent-hover: #38BDF8;
-                --accent-secondary: #8B5CF6;
+                /* Highlight 1 (Brick Ember Red Pop) & Highlight 2 (Baby Blue) */
+                --accent-primary: #BA1200;
+                --accent-hover: #D81702;
+                --accent-secondary: #9DD1F1;
                 
-                /* Supportive Soft Color 1 (Cyan Soft Glow) & Soft Color 2 (Purple Soft Glow) */
-                --soft-cyan: rgba(0, 240, 255, 0.1);
-                --soft-purple: rgba(139, 92, 246, 0.1);
+                /* Supportive Soft Colors */
+                --soft-cyan: rgba(186, 18, 0, 0.18);
+                --soft-purple: rgba(157, 209, 241, 0.15);
                 
-                --accent-border: rgba(0, 240, 255, 0.25);
-                --color-focus: #00F0FF;
-                --color-metric: #8B5CF6;
+                --accent-border: rgba(186, 18, 0, 0.4);
+                --color-focus: #9DD1F1;
+                --color-metric: #BA1200;
             }
 
             .leaflet-layer,

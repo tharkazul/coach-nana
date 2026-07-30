@@ -13,8 +13,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Spark">
-    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#f9fafb" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#031927" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#C8E0F4" media="(prefers-color-scheme: light)">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -56,43 +56,39 @@
     </script>
 
     <style>
-        /* ☀️ OFFICE STEALTH (LIGHT MODE) */
+        /* ☀️ PALE SKY DAY PALETTE (LIGHT MODE) */
         :root {
-            --bg-main: #F4F7F9;
-            /* Lighter background */
-            --bg-card: #FFFFFF;
-            /* Pure white bubbles/cards for pop */
-            --border-color: #DDE3E9;
-            --text-main: #191C1E;
-            --text-muted: #5A6973;
-            --accent: #16ACBD;
-            --accent-hover: #1397A6;
-            --accent-soft: #E0F5F7;
-            --accent-border: #BAE8ED;
+            --bg-main: #C8E0F4;          /* Pale Sky dominant canvas */
+            --bg-card: #FFFFFF;          /* Pure white card pop for high legibility */
+            --border-color: #A3D2F2;      /* Soft Sky border */
+            --text-main: #031927;        /* Ink Black for high-contrast typography */
+            --text-muted: #487A99;       /* Air Force Blue muted text */
+            --accent: #BA1200;           /* Brick Ember red pop for primary actions */
+            --accent-hover: #960E00;     /* Deep Ember hover */
+            --accent-soft: #9DD1F1;      /* Baby Blue for active pills & subtabs */
+            --accent-border: #BA1200;    /* Brick Ember accent border */
 
             /* Extended Palette */
-            --color-focus: #F9CF45;
-            --color-metric: #E3494F;
+            --color-focus: #508AA8;      /* Air Force Blue */
+            --color-metric: #BA1200;     /* Brick Ember */
         }
 
-        /* 🌙 PERFORMANCE APP (DARK MODE) */
+        /* 🌙 INK BLACK NIGHT PALETTE (DARK MODE) */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-main: #0F1315;
-                /* Darker background */
-                --bg-card: #1C2124;
-                /* Distinct lighter gray for bubbles/cards */
-                --border-color: #2D343A;
-                --text-main: #FFFFFF;
-                --text-muted: #8E9BA4;
-                --accent: #108595;
-                --accent-hover: #16A8BC;
-                --accent-soft: #08343A;
-                --accent-border: #0D5761;
+                --bg-main: #031927;      /* Ink Black dominant dark canvas */
+                --bg-card: #0B2538;      /* Rich Ink Black card pop */
+                --border-color: #193D59;  /* Subtle dark blue border */
+                --text-main: #FFFFFF;    /* Crisp White text for maximum readability */
+                --text-muted: #9DD1F1;   /* Baby Blue soft muted text */
+                --accent: #BA1200;       /* Brick Ember red pop CTA against Ink Black */
+                --accent-hover: #D81702; /* Vibrant Ember hover */
+                --accent-soft: rgba(186, 18, 0, 0.18); /* Brick Ember soft glow tint */
+                --accent-border: rgba(186, 18, 0, 0.4);
 
                 /* Extended Palette */
-                --color-focus: #C99C0C;
-                --color-metric: #B22227;
+                --color-focus: #9DD1F1;  /* Baby Blue */
+                --color-metric: #BA1200; /* Brick Ember */
             }
 
             .leaflet-layer,
@@ -987,8 +983,17 @@
                         <div id="chat-window"
                             class="flex-1 overflow-y-auto overscroll-y-contain p-4 md:p-6 bg-theme-bg/50 space-y-4 md:space-y-6 flex flex-col min-h-0">
                         </div>
+                        <div id="talk-to-container" class="p-4 flex justify-end shrink-0 transition-all duration-300">
+                            <button id="talk-to-btn" onclick="openChatInput()"
+                                class="bg-theme-accent text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2 hover:scale-105 transition-transform z-40">
+                                <span class="font-bold text-sm">Talk to</span>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                            </button>
+                        </div>
                         <div id="coach-input-area"
-                            class="p-3 md:p-4 bg-theme-card border-t border-theme-border shrink-0 pb-24 md:pb-24 transition-all duration-300">
+                            class="hidden p-3 md:p-4 bg-theme-card border-t border-theme-border shrink-0 pb-24 md:pb-24 transition-all duration-300">
 
                             <!-- Quick Replies -->
                             <div id="coach-suggestions"
