@@ -211,6 +211,17 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
+  db.run(`CREATE TABLE IF NOT EXISTS nutrition_intake (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    date TEXT,
+    carbs REAL DEFAULT 0,
+    protein REAL DEFAULT 0,
+    fat REAL DEFAULT 0,
+    UNIQUE(user_id, date),
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS milestones (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -226,6 +237,16 @@ db.serialize(() => {
         date TEXT,
         protocol_json TEXT,
         UNIQUE(user_id, date)
+    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS nutrition_intake (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        date TEXT,
+        carbs REAL DEFAULT 0,
+        protein REAL DEFAULT 0,
+        fat REAL DEFAULT 0,
+        UNIQUE(user_id, date),
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
   db.run(`CREATE TABLE IF NOT EXISTS connections (
         user_id INTEGER,
@@ -325,14 +346,34 @@ db.serialize(() => {
 
   db.run(`ALTER TABLE athlete_niggles ADD COLUMN resolved_date DATETIME`, (err) => {});
 
-  db.run(`CREATE TABLE IF NOT EXISTS athlete_fatigue_log (
+  db.run(`CREATE TABLE IF NOT EXISTS athlete_muscle_status (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
-        date TEXT,
         body_part TEXT,
         fatigue_score REAL DEFAULT 0,
+        development_score REAL DEFAULT 0,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, body_part),
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
+
+  // Migration from old athlete_fatigue_log if it exists
+  db.all(`PRAGMA table_info(athlete_fatigue_log);`, (err, rows) => {
+    if (!err && rows && rows.length > 0) {
+      console.log("Migrating athlete_fatigue_log to athlete_muscle_status...");
+      db.serialize(() => {
+        // We sum existing fatigue to populate both fatigue and development initially
+        db.run(`INSERT INTO athlete_muscle_status (user_id, body_part, fatigue_score, development_score)
+                SELECT user_id, body_part, SUM(fatigue_score), SUM(fatigue_score)
+                FROM athlete_fatigue_log
+                GROUP BY user_id, body_part
+                ON CONFLICT(user_id, body_part) DO UPDATE SET 
+                  fatigue_score = fatigue_score + excluded.fatigue_score,
+                  development_score = development_score + excluded.development_score`);
+        db.run(`DROP TABLE athlete_fatigue_log`);
+      });
+    }
+  });
 });
 
 module.exports = db;

@@ -1109,6 +1109,14 @@ function switchTab(t) {
 
     if (t === 'profile') {
         loadSettings();
+        setTimeout(() => {
+            const tabs = ['settings', 'account', 'coach'];
+            const activeTab = tabs.find(tab => {
+                const btn = document.getElementById(`profile-tab-${tab}`);
+                return btn && btn.classList.contains('text-theme-accent');
+            }) || 'settings';
+            switchProfileTab(activeTab);
+        }, 50);
     }
     if (t === 'social') loadSocialFeed();
     if (t === 'physique') {
@@ -1116,6 +1124,13 @@ function switchTab(t) {
         loadNutritionProtocol();
         if (typeof loadActiveNiggles === 'function') loadActiveNiggles();
         setTimeout(() => {
+            const tabs = ['spark', 'nutrition', 'health', 'dailylog'];
+            const activeTab = tabs.find(tab => {
+                const btn = document.getElementById(`prog-tab-${tab}`);
+                return btn && btn.classList.contains('text-theme-accent');
+            }) || 'spark';
+            switchProgressTab(activeTab);
+            
             if (window.progress_radar) window.progress_radar.resize();
             ['fitness', 'fatigue', 'readiness', 'weight'].forEach(metric => {
                 if (window[`public_sparkline_${metric}`]) window[`public_sparkline_${metric}`].resize();
@@ -1128,6 +1143,17 @@ function switchTab(t) {
         setTimeout(() => {
             const chatWindow = document.getElementById('chat-window');
             if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
+        }, 50);
+    }
+    
+    if (t === 'dashboard') {
+        setTimeout(() => {
+            const tabs = ['dash', 'planning'];
+            const activeTab = tabs.find(tab => {
+                const btn = document.getElementById(`dash-tab-${tab}`);
+                return btn && btn.classList.contains('text-theme-accent');
+            }) || 'dash';
+            switchDashboardTab(activeTab);
         }, 50);
     }
 }
@@ -3083,26 +3109,26 @@ async function loadChatHistory() {
                 if (msg.role === 'user') {
                     let imgHtml = '';
                     if (msg.image_path) {
-                        try {
-                            const paths = JSON.parse(msg.image_path);
-                            if (Array.isArray(paths) && paths.length > 0) {
-                                if (paths.length === 1) {
-                                    const tokenSuffix = paths[0].startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
-                                    imgHtml = `<img src="${paths[0]}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
-                                } else {
-                                    imgHtml = `<div class="grid grid-cols-2 gap-1 mb-1">`;
-                                    paths.forEach(p => {
-                                        const tokenSuffix = p.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
-                                        imgHtml += `<img src="${p}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full aspect-square rounded-xl object-cover animate-pop">`;
-                                    });
-                                    imgHtml += `</div>`;
+                        if (msg.image_path !== '[]') {
+                            try {
+                                const paths = JSON.parse(msg.image_path);
+                                if (Array.isArray(paths) && paths.length > 0) {
+                                    if (paths.length === 1) {
+                                        const tokenSuffix = paths[0].startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
+                                        imgHtml = `<img src="${paths[0]}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
+                                    } else {
+                                        imgHtml = `<div class="grid grid-cols-2 gap-1 mb-1">`;
+                                        paths.forEach(p => {
+                                            const tokenSuffix = p.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
+                                            imgHtml += `<img src="${p}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full aspect-square rounded-xl object-cover animate-pop">`;
+                                        });
+                                        imgHtml += `</div>`;
+                                    }
                                 }
-                            } else {
-                                throw new Error('Not array');
+                            } catch (e) {
+                                const tokenSuffix = msg.image_path.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
+                                imgHtml = `<img src="${msg.image_path}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
                             }
-                        } catch (e) {
-                            const tokenSuffix = msg.image_path.startsWith('/api/images/') ? `?token=${localStorage.getItem('nana_token')}` : '';
-                            imgHtml = `<img src="${msg.image_path}${tokenSuffix}" onerror="this.outerHTML='<div class=\\'text-[10px] italic opacity-50 mb-2\\'>Image expired</div>'" class="w-full max-h-72 rounded-xl mb-1 object-cover animate-pop">`;
                         }
                     }
                     currentGroupHtml += `
@@ -4179,16 +4205,60 @@ async function loadNutritionProtocol() {
         els.content.forEach(el => { if (el) el.classList.add('hidden') });
 
         const token = localStorage.getItem('nana_token');
-        const res = await fetch('/api/physique/nutrition', {
+        const res = await fetch(`/api/physique/nutrition?_t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const protocol = await res.json();
+        const payload = await res.json();
+        console.log("Nutrition Payload:", payload);
+        const protocol = payload.suggested || payload; // Backwards compatibility
+        const intake = payload.intake || null;
 
         els.title.forEach(el => { if (el) el.innerText = protocol.title || 'Balanced Protocol' });
         els.rationale.forEach(el => { if (el) el.innerText = protocol.rationale || '' });
         els.carbs.forEach(el => { if (el) el.innerText = `${protocol.carbs || '--'}g` });
         els.protein.forEach(el => { if (el) el.innerText = `${protocol.protein || '--'}g` });
         els.fat.forEach(el => { if (el) el.innerText = `${protocol.fat || '--'}g` });
+
+        const updateRing = (macro, suggestedVal, intakeVal) => {
+            const rings = [document.getElementById(`dash-ring-${macro}`), document.getElementById(`ring-${macro}`)];
+            const badges = [document.getElementById(`dash-badge-${macro}`), document.getElementById(`badge-${macro}`)];
+            
+            if (intakeVal > 0 && suggestedVal > 0) {
+                const percent = Math.min(100, Math.round((intakeVal / suggestedVal) * 100));
+                const circumference = 175.93;
+                const offset = circumference - (percent / 100) * circumference;
+                
+                rings.forEach(ring => {
+                    if (ring) {
+                        ring.style.strokeDashoffset = `${offset}px`;
+                    }
+                });
+                badges.forEach(badge => {
+                    if (badge) {
+                        badge.innerText = `${percent}%`;
+                        badge.classList.remove('hidden');
+                        badge.style.display = 'block'; // Force display just in case
+                    }
+                });
+            } else {
+                rings.forEach(ring => {
+                    if (ring) ring.style.strokeDashoffset = 175.93;
+                });
+                badges.forEach(badge => {
+                    if (badge) badge.classList.add('hidden');
+                });
+            }
+        };
+
+        if (intake) {
+            updateRing('carbs', protocol.carbs, intake.carbs);
+            updateRing('protein', protocol.protein, intake.protein);
+            updateRing('fat', protocol.fat, intake.fat);
+        } else {
+            updateRing('carbs', protocol.carbs, 0);
+            updateRing('protein', protocol.protein, 0);
+            updateRing('fat', protocol.fat, 0);
+        }
 
         els.loading.forEach(el => { if (el) el.classList.add('hidden') });
         els.content.forEach(el => { if (el) el.classList.remove('hidden') });
@@ -5020,25 +5090,70 @@ let activeNiggles = [];
 async function loadActiveNiggles() {
     try {
         const token = localStorage.getItem('nana_token');
-        const res = await fetch('/api/niggles/active', {
+        
+        // 1. Fetch active injuries (niggles)
+        const niggleRes = await fetch('/api/niggles/active', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        activeNiggles = await res.json();
+        activeNiggles = await niggleRes.json();
+
+        // 2. Fetch muscle status (fatigue/development)
+        const fatigueRes = await fetch('/api/fatigue', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const muscleStatus = fatigueRes.ok ? await fatigueRes.json() : [];
 
         // Reset all colors
         document.querySelectorAll('.body-part').forEach(part => {
-            part.classList.remove('severity-1', 'severity-2', 'severity-3', 'severity-4', 'severity-5');
+            part.classList.remove('severity-1', 'severity-2', 'severity-3', 'severity-4', 'severity-5', 'fatigued', 'prime-development');
         });
 
-        // Apply colors to active parts
+        // Apply colors based on fatigue/development first
+        muscleStatus.forEach(muscle => {
+            const el = document.getElementById(muscle.body_part);
+            if (el) {
+                if (muscle.status === 'fatigued') {
+                    el.classList.add('fatigued');
+                } else if (muscle.status === 'prime_development') {
+                    el.classList.add('prime-development');
+                }
+            }
+        });
+
+        // Apply niggle colors on top (they override due to CSS specificity or just being added last)
         activeNiggles.forEach(niggle => {
             const el = document.getElementById(niggle.body_part);
             if (el) {
+                // Remove fatigue/development classes if an injury exists to ensure injury color shows clearly
+                el.classList.remove('fatigued', 'prime-development');
                 el.classList.add(`severity-${niggle.severity}`);
             }
         });
+        
+        // 3. Fetch AI Coach insight
+        const insightEl = document.getElementById('body-map-coach-prompt');
+        if (insightEl) {
+            insightEl.innerHTML = "Analyzing muscle data...";
+            fetch('/api/fatigue/insight', { headers: { 'Authorization': `Bearer ${token}` } })
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                })
+                .then(data => {
+                    if (data && data.insight) {
+                        insightEl.innerHTML = `"${data.insight}"`;
+                    } else {
+                        insightEl.innerHTML = "Ready to train? Let's check your muscle status!";
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    insightEl.innerHTML = "Ready to train? Let's check your muscle status!";
+                });
+        }
+
     } catch (e) {
-        console.error("Failed to load active niggles:", e);
+        console.error("Failed to load active niggles or fatigue:", e);
     }
 }
 

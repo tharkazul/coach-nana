@@ -266,9 +266,18 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                 }
 
                                 db.all(
-                                  `SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`,
+                                  `SELECT body_part, fatigue_score, development_score FROM athlete_muscle_status WHERE user_id = ? AND (fatigue_score > 10 OR development_score > 10)`,
                                   [req.user.id],
-                                  async (err, historyRows) => {
+                                  async (err, muscleRows) => {
+                                    let muscleStatusText = "No significant muscle fatigue or peak development.";
+                                    if (muscleRows && muscleRows.length > 0) {
+                                      muscleStatusText = muscleRows.map(m => `- ${m.body_part}: Fatigue ${Math.round(m.fatigue_score)}, Peak Development ${Math.round(m.development_score)}`).join("\n                    ");
+                                    }
+
+                                    db.all(
+                                      `SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 6) ORDER BY id ASC`,
+                                      [req.user.id],
+                                      async (err, historyRows) => {
                                     try {
                                       let cleanHistory = [];
 
@@ -359,6 +368,9 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
 
                     RECENT STRENGTH & PB HISTORY:
                     ${recentSetsText}
+                    
+                    MUSCLE STATUS (Fatigue vs Peak Development):
+                    ${muscleStatusText}
                     
                     ACTIVE INJURIES / NIGGLES:
                     ${nigglesText}
@@ -460,9 +472,20 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                         "start_date": "YYYY-MM-DD"
                       }
                     }
+                    \`\`\`
+
+                    NUTRITION & MACRO LOGGING (CRITICAL):
+                    If the athlete mentions eating food, meals, or consuming specific macros today, you MUST output an additional JSON block at the very end of your response to log their intake. This is mandatory. Guess the macros in grams if they aren't explicit. Format it exactly like this inside triple backticks:
+                    \`\`\`json
+                    {
+                      "type": "log_nutrition",
+                      "data": {
+                        "carbs": 40,
+                        "protein": 30,
+                        "fat": 15
+                      }
+                    }
                     \`\`\``;
-
-
 
                                       let aiReply = await generateWithFallback(
                                         message,
@@ -568,7 +591,31 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                                   );
                                               },
                                             );
-                                            planUpdated = true; // Signal frontend to reload settings/dashboard
+                                            planUpdated = true;
+                                          } else if (
+                                            parsedData &&
+                                            parsedData.type === "log_nutrition" &&
+                                            parsedData.data
+                                          ) {
+                                            const intake = parsedData.data;
+                                            const todayStr = getAMSDateString();
+                                            db.run(
+                                              `INSERT INTO nutrition_intake (user_id, date, carbs, protein, fat)
+                                               VALUES (?, ?, ?, ?, ?)
+                                               ON CONFLICT(user_id, date) DO UPDATE SET
+                                               carbs = carbs + excluded.carbs,
+                                               protein = protein + excluded.protein,
+                                               fat = fat + excluded.fat`,
+                                              [req.user.id, todayStr, intake.carbs || 0, intake.protein || 0, intake.fat || 0],
+                                              (err) => {
+                                                if (err)
+                                                  console.error(
+                                                    "Failed to insert manual nutrition intake:",
+                                                    err,
+                                                  );
+                                              }
+                                            );
+                                            planUpdated = true;
                                           } else if (
                                             parsedData &&
                                             parsedData.type ===
@@ -750,9 +797,10 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                       const simulatedUserMessage = `Can you build my plan for next week, Spark?`;
                                       const coachAcknowledgement = `I've just crunched your latest numbers and pushed a fresh ${phase} phase plan to your dashboard. Go check it out—you're going to crush it!`;
 
+                                      const imagePathValue = imagePathsDB.length > 0 ? JSON.stringify(imagePathsDB) : null;
                                       db.run(
                                         `INSERT INTO chat_history (user_id, role, content, image_path) VALUES (?, 'user', ?, ?)`,
-                                        [req.user.id, message, JSON.stringify(imagePathsDB)],
+                                        [req.user.id, message, imagePathValue],
                                       );
                                       db.run(
                                         `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, ?)`,
@@ -790,6 +838,8 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                     }
                                   },
                                 ); // End chat history
+                                  },
+                                ); // End muscle status
                               },
                             ); // End niggles fetch
                           },

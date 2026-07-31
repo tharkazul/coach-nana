@@ -13,8 +13,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Spark">
-    <meta name="theme-color" content="#031927" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#C8E0F4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#F4F6F9" media="(prefers-color-scheme: light)">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -56,39 +56,39 @@
     </script>
 
     <style>
-        /* ☀️ PALE SKY DAY PALETTE (LIGHT MODE) */
+        /* ☀️ SOLAR VELOCITY DAY PALETTE (LIGHT MODE) */
         :root {
-            --bg-main: #C8E0F4;          /* Pale Sky dominant canvas */
-            --bg-card: #FFFFFF;          /* Pure white card pop for high legibility */
-            --border-color: #A3D2F2;      /* Soft Sky border */
-            --text-main: #031927;        /* Ink Black for high-contrast typography */
-            --text-muted: #487A99;       /* Air Force Blue muted text */
-            --accent: #BA1200;           /* Brick Ember red pop for primary actions */
-            --accent-hover: #960E00;     /* Deep Ember hover */
-            --accent-soft: #9DD1F1;      /* Baby Blue for active pills & subtabs */
-            --accent-border: #BA1200;    /* Brick Ember accent border */
+            --bg-main: #F4F6F9;          /* Soft Slate Porcelain canvas - easy on the eye */
+            --bg-card: #FFFFFF;          /* Pure white card pop for maximum legibility */
+            --border-color: #E2E8F0;      /* Subtle Slate border */
+            --text-main: #0F172A;        /* Deep Slate for high-contrast typography */
+            --text-muted: #64748B;       /* Muted Slate text */
+            --accent: #FF5A1F;           /* Solar Orange pop accent for actions & active states */
+            --accent-hover: #E04810;     /* Deeper Solar Orange hover */
+            --accent-soft: #FFF0EB;      /* Soft Solar Orange tint for active pills & subtabs */
+            --accent-border: #FFD4C2;    /* Soft Solar border */
 
             /* Extended Palette */
-            --color-focus: #508AA8;      /* Air Force Blue */
-            --color-metric: #BA1200;     /* Brick Ember */
+            --color-focus: #38BDF8;      /* Sky Blue */
+            --color-metric: #FF5A1F;     /* Solar Orange */
         }
 
-        /* 🌙 INK BLACK NIGHT PALETTE (DARK MODE) */
+        /* 🌙 MIDNIGHT SLATE NIGHT PALETTE (DARK MODE) */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-main: #031927;      /* Ink Black dominant dark canvas */
-                --bg-card: #0B2538;      /* Rich Ink Black card pop */
-                --border-color: #193D59;  /* Subtle dark blue border */
-                --text-main: #FFFFFF;    /* Crisp White text for maximum readability */
-                --text-muted: #9DD1F1;   /* Baby Blue soft muted text */
-                --accent: #BA1200;       /* Brick Ember red pop CTA against Ink Black */
-                --accent-hover: #D81702; /* Vibrant Ember hover */
-                --accent-soft: rgba(186, 18, 0, 0.18); /* Brick Ember soft glow tint */
-                --accent-border: rgba(186, 18, 0, 0.4);
+                --bg-main: #0F172A;      /* Deep Slate Midnight canvas */
+                --bg-card: #1E293B;      /* Elevated Slate cards for crisp separation */
+                --border-color: #334155;  /* Subtle dark slate border */
+                --text-main: #F8FAFC;    /* Crisp Ice White text for maximum readability */
+                --text-muted: #94A3B8;   /* Soft Muted Slate text */
+                --accent: #FF6B35;       /* Neon Solar Orange pop CTA against Midnight Slate */
+                --accent-hover: #FF8554; /* Vibrant Solar Orange hover */
+                --accent-soft: rgba(255, 90, 31, 0.15); /* Soft Solar glow tint */
+                --accent-border: rgba(255, 90, 31, 0.35);
 
                 /* Extended Palette */
-                --color-focus: #9DD1F1;  /* Baby Blue */
-                --color-metric: #BA1200; /* Brick Ember */
+                --color-focus: #38BDF8;  /* Sky Blue */
+                --color-metric: #FF6B35; /* Neon Solar Orange */
             }
 
             .leaflet-layer,
@@ -624,68 +624,63 @@
                     </div>
 
                     <div id="dashboard-subtab-dash" class="space-y-5 md:space-y-6">
-                        <!-- Coach's Desk (Hero Section) -->
-                        <div id="coachs-desk"
-                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden flex flex-col group">
+                        <!-- COACH BRIEFING CARD -->
+                        <div
+                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                             <div
-                                class="bg-theme-accent-soft p-5 md:p-8 flex flex-row gap-4 md:gap-5 items-center relative overflow-hidden">
-                                <!-- Decorative background element -->
-                                <div
-                                    class="absolute -right-10 -top-10 text-[100px] opacity-5 select-none pointer-events-none transform rotate-12 group-hover:rotate-6 transition-transform duration-700">
-                                    💡</div>
-
-                                <!-- Coach Avatar -->
-                                <div
-                                    class="w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-full border-2 border-theme-accent shadow-md bg-theme-bg overflow-hidden relative z-10">
-                                    <img id="desk-coach-avatar" src="" alt="Coach" class="w-full h-full object-cover">
-                                </div>
-
-                                <!-- Briefing Content -->
-                                <div class="flex-1 relative z-10 w-full">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <h3
-                                            class="text-xs md:text-sm uppercase tracking-widest font-bold text-theme-accent">
-                                            Coach Highlights</h3>
-                                        <span
-                                            class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
-                                    </div>
-                                    <div id="daily-reflection-container"
-                                        class="text-sm md:text-base text-theme-text font-medium leading-relaxed mb-5">
-                                        <p id="daily-reflection"><span class="text-theme-muted italic">Analyzing your
-                                                recent
-                                                training...</span></p>
+                                class="bg-theme-accent-soft p-5 md:p-6 flex flex-col gap-4 relative overflow-hidden">
+                                <!-- Top Row: Coach Avatar + Header & Reflection -->
+                                <div class="flex flex-row gap-4 items-start relative z-10">
+                                    <!-- Coach Avatar -->
+                                    <div
+                                        class="w-14 h-14 md:w-16 md:h-16 shrink-0 rounded-full border-2 border-theme-accent shadow-md bg-theme-bg overflow-hidden">
+                                        <img id="desk-coach-avatar" src="" alt="Coach" class="w-full h-full object-cover">
                                     </div>
 
-                                    <button
-                                        onclick="sendQuickAction('Let\'s discuss my plan for today. What should I focus on?')"
-                                        class="w-full bg-theme-accent text-white font-bold py-3 md:py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-base md:text-lg">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
-                                            </path>
-                                        </svg>
-                                        Discuss Today's Plan
-                                    </button>
+                                    <!-- Header & Reflection -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                            </svg>
+                                            <h3 class="text-xs md:text-sm uppercase tracking-widest font-bold text-theme-accent">
+                                                Coach Highlights</h3>
+                                            <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
+                                        </div>
+                                        <div id="daily-reflection-container"
+                                            class="text-sm md:text-base text-theme-text font-medium leading-relaxed">
+                                            <p id="daily-reflection"><span class="text-theme-muted italic">Analyzing your recent training...</span></p>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <!-- Quick Actions Footer -->
-                            <div id="quick-actions-container"
-                                class="bg-theme-bg border-t border-theme-border p-3 flex flex-wrap gap-2 px-5 md:px-8">
-                                <span
-                                    class="text-[10px] uppercase font-bold text-theme-muted tracking-wider self-center mr-2">Quick
-                                    Actions:</span>
-                                <!-- Actions dynamically injected by script.js -->
+                                <!-- Full-Width CTA Button -->
+                                <button
+                                    onclick="sendQuickAction('Let\'s discuss my plan for today. What should I focus on?')"
+                                    class="w-full bg-theme-accent text-white font-bold py-3 md:py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg hover:bg-theme-accent-hover transition-all flex items-center justify-center gap-2 text-sm md:text-base relative z-10">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                                        </path>
+                                    </svg>
+                                    <span>Discuss Today's Plan</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- TODAY'S PLAN -->
-                        <div id="dash-today-plan-container" class="hidden flex-col gap-4">
-                            <h3
-                                class="text-sm uppercase tracking-widest font-bold text-theme-text flex items-center gap-2">
-                                <span class="text-xl">📅</span> Today's Plan
-                            </h3>
-                            <div id="dash-today-plan-content" class="w-full"></div>
+                        <div id="dash-today-plan-container"
+                            class="hidden bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div
+                                class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <h3 class="text-xs md:text-sm font-bold uppercase tracking-widest text-theme-text">Today's Plan</h3>
+                                </div>
+                            </div>
+                            <div id="dash-today-plan-content" class="p-4 md:p-6 w-full"></div>
                         </div>
 
                         <!-- DASHBOARD NUTRITION PROTOCOL -->
@@ -695,10 +690,15 @@
                                 class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-theme-accent to-purple-500">
                             </div>
                             <div
-                                class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
-                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                    <span class="text-lg">🥗</span> Daily AI Nutrition Protocol
-                                </h3>
+                                class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    </svg>
+                                    <h3 class="text-xs md:text-sm font-bold uppercase tracking-widest text-theme-text">
+                                        Daily AI Nutrition Protocol
+                                    </h3>
+                                </div>
                                 <span id="dash-nutrition-loading"
                                     class="text-xs text-theme-muted animate-pulse">Generating...</span>
                             </div>
@@ -713,31 +713,43 @@
                                     </div>
                                     <div class="flex gap-4 md:gap-6 justify-center">
                                         <div class="text-center">
-                                            <div
-                                                class="w-16 h-16 rounded-full border-4 border-blue-500 flex items-center justify-center mb-2">
-                                                <span id="dash-macro-carbs"
-                                                    class="font-bold text-theme-text text-sm">--g</span>
+                                            <div class="relative w-16 h-16 mb-2">
+                                                <svg class="w-16 h-16 transform -rotate-90">
+                                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-blue-500/20" />
+                                                    <circle id="dash-ring-carbs" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" class="text-blue-500 transition-all duration-1000" />
+                                                </svg>
+                                                <div class="absolute inset-0 flex items-center justify-center">
+                                                    <span id="dash-macro-carbs" class="font-bold text-theme-text text-sm">--g</span>
+                                                </div>
+                                                <div id="dash-badge-carbs" class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-blue-200 shadow-sm hidden">0%</div>
                                             </div>
-                                            <span
-                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
                                         </div>
                                         <div class="text-center">
-                                            <div
-                                                class="w-16 h-16 rounded-full border-4 border-red-500 flex items-center justify-center mb-2">
-                                                <span id="dash-macro-protein"
-                                                    class="font-bold text-theme-text text-sm">--g</span>
+                                            <div class="relative w-16 h-16 mb-2">
+                                                <svg class="w-16 h-16 transform -rotate-90">
+                                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-red-500/20" />
+                                                    <circle id="dash-ring-protein" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" class="text-red-500 transition-all duration-1000" />
+                                                </svg>
+                                                <div class="absolute inset-0 flex items-center justify-center">
+                                                    <span id="dash-macro-protein" class="font-bold text-theme-text text-sm">--g</span>
+                                                </div>
+                                                <div id="dash-badge-protein" class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-red-200 shadow-sm hidden">0%</div>
                                             </div>
-                                            <span
-                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
                                         </div>
                                         <div class="text-center">
-                                            <div
-                                                class="w-16 h-16 rounded-full border-4 border-yellow-500 flex items-center justify-center mb-2">
-                                                <span id="dash-macro-fat"
-                                                    class="font-bold text-theme-text text-sm">--g</span>
+                                            <div class="relative w-16 h-16 mb-2">
+                                                <svg class="w-16 h-16 transform -rotate-90">
+                                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-yellow-500/20" />
+                                                    <circle id="dash-ring-fat" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" class="text-yellow-500 transition-all duration-1000" />
+                                                </svg>
+                                                <div class="absolute inset-0 flex items-center justify-center">
+                                                    <span id="dash-macro-fat" class="font-bold text-theme-text text-sm">--g</span>
+                                                </div>
+                                                <div id="dash-badge-fat" class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-yellow-200 shadow-sm hidden">0%</div>
                                             </div>
-                                            <span
-                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
                                         </div>
                                     </div>
                                 </div>
@@ -746,17 +758,19 @@
 
                         <!-- Active Quests -->
                         <div id="active-quests-container"
-                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden hidden">
+                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6 hidden">
                             <div
-                                class="bg-theme-bg/50 p-4 border-b border-theme-border flex justify-between items-center">
+                                class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xl">🎯</span>
-                                    <h3 class="text-sm uppercase tracking-widest font-bold text-theme-text">Active
-                                        Quests</h3>
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="9" stroke-width="2"></circle>
+                                        <circle cx="12" cy="12" r="5" stroke-width="2"></circle>
+                                        <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
+                                    </svg>
+                                    <h3 class="text-xs md:text-sm uppercase tracking-widest font-bold text-theme-text">Active Quests</h3>
                                 </div>
                                 <span id="bonus-points-badge"
-                                    class="text-xs font-bold text-theme-accent bg-theme-accent/10 px-2 py-1 rounded-full hidden">+0
-                                    Bonus</span>
+                                    class="text-xs font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2.5 py-0.5 rounded-full hidden">+0 Bonus</span>
                             </div>
                             <div id="quests-list" class="p-4 flex flex-col gap-3">
                                 <div class="animate-pulse space-y-2">
@@ -983,7 +997,7 @@
                         <div id="chat-window"
                             class="flex-1 overflow-y-auto overscroll-y-contain p-4 md:p-6 bg-theme-bg/50 space-y-4 md:space-y-6 flex flex-col min-h-0">
                         </div>
-                        <div id="talk-to-container" class="p-4 flex justify-end shrink-0 transition-all duration-300">
+                        <div id="talk-to-container" class="p-4 pb-16 flex justify-end shrink-0 transition-all duration-300">
                             <button id="talk-to-btn" onclick="openChatInput()"
                                 class="bg-theme-accent text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2 hover:scale-105 transition-transform z-40">
                                 <span class="font-bold text-sm">Talk to</span>
@@ -993,7 +1007,7 @@
                             </button>
                         </div>
                         <div id="coach-input-area"
-                            class="hidden p-3 md:p-4 bg-theme-card border-t border-theme-border shrink-0 pb-24 md:pb-24 transition-all duration-300">
+                            class="hidden p-3 md:p-4 bg-theme-card border-t border-theme-border shrink-0 pb-16 md:pb-16 transition-all duration-300">
 
                             <!-- Quick Replies -->
                             <div id="coach-suggestions"
@@ -1196,10 +1210,15 @@
                                 class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-theme-accent to-purple-500">
                             </div>
                             <div
-                                class="px-6 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
-                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                    <span class="text-lg">🥗</span> Daily AI Nutrition Protocol
-                                </h3>
+                                class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    </svg>
+                                    <h3 class="text-xs md:text-sm font-bold uppercase tracking-widest text-theme-text">
+                                        Daily AI Nutrition Protocol
+                                    </h3>
+                                </div>
                                 <span id="nutrition-loading"
                                     class="text-xs text-theme-muted animate-pulse">Generating...</span>
                             </div>
@@ -1212,31 +1231,43 @@
                                     </div>
                                     <div class="flex gap-4 md:gap-6 justify-center">
                                         <div class="text-center">
-                                            <div
-                                                class="w-16 h-16 rounded-full border-4 border-blue-500 flex items-center justify-center mb-2">
-                                                <span id="macro-carbs"
-                                                    class="font-bold text-theme-text text-sm">--g</span>
+                                            <div class="relative w-16 h-16 mb-2">
+                                                <svg class="w-16 h-16 transform -rotate-90">
+                                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-blue-500/20" />
+                                                    <circle id="ring-carbs" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" class="text-blue-500 transition-all duration-1000" />
+                                                </svg>
+                                                <div class="absolute inset-0 flex items-center justify-center">
+                                                    <span id="macro-carbs" class="font-bold text-theme-text text-sm">--g</span>
+                                                </div>
+                                                <div id="badge-carbs" class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-blue-200 shadow-sm hidden">0%</div>
                                             </div>
-                                            <span
-                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Carbs</span>
                                         </div>
                                         <div class="text-center">
-                                            <div
-                                                class="w-16 h-16 rounded-full border-4 border-red-500 flex items-center justify-center mb-2">
-                                                <span id="macro-protein"
-                                                    class="font-bold text-theme-text text-sm">--g</span>
+                                            <div class="relative w-16 h-16 mb-2">
+                                                <svg class="w-16 h-16 transform -rotate-90">
+                                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-red-500/20" />
+                                                    <circle id="ring-protein" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" class="text-red-500 transition-all duration-1000" />
+                                                </svg>
+                                                <div class="absolute inset-0 flex items-center justify-center">
+                                                    <span id="macro-protein" class="font-bold text-theme-text text-sm">--g</span>
+                                                </div>
+                                                <div id="badge-protein" class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-red-200 shadow-sm hidden">0%</div>
                                             </div>
-                                            <span
-                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Protein</span>
                                         </div>
                                         <div class="text-center">
-                                            <div
-                                                class="w-16 h-16 rounded-full border-4 border-yellow-500 flex items-center justify-center mb-2">
-                                                <span id="macro-fat"
-                                                    class="font-bold text-theme-text text-sm">--g</span>
+                                            <div class="relative w-16 h-16 mb-2">
+                                                <svg class="w-16 h-16 transform -rotate-90">
+                                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-yellow-500/20" />
+                                                    <circle id="ring-fat" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" class="text-yellow-500 transition-all duration-1000" />
+                                                </svg>
+                                                <div class="absolute inset-0 flex items-center justify-center">
+                                                    <span id="macro-fat" class="font-bold text-theme-text text-sm">--g</span>
+                                                </div>
+                                                <div id="badge-fat" class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-yellow-200 shadow-sm hidden">0%</div>
                                             </div>
-                                            <span
-                                                class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
+                                            <span class="text-[10px] text-theme-muted uppercase font-bold tracking-wider">Fat</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1288,8 +1319,16 @@
                                 <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
                                     <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Injury Tracker
                                 </h3>
-                                <p class="text-xs text-theme-muted mt-1">Tap a body part to log an issue or mark it as
-                                    resolved.</p>
+                                <p class="text-xs text-theme-muted mt-1">Tap a body part to log an issue or mark it as resolved.</p>
+                            </div>
+                            <!-- Coach Insight Section -->
+                            <div class="px-6 py-4 border-b border-theme-border flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-full border-2 border-theme-accent bg-theme-bg overflow-hidden flex-shrink-0">
+                                    <img src="/icon4.png" alt="Coach" class="w-full h-full object-cover">
+                                </div>
+                                <div class="bg-theme-bg p-3 rounded-lg text-sm text-theme-text relative flex-1">
+                                    <p id="body-map-coach-prompt" class="italic text-theme-muted">Analyzing muscle data...</p>
+                                </div>
                             </div>
                             <div class="p-6 flex justify-center bg-theme-bg/30">
                                 <svg id="niggles-body-map" viewBox="0 0 200 400" width="200" height="400"
@@ -1320,6 +1359,18 @@
                                         .severity-5 {
                                             fill: #ef4444 !important;
                                             stroke: #b91c1c !important;
+                                            opacity: 0.8;
+                                        }
+
+                                        .fatigued {
+                                            fill: #64748b !important;
+                                            stroke: #475569 !important;
+                                            opacity: 0.7;
+                                        }
+
+                                        .prime-development {
+                                            fill: #3b82f6 !important;
+                                            stroke: #2563eb !important;
                                             opacity: 0.8;
                                         }
                                     </style>
@@ -2481,7 +2532,7 @@
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- App Logic -->
-    <script src="/script.js?v=79"></script>
+    <script src="/script.js?v=83"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {

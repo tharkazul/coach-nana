@@ -1623,10 +1623,10 @@ async function analyzeMuscleImpact(userId, activityData, sparkSport, activityDat
   Time: ${Math.round(activityData.moving_time / 60)} min.
   Sets: ${activityData.sets_json ? JSON.stringify(activityData.sets_json) : "None"}
   
-  Based on this, which muscle groups are fatigued? Output ONLY a JSON array mapping body parts to a fatigue score (1-100). 
+  Based on this, what is the training impact (stimulus) on the involved muscle groups? Output ONLY a JSON array mapping body parts to an impact score (1-100). 
   Use standard naming (e.g. "quads", "calves", "shoulders", "lower-back", "chest", "lats", "glutes", "hamstrings", "core").
   Example format:
-  [{"body_part": "quads", "fatigue_score": 30}, {"body_part": "shoulders", "fatigue_score": 15}]
+  [{"body_part": "quads", "impact_score": 30}, {"body_part": "shoulders", "impact_score": 15}]
   `;
 
   const systemPrompt = `You are a sports science AI. Output ONLY valid JSON, no markdown formatting, no preamble.`;
@@ -1639,14 +1639,23 @@ async function analyzeMuscleImpact(userId, activityData, sparkSport, activityDat
     const fatigueArray = JSON.parse(result);
     
     if (Array.isArray(fatigueArray)) {
-      const stmt = db.prepare(`INSERT INTO athlete_fatigue_log (user_id, date, body_part, fatigue_score) VALUES (?, ?, ?, ?)`);
+      const stmt = db.prepare(`
+        INSERT INTO athlete_muscle_status (user_id, body_part, fatigue_score, development_score) 
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, body_part) DO UPDATE SET 
+          fatigue_score = fatigue_score + excluded.fatigue_score,
+          development_score = development_score + excluded.development_score,
+          last_updated = CURRENT_TIMESTAMP
+      `);
       fatigueArray.forEach(f => {
-        if(f.body_part && f.fatigue_score) {
-          stmt.run(userId, activityDate, f.body_part, f.fatigue_score);
+        // Fallback to f.fatigue_score just in case the AI uses the old format
+        const score = f.impact_score || f.fatigue_score;
+        if(f.body_part && score) {
+          stmt.run(userId, f.body_part, score, score);
         }
       });
       stmt.finalize();
-      console.log(`✅ Saved muscle fatigue for ${activityData.name}`);
+      console.log(`✅ Saved muscle impact for ${activityData.name}`);
     }
   } catch(e) {
     console.error("Failed to parse muscle impact JSON", e);
@@ -1656,14 +1665,17 @@ async function analyzeMuscleImpact(userId, activityData, sparkSport, activityDat
 async function runDailyRecoveryJob() {
   console.log("🌙 Running daily recovery & degradation job...");
 
-  // 1. Fatigue Recovery
-  // Reduce all active fatigue scores by 40% (x 0.6)
-  db.run(`UPDATE athlete_fatigue_log SET fatigue_score = fatigue_score * 0.6 WHERE fatigue_score > 0`, (err) => {
-      if (err) console.error("Fatigue recovery error:", err);
+  // 1. Muscle Status Recovery (Fatigue & Development)
+  // Fatigue decays by 40% (x 0.6), Development decays by 10% (x 0.9)
+  db.run(`UPDATE athlete_muscle_status SET 
+            fatigue_score = fatigue_score * 0.6,
+            development_score = development_score * 0.9 
+          WHERE fatigue_score > 0 OR development_score > 0`, (err) => {
+      if (err) console.error("Muscle status recovery error:", err);
   });
 
-  // Delete fatigue logs that have dropped below 1 to keep DB clean
-  db.run(`DELETE FROM athlete_fatigue_log WHERE fatigue_score < 1`);
+  // Delete status logs that have dropped below 1 for both to keep DB clean
+  db.run(`DELETE FROM athlete_muscle_status WHERE fatigue_score < 1 AND development_score < 1`);
 
   // 2. Niggle Auto-Degradation
   // If an injury has been active for a multiple of 3 days, reduce severity.

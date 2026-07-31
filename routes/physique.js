@@ -70,7 +70,8 @@ router.post("/api/user/cycle/log", authenticateToken, (req, res) => {
     function (err) {
       if (err)
         return res.status(500).json({ error: "Failed to log cycle start." });
-      res.json({ message: "Cycle logged successfully!" });
+      console.log('NUTRITION API for user', req.user.id, 'date', todayStr, 'intakeRow:', intakeRow);
+        res.json({ message: "Cycle logged successfully!" });
     },
   );
 });
@@ -171,11 +172,60 @@ router.put("/api/niggles/:id/resolve", authenticateToken, (req, res) => {
 
 router.get("/api/fatigue", authenticateToken, (req, res) => {
   db.all(
-    `SELECT date, body_part, fatigue_score FROM athlete_fatigue_log WHERE user_id = ? ORDER BY date DESC LIMIT 100`,
+    `SELECT body_part, fatigue_score, development_score, last_updated FROM athlete_muscle_status WHERE user_id = ?`,
     [req.user.id],
     (err, rows) => {
-      if (err) return res.status(500).json({ error: "Failed to fetch fatigue log." });
-      res.json(rows || []);
+      if (err) {
+        console.error("DB Error in /api/fatigue:", err);
+        return res.status(500).json({ error: "Failed to fetch muscle status.", details: err.message });
+      }
+      
+      const enhancedRows = (rows || []).map(row => {
+          let status = 'fresh';
+          if (row.fatigue_score > 30) {
+              status = 'fatigued';
+          } else if (row.development_score > 20) {
+              status = 'prime_development';
+          }
+          return { ...row, status };
+      });
+      
+      res.json(enhancedRows);
+    }
+  );
+});
+
+router.get("/api/fatigue/insight", authenticateToken, (req, res) => {
+  db.all(
+    `SELECT body_part, fatigue_score, development_score FROM athlete_muscle_status WHERE user_id = ?`,
+    [req.user.id],
+    async (err, rows) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch muscle status." });
+      
+      db.all(
+        `SELECT body_part, severity, notes FROM athlete_niggles WHERE user_id = ? AND status = 'active'`,
+        [req.user.id],
+        async (niggleErr, niggles) => {
+          if (niggleErr) return res.status(500).json({ error: "Failed to fetch niggles." });
+
+          const prompt = `
+          You are Spark Coach, an AI athletic coach. Analyze the user's current muscle fatigue, development scores, and active injuries.
+          Write exactly 1-2 short, encouraging sentences summarizing their current physical state and giving a brief recommendation for today's training focus.
+          Keep it very concise, empathetic, and conversational.
+          
+          Muscle Data: ${JSON.stringify(rows || [])}
+          Active Injuries: ${JSON.stringify(niggles || [])}
+          `;
+
+          try {
+            const aiResponse = await generateWithFallback(prompt);
+            res.json({ insight: aiResponse || "Looking closely at your muscle data... taking it easy today might be a good idea!" });
+          } catch (e) {
+            console.error("AI Insight Error:", e);
+            res.json({ insight: "Based on your data, pay attention to any soreness today and prioritize recovery where needed." });
+          }
+        }
+      );
     }
   );
 });
@@ -371,7 +421,25 @@ router.delete("/api/physique/:id", authenticateToken, (req, res) => {
 
 
 router.get("/api/physique/nutrition", authenticateToken, async (req, res) => {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = require('../services/utils').getAMSDateString();
+
+  const sendNutritionResponse = (protocol) => {
+    console.log("TRACE: sendNutritionResponse called with protocol:", JSON.stringify(protocol));
+    db.get(
+      `SELECT carbs, protein, fat FROM nutrition_intake WHERE user_id = ? AND date = ?`,
+      [req.user.id, todayStr],
+      (err, intakeRow) => {
+        if (err) console.error("TRACE: db.get error:", err);
+        console.log("TRACE: intakeRow is:", intakeRow);
+        const payloadToSend = {
+          suggested: protocol,
+          intake: intakeRow || null,
+        };
+        console.log("TRACE: Sending payload:", JSON.stringify(payloadToSend));
+        res.json(payloadToSend);
+      },
+    );
+  };
 
   db.get(
     `SELECT protocol_json FROM nutrition_protocols WHERE user_id = ? AND date = ?`,
@@ -379,7 +447,7 @@ router.get("/api/physique/nutrition", authenticateToken, async (req, res) => {
     async (err, cachedRow) => {
       if (cachedRow && cachedRow.protocol_json) {
         try {
-          return res.json(JSON.parse(cachedRow.protocol_json));
+          return sendNutritionResponse(JSON.parse(cachedRow.protocol_json));
         } catch (e) {
           // Parse error, ignore and regenerate
           console.error("Cache parse error", e);
@@ -480,11 +548,11 @@ You MUST respond with ONLY a raw JSON object containing exactly these keys:
                       [req.user.id, todayStr, JSON.stringify(protocol)],
                     );
 
-                    res.json(protocol);
+                    sendNutritionResponse(protocol);
                   } catch (e) {
                     console.error("Nutrition AI failed:", e);
                     // Fallback to a safe baseline if AI fails to parse
-                    res.json({
+                    sendNutritionResponse({
                       title: "Balanced Maintenance",
                       rationale:
                         "AI is currently resting. Here is a balanced baseline protocol for your weight.",
