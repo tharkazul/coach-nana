@@ -40,10 +40,23 @@ router.get("/api/my-profile", authenticateToken, (req, res) => {
   db.get(
     "SELECT data FROM public_profile_cache WHERE user_id = ?",
     [req.user.id],
-    (err, row) => {
-      if (err || !row)
-        return res.status(404).json({ error: "Profile not generated yet" });
-      res.json(JSON.parse(row.data));
+    async (err, row) => {
+      if (row && row.data) {
+        return res.json(JSON.parse(row.data));
+      } else {
+        try {
+          const globalMaxStats = await calculateGlobalMaxStats();
+          const profileData = await generatePublicProfile(
+            req.user.id,
+            globalMaxStats,
+          );
+          if (profileData) res.json(profileData);
+          else res.status(404).json({ error: "Profile not generated yet" });
+        } catch (e) {
+          console.error("Failed to generate profile for user", req.user.id, e);
+          res.status(500).json({ error: "Failed to generate profile" });
+        }
+      }
     },
   );
 });

@@ -58,6 +58,9 @@ db.serialize(() => {
 
   // Reset tokens for any overdue accounts on startup
   resetDailyTokensForAllUsers();
+
+  // Generate public profiles for all active users on boot
+  generateAllPublicProfiles();
 });
 
 // Periodic Jobs

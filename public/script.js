@@ -1110,11 +1110,11 @@ function switchTab(t) {
     if (t === 'profile') {
         loadSettings();
         setTimeout(() => {
-            const tabs = ['settings', 'account', 'coach'];
+            const tabs = ['profile', 'goals', 'connections', 'account'];
             const activeTab = tabs.find(tab => {
                 const btn = document.getElementById(`profile-tab-${tab}`);
                 return btn && btn.classList.contains('text-theme-accent');
-            }) || 'settings';
+            }) || 'profile';
             switchProfileTab(activeTab);
         }, 50);
     }
@@ -4224,9 +4224,10 @@ async function loadNutritionProtocol() {
             const badges = [document.getElementById(`dash-badge-${macro}`), document.getElementById(`badge-${macro}`)];
             
             if (intakeVal > 0 && suggestedVal > 0) {
-                const percent = Math.min(100, Math.round((intakeVal / suggestedVal) * 100));
+                const percent = Math.round((intakeVal / suggestedVal) * 100);
+                const clampedPercent = Math.min(100, percent);
                 const circumference = 175.93;
-                const offset = circumference - (percent / 100) * circumference;
+                const offset = circumference - (clampedPercent / 100) * circumference;
                 
                 rings.forEach(ring => {
                     if (ring) {
@@ -4238,6 +4239,21 @@ async function loadNutritionProtocol() {
                         badge.innerText = `${percent}%`;
                         badge.classList.remove('hidden');
                         badge.style.display = 'block'; // Force display just in case
+                        
+                        if (percent >= 120) {
+                            badge.style.backgroundColor = '#fee2e2'; // red-100
+                            badge.style.color = '#991b1b'; // red-800
+                            badge.style.borderColor = '#fecaca'; // red-200
+                        } else if (percent > 100) {
+                            badge.style.backgroundColor = '#ffedd5'; // orange-100
+                            badge.style.color = '#9a3412'; // orange-800
+                            badge.style.borderColor = '#fed7aa'; // orange-200
+                        } else {
+                            // reset to default classes
+                            badge.style.backgroundColor = '';
+                            badge.style.color = '';
+                            badge.style.borderColor = '';
+                        }
                     }
                 });
             } else {

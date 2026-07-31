@@ -513,6 +513,7 @@ ${longTermMemory}
 Based on today's training load, their current macro phase, and their specific goals/context, recommend a daily macro nutrition target.
 - For high Spark Points / intense days, prescribe higher carbohydrates.
 - For rest / low Spark Points days, prescribe lower carbohydrates and higher protein/fat.
+- Protein should always be kept very high (1.8g - 2.2g per kg of bodyweight, which is roughly ${Math.round(weight * 1.8)}g - ${Math.round(weight * 2.2)}g for this athlete) to preserve and build muscle mass.
 - Ensure total calories make sense for an endurance athlete of their weight and align with any weight loss/gain goals mentioned in their notes.
 
 You MUST respond with ONLY a raw JSON object containing exactly these keys:
