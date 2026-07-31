@@ -60,3 +60,16 @@ TRACE: Sending payload: {"suggested":{"title":"Rest & Injury Recovery Protocol",
 TRACE: sendNutritionResponse called with protocol: {"title":"Rest & Injury Recovery Protocol","rationale":"With today being a rest day and given your severe leg injury, we are keeping carbohydrates lower to reflect the zero training load while significantly elevating protein and healthy fats to support bone healing, manage joint inflammation, and preserve muscle mass during this period of restricted mobility.","carbs":210,"protein":230,"fat":95}
 TRACE: intakeRow is: { carbs: 135, protein: 175, fat: 56 }
 TRACE: Sending payload: {"suggested":{"title":"Rest & Injury Recovery Protocol","rationale":"With today being a rest day and given your severe leg injury, we are keeping carbohydrates lower to reflect the zero training load while significantly elevating protein and healthy fats to support bone healing, manage joint inflammation, and preserve muscle mass during this period of restricted mobility.","carbs":210,"protein":230,"fat":95},"intake":{"carbs":135,"protein":175,"fat":56}}
+TRACE: sendNutritionResponse called with protocol: {"title":"Rest & Injury Recovery Protocol","rationale":"With today being a rest day and given your severe leg injury, we are keeping carbohydrates lower to reflect the zero training load while significantly elevating protein and healthy fats to support bone healing, manage joint inflammation, and preserve muscle mass during this period of restricted mobility.","carbs":210,"protein":230,"fat":95}
+TRACE: intakeRow is: { carbs: 135, protein: 175, fat: 56 }
+TRACE: Sending payload: {"suggested":{"title":"Rest & Injury Recovery Protocol","rationale":"With today being a rest day and given your severe leg injury, we are keeping carbohydrates lower to reflect the zero training load while significantly elevating protein and healthy fats to support bone healing, manage joint inflammation, and preserve muscle mass during this period of restricted mobility.","carbs":210,"protein":230,"fat":95},"intake":{"carbs":135,"protein":175,"fat":56}}
+🔄 Running initial Strava sync for all connected users...
+❌ Startup sync failed for user 3: [TypeError: fetch failed] {
+  [cause]: Error: getaddrinfo ENOTFOUND www.strava.com
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:121:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'www.strava.com'
+  }
+}
