@@ -4865,11 +4865,10 @@ function updateAppHeight() {
     const coachInput = document.getElementById('coach-input-area');
     const shell = document.getElementById('app-shell');
     const talkToContainer = document.getElementById('talk-to-container');
+    const coachMacroBar = document.getElementById('coach-macro-bar');
 
-    // Set a global CSS variable for other fixed elements to use
     document.documentElement.style.setProperty('--vv-height', `${vh}px`);
 
-    // Always JS-driven now, but applied to the shell instead of the root document
     if (shell) shell.style.height = `${vh}px`;
 
     if (isKeyboardOpen) {
@@ -4885,6 +4884,10 @@ function updateAppHeight() {
             coachInput.classList.remove('hidden');
             coachInput.classList.remove('pb-24', 'md:pb-24'); 
         }
+        if (coachMacroBar) {
+            coachMacroBar.classList.add('hidden');
+        }
+        window.scrollTo(0, 0);
         // Re-anchor to the latest message now that the visible area just shrank
         const chatWindow = document.getElementById('chat-window');
         if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -4897,6 +4900,10 @@ function updateAppHeight() {
         if (coachInput) {
             coachInput.classList.add('pb-24', 'md:pb-24');
         }
+        if (coachMacroBar) {
+            coachMacroBar.classList.remove('hidden');
+        }
+        window.scrollTo(0, 0);
     }
 }
 
@@ -4926,6 +4933,9 @@ if (window.visualViewport) {
         updateAppHeight();
         clearTimeout(window._appHeightSettleTimer);
         window._appHeightSettleTimer = setTimeout(updateAppHeight, 350);
+    });
+    window.visualViewport.addEventListener('scroll', () => {
+        window.scrollTo(0, 0);
     });
 }
 window.addEventListener('resize', updateAppHeight);
