@@ -592,7 +592,8 @@ router.get("/api/weight", authenticateToken, (req, res) => {
 });
 
 router.get("/api/physique/nutrition/summary", authenticateToken, async (req, res) => {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const { getAMSDateString } = require("../services/utils");
+  const todayStr = getAMSDateString();
   const userId = req.user.id;
 
   db.get(
@@ -628,27 +629,33 @@ router.get("/api/physique/nutrition/summary", authenticateToken, async (req, res
             `SELECT logged_carbs, logged_protein, logged_fat, items_summary FROM daily_diet_logs WHERE user_id = ? AND date = ?`,
             [userId, todayStr],
             (err, dietRow) => {
-              const logged = {
-                carbs: dietRow ? Math.round(dietRow.logged_carbs || 0) : 0,
-                protein: dietRow ? Math.round(dietRow.logged_protein || 0) : 0,
-                fat: dietRow ? Math.round(dietRow.logged_fat || 0) : 0
-              };
-              const itemsSummary = dietRow ? (dietRow.items_summary || "") : "";
+              db.get(
+                `SELECT carbs, protein, fat FROM nutrition_intake WHERE user_id = ? AND date = ?`,
+                [userId, todayStr],
+                (err, intakeRow) => {
+                  const logged = {
+                    carbs: Math.round((dietRow ? dietRow.logged_carbs : 0) || (intakeRow ? intakeRow.carbs : 0) || 0),
+                    protein: Math.round((dietRow ? dietRow.logged_protein : 0) || (intakeRow ? intakeRow.protein : 0) || 0),
+                    fat: Math.round((dietRow ? dietRow.logged_fat : 0) || (intakeRow ? intakeRow.fat : 0) || 0)
+                  };
+                  const itemsSummary = dietRow ? (dietRow.items_summary || "") : "";
 
-              const hasData = logged.carbs > 0 || logged.protein > 0 || logged.fat > 0;
-              const percentages = {
-                carbs: target.carbs > 0 ? Math.round((logged.carbs / target.carbs) * 100) : 0,
-                protein: target.protein > 0 ? Math.round((logged.protein / target.protein) * 100) : 0,
-                fat: target.fat > 0 ? Math.round((logged.fat / target.fat) * 100) : 0
-              };
+                  const hasData = logged.carbs > 0 || logged.protein > 0 || logged.fat > 0;
+                  const percentages = {
+                    carbs: target.carbs > 0 ? Math.round((logged.carbs / target.carbs) * 100) : 0,
+                    protein: target.protein > 0 ? Math.round((logged.protein / target.protein) * 100) : 0,
+                    fat: target.fat > 0 ? Math.round((logged.fat / target.fat) * 100) : 0
+                  };
 
-              res.json({
-                has_data: hasData,
-                target,
-                logged,
-                percentages,
-                items_summary: itemsSummary
-              });
+                  res.json({
+                    has_data: hasData,
+                    target,
+                    logged,
+                    percentages,
+                    items_summary: itemsSummary
+                  });
+                }
+              );
             }
           );
         }
@@ -658,15 +665,19 @@ router.get("/api/physique/nutrition/summary", authenticateToken, async (req, res
 });
 
 router.post("/api/physique/nutrition/reset", authenticateToken, (req, res) => {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const { getAMSDateString } = require("../services/utils");
+  const todayStr = getAMSDateString();
   db.run(
     `DELETE FROM daily_diet_logs WHERE user_id = ? AND date = ?`,
     [req.user.id, todayStr],
     (err) => {
-      if (err) {
-        return res.status(500).json({ error: "Failed to reset diet log" });
-      }
-      res.json({ success: true, message: "Diet log reset for today" });
+      db.run(
+        `DELETE FROM nutrition_intake WHERE user_id = ? AND date = ?`,
+        [req.user.id, todayStr],
+        () => {
+          res.json({ success: true, message: "Diet log reset for today" });
+        }
+      );
     }
   );
 });

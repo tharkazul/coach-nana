@@ -87,6 +87,12 @@ router.get("/api/gamification", authenticateToken, async (req, res) => {
     console.error("Error evaluating quests in /api/gamification:", e);
   }
 
+  // Fix any quest erroneously marked completed after its expiration date
+  db.run(
+    `UPDATE user_quests SET status = 'expired' WHERE user_id = ? AND expires_at IS NOT NULL AND completed_at > expires_at AND status = 'completed'`,
+    [userId]
+  );
+
   // Ensure only 1 active quest per user by closing any older active quests
   db.run(
     `UPDATE user_quests SET status = 'closed' WHERE user_id = ? AND status = 'active' AND id NOT IN (SELECT id FROM (SELECT id FROM user_quests WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC, id DESC LIMIT 1))`,

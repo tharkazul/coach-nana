@@ -594,41 +594,32 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                             );
                                             planUpdated = true;
                                           } else if (
-                                            parsedData &&
-                                            parsedData.type === "log_nutrition" &&
-                                            parsedData.data
-                                          ) {
-                                            const intake = parsedData.data;
-                                            const todayStr = getAMSDateString();
-                                            db.run(
-                                              `INSERT INTO nutrition_intake (user_id, date, carbs, protein, fat)
-                                               VALUES (?, ?, ?, ?, ?)
-                                               ON CONFLICT(user_id, date) DO UPDATE SET
-                                               carbs = carbs + excluded.carbs,
-                                               protein = protein + excluded.protein,
-                                               fat = fat + excluded.fat`,
-                                              [req.user.id, todayStr, intake.carbs || 0, intake.protein || 0, intake.fat || 0],
-                                              (err) => {
-                                                if (err)
-                                                  console.error(
-                                                    "Failed to insert manual nutrition intake:",
-                                                    err,
-                                                  );
-                                              }
-                                            );
-                                            planUpdated = true;
-                                          } else if (
                                              parsedData &&
-                                             parsedData.type === "log_diet" &&
+                                             (parsedData.type === "log_nutrition" || parsedData.type === "log_diet") &&
                                              parsedData.data
                                            ) {
                                              const diet = parsedData.data;
-                                             const todayStr = new Date().toISOString().split("T")[0];
+                                             const todayStr = getAMSDateString();
                                              const carbs = Number(diet.carbs || 0);
                                              const protein = Number(diet.protein || 0);
                                              const fat = Number(diet.fat || 0);
                                              const summary = String(diet.summary || "");
 
+                                             // 1. Sync nutrition_intake
+                                             db.run(
+                                               `INSERT INTO nutrition_intake (user_id, date, carbs, protein, fat)
+                                                VALUES (?, ?, ?, ?, ?)
+                                                ON CONFLICT(user_id, date) DO UPDATE SET
+                                                  carbs = carbs + excluded.carbs,
+                                                  protein = protein + excluded.protein,
+                                                  fat = fat + excluded.fat`,
+                                               [req.user.id, todayStr, carbs, protein, fat],
+                                               (err) => {
+                                                 if (err) console.error("Failed to insert nutrition intake:", err);
+                                               }
+                                             );
+
+                                             // 2. Sync daily_diet_logs
                                              await new Promise((resolveDiet) => {
                                                db.get(
                                                  `SELECT logged_carbs, logged_protein, logged_fat, items_summary FROM daily_diet_logs WHERE user_id = ? AND date = ?`,

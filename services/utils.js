@@ -917,7 +917,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
           const activityDateStr = data.start_date_local
             ? data.start_date_local.split("T")[0]
             : data.start_date.split("T")[0];
-          const todayStr = new Date().toISOString().split("T")[0];
+          const todayStr = getAMSDateString();
           if (activityDateStr === todayStr) {
             db.run(
               `DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`,
@@ -1424,26 +1424,28 @@ async function evaluateAndProgressQuests(userId) {
   for (const q of quests) {
     if (q.status === "active") {
       if (activeCount >= 1) {
-        // Enforce maximum of 1 active quest by voiding older ones (array is sorted newest first)
-        q.status = "void";
-        db.run(`UPDATE user_quests SET status = 'void' WHERE id = ?`, [q.id]);
+        // Enforce maximum of 1 active quest by voiding/closing older ones
+        q.status = "closed";
+        db.run(`UPDATE user_quests SET status = 'closed' WHERE id = ?`, [q.id]);
         continue;
       }
       
       const expiresAtStr = (q.expires_at || "").trim();
       let isExpired = false;
+      let expiresTs = null;
       if (expiresAtStr) {
         const isoString =
           expiresAtStr.replace(" ", "T") +
           (expiresAtStr.includes("Z") || expiresAtStr.includes("+") ? "" : "Z");
-        if (now >= new Date(isoString).getTime()) {
+        expiresTs = new Date(isoString).getTime();
+        if (now >= expiresTs) {
           isExpired = true;
         }
       }
 
       if (isExpired) {
-        q.status = "void";
-        db.run(`UPDATE user_quests SET status = 'void' WHERE id = ?`, [q.id]);
+        q.status = "expired";
+        db.run(`UPDATE user_quests SET status = 'expired' WHERE id = ?`, [q.id]);
         continue;
       }
 
@@ -1485,7 +1487,10 @@ async function evaluateAndProgressQuests(userId) {
           actStr.replace(" ", "T") +
           (actStr.includes("Z") || actStr.includes("+") || actStr.includes("T") ? "" : "Z");
         const actTs = new Date(actIso).getTime();
+
+        // Must be AFTER created_at AND BEFORE expires_at
         if (actTs < createdTs) return false;
+        if (expiresTs && actTs > expiresTs) return false;
 
         if (!isAnySport && a.sport_type) {
           if (!targetSports.includes(a.sport_type.toLowerCase())) {
@@ -1558,15 +1563,23 @@ async function calculateQuestProgress(userId, quest) {
       ? quest.target_sport.split(",").map((s) => s.trim().toLowerCase())
       : ["any"];
     const sportsSet = new Set(targetSports);
-    if (sportsSet.has("ride")) {
+    if (sportsSet.has("ride") || sportsSet.has("bike") || sportsSet.has("cycling")) {
+      sportsSet.add("ride");
       sportsSet.add("virtualride");
       sportsSet.add("ebikeride");
       sportsSet.add("mountainbikeride");
       sportsSet.add("gravelride");
     }
-    if (sportsSet.has("run")) {
+    if (sportsSet.has("run") || sportsSet.has("running")) {
+      sportsSet.add("run");
       sportsSet.add("virtualrun");
       sportsSet.add("trailrun");
+      sportsSet.add("treadmill");
+    }
+    if (sportsSet.has("swim") || sportsSet.has("swimming")) {
+      sportsSet.add("swim");
+      sportsSet.add("openwaterswim");
+      sportsSet.add("poolswim");
     }
     targetSports = Array.from(sportsSet);
     const isAnySport = targetSports.includes("any");
@@ -1577,11 +1590,20 @@ async function calculateQuestProgress(userId, quest) {
       sportCondition = `AND LOWER(sport_type) IN (${sportIn})`;
     }
 
+    const cutoff = quest.completed_at || quest.expires_at;
+    let timeCondition = "";
+    let params = [userId, quest.created_at];
+
+    if (cutoff) {
+      timeCondition = ` AND start_date <= ?`;
+      params.push(cutoff);
+    }
+
     if (quest.is_accumulative) {
       if (quest.target_metric === "unique_sports") {
         db.get(
-          `SELECT COUNT(DISTINCT LOWER(sport_type)) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
-          [userId, quest.created_at],
+          `SELECT COUNT(DISTINCT LOWER(sport_type)) as total FROM activities WHERE user_id = ? AND start_date >= ? ${timeCondition} ${sportCondition}`,
+          params,
           (err, row) => resolve(row ? row.total || 0 : 0)
         );
       } else {
@@ -1590,16 +1612,16 @@ async function calculateQuestProgress(userId, quest) {
           ? quest.target_metric
           : "distance_km";
         db.get(
-          `SELECT SUM(${metricCol}) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
-          [userId, quest.created_at],
+          `SELECT SUM(${metricCol}) as total FROM activities WHERE user_id = ? AND start_date >= ? ${timeCondition} ${sportCondition}`,
+          params,
           (err, row) => resolve(row ? (row.total ? parseFloat(row.total.toFixed(2)) : 0) : 0)
         );
       }
     } else {
       if (quest.target_metric === "unique_sports") {
         db.get(
-          `SELECT COUNT(id) as total FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
-          [userId, quest.created_at],
+          `SELECT COUNT(id) as total FROM activities WHERE user_id = ? AND start_date >= ? ${timeCondition} ${sportCondition}`,
+          params,
           (err, row) => resolve(row && row.total > 0 ? 1 : 0)
         );
       } else {
@@ -1608,8 +1630,8 @@ async function calculateQuestProgress(userId, quest) {
           ? quest.target_metric
           : "distance_km";
         db.get(
-          `SELECT MAX(${metricCol}) as max_val FROM activities WHERE user_id = ? AND start_date >= ? ${sportCondition}`,
-          [userId, quest.created_at],
+          `SELECT MAX(${metricCol}) as max_val FROM activities WHERE user_id = ? AND start_date >= ? ${timeCondition} ${sportCondition}`,
+          params,
           (err, row) => resolve(row ? (row.max_val ? parseFloat(row.max_val.toFixed(2)) : 0) : 0)
         );
       }
@@ -1747,6 +1769,11 @@ function resetDailyTokensForAllUsers() {
   );
 }
 
+function resetDailyNutritionForAllUsers() {
+  const todayStr = getAMSDateString();
+  console.log(`🥗 Daily midnight nutrition reset executed for AMS date: ${todayStr}`);
+}
+
 function getEffectiveTokenLimit(user) {
   let expectedLimit = user.subscription_tier === 'spark_plus' ? 50000 : 10000;
   let dbLimit = user.daily_token_limit;
@@ -1756,6 +1783,7 @@ function getEffectiveTokenLimit(user) {
 
 module.exports = {
   resetDailyTokensForAllUsers,
+  resetDailyNutritionForAllUsers,
   getStravaShareSettings,
   buildStravaUpdatePayload,
   runDailyRecoveryJob,

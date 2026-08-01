@@ -41,6 +41,7 @@ const {
   sendMorningMessage,
   runDailyRecoveryJob,
   resetDailyTokensForAllUsers,
+  resetDailyNutritionForAllUsers,
 } = require("./services/utils");
 
 const { sseClients } = require("./services/sse");
@@ -58,15 +59,17 @@ db.serialize(() => {
 
   // Reset tokens for any overdue accounts on startup
   resetDailyTokensForAllUsers();
+  resetDailyNutritionForAllUsers();
 
   // Generate public profiles for all active users on boot
   generateAllPublicProfiles();
 });
 
 // Periodic Jobs
-// Schedule daily token reset at midnight (Europe/Amsterdam timezone)
+// Schedule daily token & nutrition reset at midnight (Europe/Amsterdam timezone)
 cron.schedule('0 0 * * *', () => {
   resetDailyTokensForAllUsers();
+  resetDailyNutritionForAllUsers();
 }, {
   scheduled: true,
   timezone: "Europe/Amsterdam"

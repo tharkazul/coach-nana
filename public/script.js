@@ -4314,7 +4314,7 @@ function renderMacroRings(containerEl, summaryData) {
 async function fetchDailyNutritionSummary() {
     try {
         const token = localStorage.getItem('nana_token');
-        const res = await fetch('/api/physique/nutrition/summary', {
+        const res = await fetch(`/api/physique/nutrition/summary?_t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
