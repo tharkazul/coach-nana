@@ -58,37 +58,58 @@
     <style>
         /* ☀️ SOLAR VELOCITY DAY PALETTE (LIGHT MODE) */
         :root {
-            --bg-main: #F4F6F9;          /* Soft Slate Porcelain canvas - easy on the eye */
-            --bg-card: #FFFFFF;          /* Pure white card pop for maximum legibility */
-            --border-color: #E2E8F0;      /* Subtle Slate border */
-            --text-main: #0F172A;        /* Deep Slate for high-contrast typography */
-            --text-muted: #64748B;       /* Muted Slate text */
-            --accent: #FF5A1F;           /* Solar Orange pop accent for actions & active states */
-            --accent-hover: #E04810;     /* Deeper Solar Orange hover */
-            --accent-soft: #FFF0EB;      /* Soft Solar Orange tint for active pills & subtabs */
-            --accent-border: #FFD4C2;    /* Soft Solar border */
+            --bg-main: #F4F6F9;
+            /* Soft Slate Porcelain canvas - easy on the eye */
+            --bg-card: #FFFFFF;
+            /* Pure white card pop for maximum legibility */
+            --border-color: #E2E8F0;
+            /* Subtle Slate border */
+            --text-main: #0F172A;
+            /* Deep Slate for high-contrast typography */
+            --text-muted: #64748B;
+            /* Muted Slate text */
+            --accent: #FF5A1F;
+            /* Solar Orange pop accent for actions & active states */
+            --accent-hover: #E04810;
+            /* Deeper Solar Orange hover */
+            --accent-soft: #FFF0EB;
+            /* Soft Solar Orange tint for active pills & subtabs */
+            --accent-border: #FFD4C2;
+            /* Soft Solar border */
 
             /* Extended Palette */
-            --color-focus: #38BDF8;      /* Sky Blue */
-            --color-metric: #FF5A1F;     /* Solar Orange */
+            --color-focus: #38BDF8;
+            /* Sky Blue */
+            --color-metric: #FF5A1F;
+            /* Solar Orange */
         }
 
         /* 🌙 MIDNIGHT SLATE NIGHT PALETTE (DARK MODE) */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-main: #0F172A;      /* Deep Slate Midnight canvas */
-                --bg-card: #1E293B;      /* Elevated Slate cards for crisp separation */
-                --border-color: #334155;  /* Subtle dark slate border */
-                --text-main: #F8FAFC;    /* Crisp Ice White text for maximum readability */
-                --text-muted: #94A3B8;   /* Soft Muted Slate text */
-                --accent: #FF6B35;       /* Neon Solar Orange pop CTA against Midnight Slate */
-                --accent-hover: #FF8554; /* Vibrant Solar Orange hover */
-                --accent-soft: rgba(255, 90, 31, 0.15); /* Soft Solar glow tint */
+                --bg-main: #0F172A;
+                /* Deep Slate Midnight canvas */
+                --bg-card: #1E293B;
+                /* Elevated Slate cards for crisp separation */
+                --border-color: #334155;
+                /* Subtle dark slate border */
+                --text-main: #F8FAFC;
+                /* Crisp Ice White text for maximum readability */
+                --text-muted: #94A3B8;
+                /* Soft Muted Slate text */
+                --accent: #FF6B35;
+                /* Neon Solar Orange pop CTA against Midnight Slate */
+                --accent-hover: #FF8554;
+                /* Vibrant Solar Orange hover */
+                --accent-soft: rgba(255, 90, 31, 0.15);
+                /* Soft Solar glow tint */
                 --accent-border: rgba(255, 90, 31, 0.35);
 
                 /* Extended Palette */
-                --color-focus: #38BDF8;  /* Sky Blue */
-                --color-metric: #FF6B35; /* Neon Solar Orange */
+                --color-focus: #38BDF8;
+                /* Sky Blue */
+                --color-metric: #FF6B35;
+                /* Neon Solar Orange */
             }
 
             .leaflet-layer,
@@ -625,31 +646,35 @@
 
                     <div id="dashboard-subtab-dash" class="space-y-5 md:space-y-6">
                         <!-- COACH BRIEFING CARD -->
-                        <div
-                            class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
-                            <div
-                                class="bg-theme-accent-soft p-5 md:p-6 flex flex-col gap-4 relative overflow-hidden">
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="bg-theme-accent-soft p-5 md:p-6 flex flex-col gap-4 relative overflow-hidden">
                                 <!-- Top Row: Coach Avatar + Header & Reflection -->
                                 <div class="flex flex-row gap-4 items-start relative z-10">
                                     <!-- Coach Avatar -->
                                     <div
                                         class="w-14 h-14 md:w-16 md:h-16 shrink-0 rounded-full border-2 border-theme-accent shadow-md bg-theme-bg overflow-hidden">
-                                        <img id="desk-coach-avatar" src="" alt="Coach" class="w-full h-full object-cover">
+                                        <img id="desk-coach-avatar" src="" alt="Coach"
+                                            class="w-full h-full object-cover">
                                     </div>
 
                                     <!-- Header & Reflection -->
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-2 mb-1.5">
-                                            <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                            <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                             </svg>
-                                            <h3 class="text-xs md:text-sm uppercase tracking-widest font-bold text-theme-accent">
+                                            <h3
+                                                class="text-xs md:text-sm uppercase tracking-widest font-bold text-theme-accent">
                                                 Coach Highlights</h3>
-                                            <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
+                                            <span
+                                                class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
                                         </div>
                                         <div id="daily-reflection-container"
                                             class="text-sm md:text-base text-theme-text font-medium leading-relaxed">
-                                            <p id="daily-reflection"><span class="text-theme-muted italic">Analyzing your recent training...</span></p>
+                                            <p id="daily-reflection"><span class="text-theme-muted italic">Analyzing
+                                                    your recent training...</span></p>
                                         </div>
                                     </div>
                                 </div>
@@ -674,10 +699,14 @@
                             <div
                                 class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
                                 <div class="flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                        </path>
                                     </svg>
-                                    <h3 class="text-xs md:text-sm font-bold uppercase tracking-widest text-theme-text">Today's Plan</h3>
+                                    <h3 class="text-xs md:text-sm font-bold uppercase tracking-widest text-theme-text">
+                                        Today's Plan</h3>
                                 </div>
                             </div>
                             <div id="dash-today-plan-content" class="p-4 md:p-6 w-full"></div>
@@ -692,8 +721,11 @@
                             <div
                                 class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
                                 <div class="flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                        </path>
                                     </svg>
                                     <h3 class="text-xs md:text-sm font-bold uppercase tracking-widest text-theme-text">
                                         Daily AI Nutrition Protocol
@@ -705,7 +737,8 @@
                             <div id="dash-nutrition-content" class="p-6 hidden">
                                 <div class="flex flex-col md:flex-row gap-6 items-center">
                                     <div class="flex-1 space-y-2 text-center md:text-left">
-                                        <h4 id="dash-nutrition-focus-title" class="text-md font-bold text-theme-text">--</h4>
+                                        <h4 id="dash-nutrition-focus-title" class="text-md font-bold text-theme-text">--
+                                        </h4>
                                         <p id="dash-nutrition-rationale"
                                             class="text-sm text-theme-muted leading-relaxed">--
                                         </p>
@@ -721,15 +754,18 @@
                             <div
                                 class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
                                 <div class="flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
                                         <circle cx="12" cy="12" r="9" stroke-width="2"></circle>
                                         <circle cx="12" cy="12" r="5" stroke-width="2"></circle>
                                         <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
                                     </svg>
-                                    <h3 class="text-xs md:text-sm uppercase tracking-widest font-bold text-theme-text">Active Quests</h3>
+                                    <h3 class="text-xs md:text-sm uppercase tracking-widest font-bold text-theme-text">
+                                        Active Quests</h3>
                                 </div>
                                 <span id="bonus-points-badge"
-                                    class="text-xs font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2.5 py-0.5 rounded-full hidden">+0 Bonus</span>
+                                    class="text-xs font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2.5 py-0.5 rounded-full hidden">+0
+                                    Bonus</span>
                             </div>
                             <div id="quests-list" class="p-4 flex flex-col gap-3">
                                 <div class="animate-pulse space-y-2">
@@ -960,24 +996,31 @@
                             </div>
                         </div>
                         <!-- Daily Macro Rings Header Bar in Coach View -->
-                        <div id="coach-macro-bar" class="px-4 py-3 bg-theme-bg/60 border-b border-theme-border flex flex-col gap-2 transition-all">
+                        <div id="coach-macro-bar"
+                            class="px-4 py-3 bg-theme-bg/60 border-b border-theme-border flex flex-col gap-2 transition-all">
                             <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-theme-muted flex items-center gap-1.5">
+                                <span
+                                    class="text-[11px] font-bold uppercase tracking-wider text-theme-muted flex items-center gap-1.5">
                                     🥗 Today's Macro Progress
                                 </span>
-                                <button onclick="resetDailyDiet()" class="text-[10px] text-theme-muted hover:text-red-400 transition underline">Reset Today's Log</button>
+                                <button onclick="resetDailyDiet()"
+                                    class="text-[10px] text-theme-muted hover:text-red-400 transition underline">Reset
+                                    Today's Log</button>
                             </div>
                             <div id="coach-macro-rings-container"></div>
                         </div>
                         <div id="chat-window"
                             class="flex-1 overflow-y-auto overscroll-y-contain p-4 md:p-6 bg-theme-bg/50 space-y-4 md:space-y-6 flex flex-col min-h-0">
                         </div>
-                        <div id="talk-to-container" class="p-4 pb-16 flex justify-end shrink-0 transition-all duration-300">
+                        <div id="talk-to-container"
+                            class="p-4 pb-16 flex justify-end shrink-0 transition-all duration-300">
                             <button id="talk-to-btn" onclick="openChatInput()"
                                 class="bg-theme-accent text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2 hover:scale-105 transition-transform z-40">
                                 <span class="font-bold text-sm">Talk to</span>
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                                    </path>
                                 </svg>
                             </button>
                         </div>
@@ -1187,8 +1230,11 @@
                             <div
                                 class="px-4 md:px-6 py-3 md:py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/30">
                                 <div class="flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    <svg class="w-4 h-4 text-theme-accent shrink-0" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                        </path>
                                     </svg>
                                     <h3 class="text-xs md:text-sm font-bold uppercase tracking-widest text-theme-text">
                                         Daily AI Nutrition Protocol
@@ -1254,15 +1300,18 @@
                                 <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
                                     <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Injury Tracker
                                 </h3>
-                                <p class="text-xs text-theme-muted mt-1">Tap a body part to log an issue or mark it as resolved.</p>
+                                <p class="text-xs text-theme-muted mt-1">Tap a body part to log an issue or mark it as
+                                    resolved.</p>
                             </div>
                             <!-- Coach Insight Section -->
                             <div class="px-6 py-4 border-b border-theme-border flex items-start gap-4">
-                                <div class="w-10 h-10 rounded-full border-2 border-theme-accent bg-theme-bg overflow-hidden flex-shrink-0">
+                                <div
+                                    class="w-10 h-10 rounded-full border-2 border-theme-accent bg-theme-bg overflow-hidden flex-shrink-0">
                                     <img src="/icon4.png" alt="Coach" class="w-full h-full object-cover">
                                 </div>
                                 <div class="bg-theme-bg p-3 rounded-lg text-sm text-theme-text relative flex-1">
-                                    <p id="body-map-coach-prompt" class="italic text-theme-muted">Analyzing muscle data...</p>
+                                    <p id="body-map-coach-prompt" class="italic text-theme-muted">Analyzing muscle
+                                        data...</p>
                                 </div>
                             </div>
                             <div class="p-6 flex justify-center bg-theme-bg/30">
@@ -2467,7 +2516,7 @@
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- App Logic -->
-    <script src="/script.js?v=83"></script>
+    <script src="/script.js?v=84"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
