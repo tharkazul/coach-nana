@@ -474,6 +474,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     }
                     \`\`\`
 
+<<<<<<< HEAD
                     NUTRITION & MACRO LOGGING (CRITICAL):
                     If the athlete mentions eating food, meals, or consuming specific macros today, you MUST output an additional JSON block at the very end of your response to log their intake. This is mandatory. Guess the macros in grams if they aren't explicit. Format it exactly like this inside triple backticks:
                     \`\`\`json
@@ -483,6 +484,18 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                         "carbs": 40,
                         "protein": 30,
                         "fat": 15
+=======
+                    DIET & MEAL LOGGING:
+                    If the athlete shares what they ate or drank today (e.g. "I had a pizza, 2x protein shakes, a chicken sandwich and a banana"), you MUST estimate the approximate macros in grams (carbs, protein, fat) for those items, respond warmly as a supportive coach, and output an additional JSON block at the end of your message. Format it exactly like this inside triple backticks:
+                    \`\`\`json
+                    {
+                      "type": "log_diet",
+                      "data": {
+                        "carbs": 120,
+                        "protein": 95,
+                        "fat": 40,
+                        "summary": "Pizza, 2x protein shakes, chicken sandwich, banana"
+>>>>>>> 6906827 (keyboard fix)
                       }
                     }
                     \`\`\``;
@@ -616,6 +629,51 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                               }
                                             );
                                             planUpdated = true;
+                                          } else if (
+                                             parsedData &&
+                                             parsedData.type === "log_diet" &&
+                                             parsedData.data
+                                           ) {
+                                             const diet = parsedData.data;
+                                             const todayStr = new Date().toISOString().split("T")[0];
+                                             const carbs = Number(diet.carbs || 0);
+                                             const protein = Number(diet.protein || 0);
+                                             const fat = Number(diet.fat || 0);
+                                             const summary = String(diet.summary || "");
+
+                                             await new Promise((resolveDiet) => {
+                                               db.get(
+                                                 `SELECT logged_carbs, logged_protein, logged_fat, items_summary FROM daily_diet_logs WHERE user_id = ? AND date = ?`,
+                                                 [req.user.id, todayStr],
+                                                 (err, existingRow) => {
+                                                   const newCarbs = (existingRow ? (existingRow.logged_carbs || 0) : 0) + carbs;
+                                                   const newProtein = (existingRow ? (existingRow.logged_protein || 0) : 0) + protein;
+                                                   const newFat = (existingRow ? (existingRow.logged_fat || 0) : 0) + fat;
+
+                                                   let newSummary = existingRow ? (existingRow.items_summary || "") : "";
+                                                   if (summary) {
+                                                     newSummary = newSummary ? `${newSummary}, ${summary}` : summary;
+                                                   }
+
+                                                   db.run(
+                                                     `INSERT INTO daily_diet_logs (user_id, date, logged_carbs, logged_protein, logged_fat, items_summary, updated_at)
+                                                      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                                                      ON CONFLICT(user_id, date) DO UPDATE SET
+                                                        logged_carbs = excluded.logged_carbs,
+                                                        logged_protein = excluded.logged_protein,
+                                                        logged_fat = excluded.logged_fat,
+                                                        items_summary = excluded.items_summary,
+                                                        updated_at = CURRENT_TIMESTAMP`,
+                                                     [req.user.id, todayStr, newCarbs, newProtein, newFat, newSummary],
+                                                     (err) => {
+                                                       if (err) console.error("Failed to upsert daily_diet_logs:", err);
+                                                       resolveDiet();
+                                                     }
+                                                   );
+                                                 }
+                                               );
+                                             });
+                                             planUpdated = true;
                                           } else if (
                                             parsedData &&
                                             parsedData.type ===

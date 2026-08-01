@@ -238,6 +238,7 @@ db.serialize(() => {
         protocol_json TEXT,
         UNIQUE(user_id, date)
     )`);
+<<<<<<< HEAD
   db.run(`CREATE TABLE IF NOT EXISTS nutrition_intake (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -245,6 +246,17 @@ db.serialize(() => {
         carbs REAL DEFAULT 0,
         protein REAL DEFAULT 0,
         fat REAL DEFAULT 0,
+=======
+  db.run(`CREATE TABLE IF NOT EXISTS daily_diet_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        date TEXT,
+        logged_carbs REAL DEFAULT 0,
+        logged_protein REAL DEFAULT 0,
+        logged_fat REAL DEFAULT 0,
+        items_summary TEXT DEFAULT '',
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+>>>>>>> 6906827 (keyboard fix)
         UNIQUE(user_id, date),
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);

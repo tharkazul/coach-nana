@@ -591,4 +591,84 @@ router.get("/api/weight", authenticateToken, (req, res) => {
   );
 });
 
+router.get("/api/physique/nutrition/summary", authenticateToken, async (req, res) => {
+  const todayStr = new Date().toISOString().split("T")[0];
+  const userId = req.user.id;
+
+  db.get(
+    `SELECT weight_kg FROM biometrics WHERE user_id = ? ORDER BY date DESC LIMIT 1`,
+    [userId],
+    (err, weightRow) => {
+      const weight = weightRow ? weightRow.weight_kg : 75;
+      const defaultTarget = {
+        carbs: Math.round(weight * 3.5),
+        protein: Math.round(weight * 1.8),
+        fat: Math.round(weight * 0.9)
+      };
+
+      db.get(
+        `SELECT protocol_json FROM nutrition_protocols WHERE user_id = ? AND date = ?`,
+        [userId, todayStr],
+        (err, cachedProtocol) => {
+          let target = defaultTarget;
+          if (cachedProtocol && cachedProtocol.protocol_json) {
+            try {
+              const parsed = JSON.parse(cachedProtocol.protocol_json);
+              target = {
+                carbs: parsed.carbs || defaultTarget.carbs,
+                protein: parsed.protein || defaultTarget.protein,
+                fat: parsed.fat || defaultTarget.fat
+              };
+            } catch (e) {
+              console.error("Error parsing cached nutrition protocol:", e);
+            }
+          }
+
+          db.get(
+            `SELECT logged_carbs, logged_protein, logged_fat, items_summary FROM daily_diet_logs WHERE user_id = ? AND date = ?`,
+            [userId, todayStr],
+            (err, dietRow) => {
+              const logged = {
+                carbs: dietRow ? Math.round(dietRow.logged_carbs || 0) : 0,
+                protein: dietRow ? Math.round(dietRow.logged_protein || 0) : 0,
+                fat: dietRow ? Math.round(dietRow.logged_fat || 0) : 0
+              };
+              const itemsSummary = dietRow ? (dietRow.items_summary || "") : "";
+
+              const hasData = logged.carbs > 0 || logged.protein > 0 || logged.fat > 0;
+              const percentages = {
+                carbs: target.carbs > 0 ? Math.round((logged.carbs / target.carbs) * 100) : 0,
+                protein: target.protein > 0 ? Math.round((logged.protein / target.protein) * 100) : 0,
+                fat: target.fat > 0 ? Math.round((logged.fat / target.fat) * 100) : 0
+              };
+
+              res.json({
+                has_data: hasData,
+                target,
+                logged,
+                percentages,
+                items_summary: itemsSummary
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+router.post("/api/physique/nutrition/reset", authenticateToken, (req, res) => {
+  const todayStr = new Date().toISOString().split("T")[0];
+  db.run(
+    `DELETE FROM daily_diet_logs WHERE user_id = ? AND date = ?`,
+    [req.user.id, todayStr],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to reset diet log" });
+      }
+      res.json({ success: true, message: "Diet log reset for today" });
+    }
+  );
+});
+
 module.exports = router;

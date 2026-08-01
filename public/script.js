@@ -1072,10 +1072,8 @@ function switchTab(t) {
                         child.dataset.autoDisabled = "true";
                     }
                 } else {
-                    if (child.dataset.autoDisabled === "true") {
-                        child.disabled = false;
-                        delete child.dataset.autoDisabled;
-                    }
+                    child.disabled = false;
+                    delete child.dataset.autoDisabled;
                 }
             });
         }
@@ -1085,6 +1083,11 @@ function switchTab(t) {
         localStorage.setItem('lastChatViewTimestamp', Date.now());
         const badge = document.getElementById('coach-badge');
         if (badge) badge.classList.add('hidden');
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            chatInput.disabled = false;
+            delete chatInput.dataset.autoDisabled;
+        }
     }
 
     if (t === 'history') {
@@ -3645,6 +3648,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
             loadMicroPlan();
             buildDashboard(); // Refresh graphs if a manual activity was logged
             loadSettings(); // Reload settings in case cycle tracking was updated
+            fetchDailyNutritionSummary(); // Refresh macro progress rings
         }
 
         speakResponse(data.reply, data.mood || 'default', localStorage.getItem('coachTone'));
@@ -4189,16 +4193,179 @@ async function deletePhysiqueLog(id) {
     }
 }
 
+function renderMacroRings(containerEl, summaryData) {
+    if (!containerEl) return;
+    
+    const hasData = summaryData && summaryData.has_data;
+    const target = (summaryData && summaryData.target) || { carbs: 250, protein: 140, fat: 65 };
+    const logged = (summaryData && summaryData.logged) || { carbs: 0, protein: 0, fat: 0 };
+    const percentages = (summaryData && summaryData.percentages) || { carbs: 0, protein: 0, fat: 0 };
+    const itemsSummary = (summaryData && summaryData.items_summary) || "";
+
+    const ringsConfig = [
+        {
+            key: 'protein',
+            label: 'Protein',
+            targetGrams: target.protein,
+            loggedGrams: logged.protein,
+            pct: percentages.protein,
+            trackColor: 'rgba(91, 155, 213, 0.35)',
+            fillColor: '#2563EB',
+            badgeBg: '#DBEAFE',
+            badgeBorder: '#93C5FD',
+            badgeText: '#1E40AF',
+        },
+        {
+            key: 'carbs',
+            label: 'Carbs',
+            targetGrams: target.carbs,
+            loggedGrams: logged.carbs,
+            pct: percentages.carbs,
+            trackColor: 'rgba(155, 187, 89, 0.35)',
+            fillColor: '#16A34A',
+            badgeBg: '#DCFCE7',
+            badgeBorder: '#86EFAC',
+            badgeText: '#166534',
+        },
+        {
+            key: 'fat',
+            label: 'Fat',
+            targetGrams: target.fat,
+            loggedGrams: logged.fat,
+            pct: percentages.fat,
+            trackColor: 'rgba(224, 102, 102, 0.35)',
+            fillColor: '#DC2626',
+            badgeBg: '#FEE2E2',
+            badgeBorder: '#FCA5A5',
+            badgeText: '#991B1B',
+        }
+    ];
+
+    let html = `<div class="flex flex-wrap items-center justify-center gap-3 sm:gap-6 w-full py-1 select-none">`;
+
+    ringsConfig.forEach(ring => {
+        const pctClamped = Math.min(Math.max(ring.pct, 0), 100);
+        const radius = 40;
+        const strokeWidth = 8;
+        const cx = 55;
+        const cy = 55;
+        const circumference = 2 * Math.PI * radius;
+        const strokeDashoffset = circumference - (pctClamped / 100) * circumference;
+
+        const angleRad = (pctClamped / 100) * 2 * Math.PI - Math.PI / 2;
+        const badgeX = cx + radius * Math.cos(angleRad);
+        const badgeY = cy + radius * Math.sin(angleRad);
+
+        html += `
+        <div class="flex flex-col items-center group relative cursor-pointer" title="${ring.label}: ${ring.loggedGrams}g logged / ${ring.targetGrams}g target (${ring.pct}%)">
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90 overflow-visible" viewBox="0 0 110 110">
+                    <circle cx="${cx}" cy="${cy}" r="${radius}" 
+                            fill="none" 
+                            stroke="${ring.trackColor}" 
+                            stroke-width="${strokeWidth}" 
+                            class="transition-all duration-500" />
+                    
+                    ${hasData && pctClamped > 0 ? `
+                    <circle cx="${cx}" cy="${cy}" r="${radius}" 
+                            fill="none" 
+                            stroke="${ring.fillColor}" 
+                            stroke-width="${strokeWidth}" 
+                            stroke-dasharray="${circumference}" 
+                            stroke-dashoffset="${strokeDashoffset}" 
+                            stroke-linecap="round" 
+                            class="transition-all duration-700 ease-out" />
+                    ` : ''}
+                </svg>
+
+                ${hasData && pctClamped > 0 ? `
+                <div class="absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-extrabold shadow border transition-all duration-700 pointer-events-none"
+                     style="left: calc(${(badgeX / 110) * 100}% - 12px); top: calc(${(badgeY / 110) * 100}% - 12px); background-color: ${ring.badgeBg}; border-color: ${ring.badgeBorder}; color: ${ring.badgeText};">
+                    ${ring.pct}%
+                </div>
+                ` : ''}
+
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-1">
+                    <span class="text-xs sm:text-sm font-bold text-theme-text">${ring.label}</span>
+                    <span class="text-[9px] sm:text-[10px] text-theme-muted font-medium mt-0.5">
+                        ${hasData ? `${ring.loggedGrams}g` : `<span class="opacity-60">${ring.targetGrams}g</span>`}
+                    </span>
+                </div>
+            </div>
+        </div>
+        `;
+    });
+
+    html += `</div>`;
+
+    if (itemsSummary && hasData) {
+        html += `
+        <div class="text-center mt-1">
+            <span class="text-[10px] sm:text-[11px] text-theme-muted bg-theme-bg/60 px-3 py-1 rounded-full border border-theme-border inline-block">
+                🥗 Logged: <span class="text-theme-text font-medium">${itemsSummary}</span>
+            </span>
+        </div>
+        `;
+    }
+
+    containerEl.innerHTML = html;
+}
+
+async function fetchDailyNutritionSummary() {
+    try {
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch('/api/physique/nutrition/summary', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const summary = await res.json();
+            const coachContainer = document.getElementById('coach-macro-rings-container');
+            const dashContainer = document.getElementById('dash-macro-rings-container');
+            const physContainer = document.getElementById('physique-macro-rings-container');
+
+            if (coachContainer) renderMacroRings(coachContainer, summary);
+            if (dashContainer) renderMacroRings(dashContainer, summary);
+            if (physContainer) renderMacroRings(physContainer, summary);
+        }
+    } catch (e) {
+        console.error("Failed to fetch daily nutrition summary", e);
+    }
+}
+
+async function resetDailyDiet() {
+    if (!confirm("Are you sure you want to reset today's diet log?")) return;
+    try {
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch('/api/physique/nutrition/reset', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            fetchDailyNutritionSummary();
+        }
+    } catch (e) {
+        console.error("Failed to reset diet log", e);
+    }
+}
+
+function toggleCoachMacroBar() {
+    const bar = document.getElementById('coach-macro-bar');
+    const txt = document.getElementById('macro-toggle-text');
+    if (bar) {
+        bar.classList.toggle('hidden');
+        if (txt) {
+            txt.innerText = bar.classList.contains('hidden') ? 'Show Rings' : 'Hide Rings';
+        }
+    }
+}
+
 async function loadNutritionProtocol() {
     try {
         const els = {
             loading: [document.getElementById('nutrition-loading'), document.getElementById('dash-nutrition-loading')],
             content: [document.getElementById('nutrition-content'), document.getElementById('dash-nutrition-content')],
             title: [document.getElementById('nutrition-focus-title'), document.getElementById('dash-nutrition-focus-title')],
-            rationale: [document.getElementById('nutrition-rationale'), document.getElementById('dash-nutrition-rationale')],
-            carbs: [document.getElementById('macro-carbs'), document.getElementById('dash-macro-carbs')],
-            protein: [document.getElementById('macro-protein'), document.getElementById('dash-macro-protein')],
-            fat: [document.getElementById('macro-fat'), document.getElementById('dash-macro-fat')]
+            rationale: [document.getElementById('nutrition-rationale'), document.getElementById('dash-nutrition-rationale')]
         };
 
         els.loading.forEach(el => { if (el) el.classList.remove('hidden') });
@@ -4215,9 +4382,6 @@ async function loadNutritionProtocol() {
 
         els.title.forEach(el => { if (el) el.innerText = protocol.title || 'Balanced Protocol' });
         els.rationale.forEach(el => { if (el) el.innerText = protocol.rationale || '' });
-        els.carbs.forEach(el => { if (el) el.innerText = `${protocol.carbs || '--'}g` });
-        els.protein.forEach(el => { if (el) el.innerText = `${protocol.protein || '--'}g` });
-        els.fat.forEach(el => { if (el) el.innerText = `${protocol.fat || '--'}g` });
 
         const updateRing = (macro, suggestedVal, intakeVal) => {
             const rings = [document.getElementById(`dash-ring-${macro}`), document.getElementById(`ring-${macro}`)];
@@ -4278,10 +4442,13 @@ async function loadNutritionProtocol() {
 
         els.loading.forEach(el => { if (el) el.classList.add('hidden') });
         els.content.forEach(el => { if (el) el.classList.remove('hidden') });
+
+        fetchDailyNutritionSummary();
     } catch (e) {
         console.error("Failed to load nutrition protocol", e);
         const loadingEls = [document.getElementById('nutrition-loading'), document.getElementById('dash-nutrition-loading')];
         loadingEls.forEach(el => { if (el) el.innerText = 'Failed to load' });
+        fetchDailyNutritionSummary();
     }
 }
 
@@ -4723,10 +4890,6 @@ function updateAppHeight() {
             // Since we set the shell height to vh, the layout adapts smoothly.
             coachInput.classList.remove('pb-24', 'md:pb-24'); 
         }
-        // Crucial for iOS: prevent Safari from pushing the fixed document up!
-        if (window.visualViewport && window.visualViewport.offsetTop > 0) {
-            window.scrollTo(0, 0);
-        }
         // Re-anchor to the latest message now that the visible area just shrank
         const chatWindow = document.getElementById('chat-window');
         if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -4773,15 +4936,9 @@ if (window.visualViewport) {
         updateAppHeight();
         // The keyboard animates open over ~250-300ms — the first resize event
         // can fire mid-animation with a transitional height. Re-check once it's
-        // had time to settle, same as what happens naturally when you switch
-        // apps and back.
+        // had time to settle.
         clearTimeout(window._appHeightSettleTimer);
         window._appHeightSettleTimer = setTimeout(updateAppHeight, 350);
-    });
-    window.visualViewport.addEventListener('scroll', () => {
-        if (window.visualViewport.height < window.innerHeight) {
-            window.scrollTo(0, 0);
-        }
     });
 }
 window.addEventListener('resize', updateAppHeight);
@@ -5579,6 +5736,7 @@ function forceScrollToBottom() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    fetchDailyNutritionSummary();
     const chatWindow = document.getElementById('chat-window');
     const scrollBtn = document.getElementById('scroll-to-bottom-btn');
 
@@ -5592,5 +5750,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 scrollBtn.classList.remove('hidden');
             }
         });
+    }
+
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        const unlockChatInput = () => {
+            chatInput.disabled = false;
+            delete chatInput.dataset.autoDisabled;
+            const viewCoach = document.getElementById('view-coach');
+            if (viewCoach) viewCoach.removeAttribute('inert');
+        };
+        chatInput.addEventListener('pointerdown', unlockChatInput);
+        chatInput.addEventListener('touchstart', unlockChatInput);
+        chatInput.addEventListener('focus', unlockChatInput);
+        chatInput.addEventListener('click', unlockChatInput);
     }
 });
