@@ -474,17 +474,6 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     }
                     \`\`\`
 
-<<<<<<< HEAD
-                    NUTRITION & MACRO LOGGING (CRITICAL):
-                    If the athlete mentions eating food, meals, or consuming specific macros today, you MUST output an additional JSON block at the very end of your response to log their intake. This is mandatory. Guess the macros in grams if they aren't explicit. Format it exactly like this inside triple backticks:
-                    \`\`\`json
-                    {
-                      "type": "log_nutrition",
-                      "data": {
-                        "carbs": 40,
-                        "protein": 30,
-                        "fat": 15
-=======
                     DIET & MEAL LOGGING:
                     If the athlete shares what they ate or drank today (e.g. "I had a pizza, 2x protein shakes, a chicken sandwich and a banana"), you MUST estimate the approximate macros in grams (carbs, protein, fat) for those items, respond warmly as a supportive coach, and output an additional JSON block at the end of your message. Format it exactly like this inside triple backticks:
                     \`\`\`json
@@ -495,7 +484,6 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                         "protein": 95,
                         "fat": 40,
                         "summary": "Pizza, 2x protein shakes, chicken sandwich, banana"
->>>>>>> 6906827 (keyboard fix)
                       }
                     }
                     \`\`\``;
