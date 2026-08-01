@@ -1982,25 +1982,52 @@ app.get('/api/physique/nutrition', authenticateToken, async (req, res) => {
             const weight = weightRow ? weightRow.weight_kg : 75; // Default to 75kg if unknown
             const phase = await getUserMacroPhase(req.user.id);
             
-            // Fetch today's completed activities (if any)
-            db.all(`SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`, [req.user.id, todayStr], (err, actualAct) => {
-                const actualSpark = actualAct && actualAct.length > 0 && actualAct[0].total_score ? actualAct[0].total_score : 0;
+            // Fetch today's completed activities with details (if any)
+            db.all(`SELECT name, sport_type, spark_score, distance_km, moving_time_min FROM activities WHERE user_id = ? AND date(start_date) = ?`, [req.user.id, todayStr], (err, actualActs) => {
+                let actualSpark = 0;
+                let completedSummary = "";
 
-                db.all(`SELECT date, target_spark, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`, [req.user.id, todayStr], async (err, todayPlan) => {
-                    let todaySpark = todayPlan && todayPlan.length > 0 ? todayPlan[0].target_spark : 0;
-                    let todayDesc = todayPlan && todayPlan.length > 0 ? todayPlan[0].description : 'Rest day';
-                    
-                    // If they already trained harder than planned (or trained on a rest day), update the prompt
-                    if (actualSpark > todaySpark || (actualSpark > 0 && todayDesc === 'Rest day')) {
-                        todaySpark = actualSpark;
-                        todayDesc = 'Completed Workout / Training Day';
+                if (actualActs && actualActs.length > 0) {
+                    const actSummaries = actualActs.map(act => {
+                        actualSpark += (act.spark_score || 0);
+                        const nameStr = act.name || "Workout";
+                        const sportStr = act.sport_type || "Exercise";
+                        const distStr = act.distance_km ? `${act.distance_km.toFixed(1)}km` : "";
+                        const timeStr = act.moving_time_min ? `${Math.round(act.moving_time_min)}m` : "";
+                        const detailsStr = [sportStr, distStr, timeStr, `${Math.round(act.spark_score || 0)} Spark Points`].filter(Boolean).join(", ");
+                        return `${nameStr} (${detailsStr})`;
+                    });
+                    completedSummary = actSummaries.join("; ");
+                }
+
+                db.all(`SELECT sport, description, target_spark FROM micro_plan WHERE user_id = ? AND date = ?`, [req.user.id, todayStr], async (err, plannedRows) => {
+                    let plannedSummary = "";
+                    if (plannedRows && plannedRows.length > 0) {
+                        plannedSummary = plannedRows.map(p => {
+                            const sportStr = p.sport ? `[${p.sport}] ` : "";
+                            return `${sportStr}${p.description} (${Math.round(p.target_spark || 0)} Spark Points)`;
+                        }).join("; ");
+                    } else {
+                        plannedSummary = "Rest day (0 Spark Points)";
+                    }
+
+                    let trainingContextPrompt = "";
+                    if (completedSummary) {
+                        trainingContextPrompt = `Completed Activities Today: ${completedSummary} (Total Spark Points: ${actualSpark.toFixed(1)})`;
+                        if (plannedSummary && plannedSummary !== "Rest day (0 Spark Points)") {
+                            trainingContextPrompt += `\nPlanned Training for Today: ${plannedSummary}`;
+                        }
+                    } else {
+                        trainingContextPrompt = `Today's Planned Training: ${plannedSummary}`;
                     }
 
                     const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
 Their latest weight is ${weight}kg.
-Today's training load/plan: ${todayDesc} (Spark Points: ${todaySpark}).
 
-Based on today's training load and their current macro phase, recommend a daily macro nutrition target.
+${trainingContextPrompt}
+
+Based on today's completed activities (if any), planned training load, and their current macro phase, recommend a daily macro nutrition target.
+- Explicitly reference the actual completed exercise names and sport types (e.g. Run, Swim, Bike, Strength) in your rationale if a workout was completed.
 - For high Spark Points / intense days, prescribe higher carbohydrates.
 - For rest / low Spark Points days, prescribe lower carbohydrates and higher protein/fat.
 - Ensure total calories make sense for an endurance athlete of their weight.
@@ -2008,7 +2035,7 @@ Based on today's training load and their current macro phase, recommend a daily 
 You MUST respond with ONLY a raw JSON object containing exactly these keys:
 {
   "title": "String (e.g. 'High Carb / Big Session')",
-  "rationale": "String (1-2 sentences explaining why)",
+  "rationale": "String (1-2 sentences explaining why, referencing the specific exercise name and type if completed)",
   "carbs": Number (grams),
   "protein": Number (grams),
   "fat": Number (grams)

@@ -471,41 +471,59 @@ router.get("/api/physique/nutrition", authenticateToken, async (req, res) => {
               const athleteContext = userRow ? userRow.athlete_context : "";
               const longTermMemory = userRow ? userRow.long_term_memory : "";
 
-              // Fetch today's completed activities (if any)
+              // Fetch today's completed activities with details (if any)
               db.all(
-                `SELECT SUM(spark_score) as total_score FROM activities WHERE user_id = ? AND date(start_date) = ?`,
+                `SELECT name, sport_type, spark_score, distance_km, moving_time_min FROM activities WHERE user_id = ? AND date(start_date) = ?`,
                 [req.user.id, todayStr],
-                (err, actualAct) => {
-                  const actualSpark =
-                    actualAct && actualAct.length > 0 && actualAct[0].total_score
-                      ? actualAct[0].total_score
-                      : 0;
+                (err, actualActs) => {
+                  let actualSpark = 0;
+                  let completedSummary = "";
+
+                  if (actualActs && actualActs.length > 0) {
+                    const actSummaries = actualActs.map((act) => {
+                      actualSpark += act.spark_score || 0;
+                      const nameStr = act.name || "Workout";
+                      const sportStr = act.sport_type || "Exercise";
+                      const distStr = act.distance_km ? `${act.distance_km.toFixed(1)}km` : "";
+                      const timeStr = act.moving_time_min ? `${Math.round(act.moving_time_min)}m` : "";
+                      const detailsStr = [sportStr, distStr, timeStr, `${Math.round(act.spark_score || 0)} Spark Points`]
+                        .filter(Boolean)
+                        .join(", ");
+                      return `${nameStr} (${detailsStr})`;
+                    });
+                    completedSummary = actSummaries.join("; ");
+                  }
 
                   db.all(
-                    `SELECT date, target_spark, description FROM micro_plan WHERE user_id = ? AND date = ? LIMIT 1`,
+                    `SELECT sport, description, target_spark FROM micro_plan WHERE user_id = ? AND date = ?`,
                     [req.user.id, todayStr],
-                    async (err, todayPlan) => {
-                      let todaySpark =
-                        todayPlan && todayPlan.length > 0
-                          ? todayPlan[0].target_spark
-                          : 0;
-                      let todayDesc =
-                        todayPlan && todayPlan.length > 0
-                          ? todayPlan[0].description
-                          : "Rest day";
+                    async (err, plannedRows) => {
+                      let plannedSummary = "";
+                      if (plannedRows && plannedRows.length > 0) {
+                        plannedSummary = plannedRows
+                          .map((p) => {
+                            const sportStr = p.sport ? `[${p.sport}] ` : "";
+                            return `${sportStr}${p.description} (${Math.round(p.target_spark || 0)} Spark Points)`;
+                          })
+                          .join("; ");
+                      } else {
+                        plannedSummary = "Rest day (0 Spark Points)";
+                      }
 
-                      // If they already trained harder than planned (or trained on a rest day), update the prompt
-                      if (
-                        actualSpark > todaySpark ||
-                        (actualSpark > 0 && todayDesc === "Rest day")
-                      ) {
-                        todaySpark = actualSpark;
-                        todayDesc = "Completed Workout / Training Day";
+                      let trainingContextPrompt = "";
+                      if (completedSummary) {
+                        trainingContextPrompt = `Completed Activities Today: ${completedSummary} (Total Spark Points: ${actualSpark.toFixed(1)})`;
+                        if (plannedSummary && plannedSummary !== "Rest day (0 Spark Points)") {
+                          trainingContextPrompt += `\nPlanned Training for Today: ${plannedSummary}`;
+                        }
+                      } else {
+                        trainingContextPrompt = `Today's Planned Training: ${plannedSummary}`;
                       }
 
                       const systemPrompt = `You are an elite sports nutritionist. The user is an endurance athlete currently in their ${phase} phase.
 Their latest weight is ${weight}kg.
-Today's training load/plan: ${todayDesc} (Spark Points: ${todaySpark}).
+
+${trainingContextPrompt}
 
 Athlete Context:
 ${athleteContext}
@@ -513,7 +531,8 @@ ${athleteContext}
 Coach/Long Term Memory Notes (IMPORTANT for goals/injuries/deficits):
 ${longTermMemory}
 
-Based on today's training load, their current macro phase, and their specific goals/context, recommend a daily macro nutrition target.
+Based on today's completed activities (if any), planned training load, macro phase, and athlete context/goals, recommend a daily macro nutrition target.
+- Explicitly reference the actual completed exercise names and sport types (e.g. Run, Swim, Bike, Strength) in your rationale if a workout was completed.
 - For high Spark Points / intense days, prescribe higher carbohydrates.
 - For rest / low Spark Points days, prescribe lower carbohydrates and higher protein/fat.
 - Protein should always be kept very high (1.8g - 2.2g per kg of bodyweight, which is roughly ${Math.round(weight * 1.8)}g - ${Math.round(weight * 2.2)}g for this athlete) to preserve and build muscle mass.
@@ -522,7 +541,7 @@ Based on today's training load, their current macro phase, and their specific go
 You MUST respond with ONLY a raw JSON object containing exactly these keys:
 {
   "title": "String (e.g. 'High Carb / Big Session')",
-  "rationale": "String (1-2 sentences explaining why)",
+  "rationale": "String (1-2 sentences explaining why, referencing the specific exercise name and type if completed)",
   "carbs": Number (grams),
   "protein": Number (grams),
   "fat": Number (grams)
