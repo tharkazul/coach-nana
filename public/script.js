@@ -4882,7 +4882,8 @@ function updateAppHeight() {
         }
         if (coachInput) {
             coachInput.classList.remove('hidden');
-            coachInput.classList.remove('pb-24', 'md:pb-24'); 
+            coachInput.classList.remove('pb-16', 'md:pb-16', 'pb-20', 'pb-24', 'md:pb-24'); 
+            coachInput.classList.add('pb-2');
         }
         if (coachMacroBar) {
             coachMacroBar.classList.add('hidden');
@@ -4898,10 +4899,8 @@ function updateAppHeight() {
             nav.style.transform = 'translateY(0)'; // restore
         }
         if (coachInput) {
-            coachInput.classList.add('pb-24', 'md:pb-24');
-        }
-        if (coachMacroBar) {
-            coachMacroBar.classList.remove('hidden');
+            coachInput.classList.remove('pb-2');
+            coachInput.classList.add('pb-20', 'md:pb-24');
         }
         window.scrollTo(0, 0);
     }
