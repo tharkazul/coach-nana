@@ -4883,11 +4883,6 @@ function updateAppHeight() {
         }
         if (coachInput) {
             coachInput.classList.remove('hidden');
-            // We do NOT remove pb-24 here because removing it while the keyboard is animating up
-            // causes the layout to shrink instantly, breaking focus on iOS Safari.
-            // Instead, we just let the fixed shell height naturally handle it or use a separate strategy.
-            // However, we still need to make sure the input isn't pushed too far up.
-            // Since we set the shell height to vh, the layout adapts smoothly.
             coachInput.classList.remove('pb-24', 'md:pb-24'); 
         }
         // Re-anchor to the latest message now that the visible area just shrank
@@ -4899,21 +4894,9 @@ function updateAppHeight() {
             nav.style.pointerEvents = 'auto';
             nav.style.transform = 'translateY(0)'; // restore
         }
-        // If we are on the chat tab, restore the talk to button and hide input when keyboard closes
-        const currentTab = document.querySelector('.nav-btn.text-white'); // rough check for active tab
-        const isCoachTab = currentTab && currentTab.id === 'nav-btn-coach';
-        
         if (coachInput) {
             coachInput.classList.add('pb-24', 'md:pb-24');
-            if (isCoachTab) {
-                coachInput.classList.add('hidden');
-            }
         }
-        if (talkToContainer && isCoachTab) {
-            talkToContainer.classList.remove('hidden');
-        }
-        
-        window.scrollTo(0, 0);
     }
 }
 
@@ -4921,22 +4904,26 @@ function openChatInput() {
     const btn = document.getElementById('talk-to-container');
     const inputArea = document.getElementById('coach-input-area');
     const input = document.getElementById('chat-input');
-    
+    const viewCoach = document.getElementById('view-coach');
+
+    if (viewCoach) viewCoach.removeAttribute('inert');
+    if (input) {
+        input.disabled = false;
+        delete input.dataset.autoDisabled;
+    }
+
     if (btn) btn.classList.add('hidden');
     if (inputArea) inputArea.classList.remove('hidden');
-    
-    // Slight delay to allow DOM to render before focusing, preventing iOS focus drop
-    setTimeout(() => {
-        if (input) input.focus();
-    }, 50);
+
+    // Synchronous focus inside touch/click gesture handler opens iOS Safari keyboard immediately!
+    if (input) {
+        input.focus();
+    }
 }
 
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
         updateAppHeight();
-        // The keyboard animates open over ~250-300ms — the first resize event
-        // can fire mid-animation with a transitional height. Re-check once it's
-        // had time to settle.
         clearTimeout(window._appHeightSettleTimer);
         window._appHeightSettleTimer = setTimeout(updateAppHeight, 350);
     });
