@@ -1191,41 +1191,79 @@ async function triggerBackgroundSummary(userId) {
       if (err || !user) return;
 
       db.all(
-        `SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 10) ORDER BY id ASC`,
+        `SELECT body_part, severity, notes, status FROM athlete_niggles WHERE user_id = ?`,
         [userId],
-        async (err, historyRows) => {
-          if (err || !historyRows || historyRows.length === 0) return;
+        async (err, niggleRows) => {
+          const activeNiggles = (niggleRows || []).filter((n) => n.status === "active");
+          const resolvedNiggles = (niggleRows || []).filter((n) => n.status === "resolved");
 
-          const historyText = historyRows
-            .map((r) => `${r.role.toUpperCase()}: ${r.content}`)
-            .join("\n");
-          const currentSummary = user.long_term_memory || "No summary yet.";
+          const activeText =
+            activeNiggles.length > 0
+              ? activeNiggles
+                  .map(
+                    (n) =>
+                      `- ${n.body_part}: Severity ${n.severity}/5. ${n.notes || ""}`,
+                  )
+                  .join("\n")
+              : "No active injuries or niggles reported. Athlete is 100% healthy.";
 
-          const prompt = `You are a background AI assistant for an endurance coach app. Your job is to update the athlete's long-term memory summary based on recent chat history.
-            
+          const resolvedText =
+            resolvedNiggles.length > 0
+              ? resolvedNiggles
+                  .map((n) => `- ${n.body_part}: HEALED / RESOLVED`)
+                  .join("\n")
+              : "None.";
+
+          db.all(
+            `SELECT role, content FROM (SELECT * FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 12) ORDER BY id ASC`,
+            [userId],
+            async (err, historyRows) => {
+              if (err) return;
+
+              const historyText =
+                historyRows && historyRows.length > 0
+                  ? historyRows
+                      .map((r) => `${r.role.toUpperCase()}: ${r.content}`)
+                      .join("\n")
+                  : "No recent chat.";
+
+              const currentSummary = user.long_term_memory || "No summary yet.";
+
+              const prompt = `You are a background AI assistant for an endurance coach app. Your job is to update the athlete's long-term memory summary based on recent chat history and REAL-TIME injury records.
+
 CURRENT LONG-TERM MEMORY:
 ${currentSummary}
+
+REAL-TIME ACTIVE INJURIES (REALITY / TRUTH):
+${activeText}
+
+REAL-TIME RESOLVED / HEALED INJURIES (REALITY / TRUTH):
+${resolvedText}
 
 RECENT CHAT HISTORY:
 ${historyText}
 
-INSTRUCTIONS:
-Update the long-term memory summary to incorporate any new important facts (injuries, new goals, shifts in mood, new baseline numbers). 
-Keep it extremely concise (under 150 words). Do not include pleasantries. Only output the new summary text.`;
+INSTRUCTIONS & CRITICAL RULES FOR INJURIES:
+1. INJURY TRUTH: Refer strictly to the ACTIVE INJURIES list above. If an injury (e.g. heel, knee, ankle, back) is listed under RESOLVED INJURIES or is NOT in ACTIVE INJURIES, REMOVE IT COMPLETELY from current physical issues in the summary! Note it as fully healed or omit it.
+2. DO NOT state that a resolved or non-active injury is currently hurting, bothering, or limiting the athlete.
+3. Update the long-term memory summary to incorporate any new important facts (new goals, shifts in mood, new baseline numbers).
+4. Keep it extremely concise (under 150 words). Do not include pleasantries. Only output the updated summary text.`;
 
-          try {
-            const newSummary = await generateWithFallback(prompt);
-            db.run(`UPDATE users SET long_term_memory = ? WHERE id = ?`, [
-              newSummary.trim(),
-              userId,
-            ]);
-            console.log(`✅ Updated long-term memory for user ${userId}`);
-          } catch (e) {
-            console.error(
-              `❌ Failed to update long-term memory for user ${userId}:`,
-              e,
-            );
-          }
+              try {
+                const newSummary = await generateWithFallback(prompt);
+                db.run(`UPDATE users SET long_term_memory = ? WHERE id = ?`, [
+                  newSummary.trim(),
+                  userId,
+                ]);
+                console.log(`✅ Updated long-term memory for user ${userId}`);
+              } catch (e) {
+                console.error(
+                  `❌ Failed to update long-term memory for user ${userId}:`,
+                  e,
+                );
+              }
+            },
+          );
         },
       );
     },

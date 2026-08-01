@@ -251,18 +251,29 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                 : "No upcoming events/milestones.";
 
                             db.all(
-                              `SELECT body_part, severity, notes FROM athlete_niggles WHERE user_id = ? AND status = 'active'`,
+                              `SELECT body_part, severity, notes, status FROM athlete_niggles WHERE user_id = ?`,
                               [req.user.id],
-                              async (err, niggleRows) => {
-                                let nigglesText =
-                                  "No active injuries or niggles reported.";
-                                if (niggleRows && niggleRows.length > 0) {
-                                  nigglesText = niggleRows
+                              async (err, allNiggleRows) => {
+                                const activeNiggles = (allNiggleRows || []).filter((n) => n.status === "active");
+                                const resolvedNiggles = (allNiggleRows || []).filter((n) => n.status === "resolved");
+
+                                let nigglesText = "No active injuries or niggles reported. Athlete is 100% healthy with no active physical limitations.";
+                                if (activeNiggles.length > 0) {
+                                  nigglesText = activeNiggles
                                     .map(
                                       (n) =>
                                         `- ${n.body_part}: Severity ${n.severity}/5. ${n.notes || ""}`,
                                     )
                                     .join("\n                    ");
+                                }
+
+                                let resolvedNigglesText = "";
+                                if (resolvedNiggles.length > 0) {
+                                  resolvedNigglesText =
+                                    "\n                    RESOLVED / HEALED INJURIES (NO LONGER ACTIVE):\n                    " +
+                                    resolvedNiggles
+                                      .map((n) => `- ${n.body_part}: FULLY HEALED / RESOLVED`)
+                                      .join("\n                    ");
                                 }
 
                                 db.all(
@@ -372,8 +383,13 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     MUSCLE STATUS (Fatigue vs Peak Development):
                     ${muscleStatusText}
                     
-                    ACTIVE INJURIES / NIGGLES:
-                    ${nigglesText}
+                    ACTIVE INJURIES / NIGGLES (REAL-TIME SINGLE SOURCE OF TRUTH):
+                    ${nigglesText}${resolvedNigglesText}
+
+                    INJURY TRUTH & ACTIVE STATUS DIRECTIVES (CRITICAL):
+                    - The ACTIVE INJURIES section above is the SINGLE SOURCE OF TRUTH regarding physical injuries.
+                    - If an injury or body part (e.g. heel, knee, ankle, shoulder, back) is NOT listed under ACTIVE INJURIES or is listed under RESOLVED INJURIES, the athlete is FULLY HEALED and recovered.
+                    - NEVER ask about, mention, or express concern over past injuries (such as a heel injury) if they are NOT currently in ACTIVE INJURIES. Ignore any outdated references to past injuries in long-term memory or athlete context.
 
                     PHASE GUIDANCE:
                     - If phase is BASE: Focus on aerobic volume and consistency. Discourage racing or excessive intensity.
@@ -388,11 +404,13 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     3. Always use metric measurements exclusively (meters for distance, km/h for speed, min/km for pace). Never use imperial units.
                     4. Respond directly with your conversational text. Do not wrap your main reply in JSON.
                     5. CRITICAL DATE CONTEXT: If an activity in the user's recent history is tagged with [TODAY], you MUST refer to it as happening "today". NEVER refer to a [TODAY] activity as "yesterday" or "last night".
-                    6. INJURY GUARDRAILS: The athlete has active injuries listed above. You MUST alter the training plan and your advice based on this data to prevent further injury.
-                       - If an injury is Lower Body (Severity 3+): Strictly avoid high-impact running. Substitute required aerobic load with swimming or indoor cycling.
-                       - If an injury affects Grip/Hands: Substitute swimming or heavy upper-body strength with running or indoor cycling.
-                       - If Severity is 5: Schedule complete rest for the affected area.
-                       - Whenever you modify a plan due to an active injury, explain the substitution to the athlete.
+                    6. INJURY GUARDRAILS:
+                       - If ACTIVE INJURIES lists "No active injuries or niggles reported", treat the athlete as 100% healthy with ZERO physical restrictions.
+                       - Only if an injury is currently active:
+                         * Lower Body (Severity 3+): Avoid high-impact running. Substitute with swimming or indoor cycling.
+                         * Grip/Hands: Substitute swimming/heavy upper-body with running or indoor cycling.
+                         * Severity 5: Schedule complete rest for the affected area.
+                         * Explain any substitution made due to an active injury.
                     5. BRICK WORKOUTS: If you prescribe a multi-sport Brick workout (e.g., Bike + Run), you MUST create two separate objects in the JSON array (one for "Bike", one for "Run") for that same date.
                     6. INTERVALS: To create a repeating block (e.g., 8x 3min fast, 1min rest), use a "repeat" object in steps_json with "iterations" and an array of "steps".
                     7. SENTIMENT & SUPPORT: Pay close attention to the athlete's physical and mental state. If they mention soreness, exhaustion, poor sleep, or lack of motivation, immediately prioritize empathy and recovery. Strongly advise them to rest or dial back intensity, even if it means modifying the plan.

@@ -138,6 +138,7 @@ router.post("/api/niggles", authenticateToken, (req, res) => {
               return res
                 .status(500)
                 .json({ error: "Failed to update niggle." });
+            triggerBackgroundSummary(req.user.id);
             res.json({ success: true });
           },
         );
@@ -149,6 +150,7 @@ router.post("/api/niggles", authenticateToken, (req, res) => {
           (insertErr) => {
             if (insertErr)
               return res.status(500).json({ error: "Failed to log niggle." });
+            triggerBackgroundSummary(req.user.id);
             res.json({ success: true });
           },
         );
@@ -165,6 +167,7 @@ router.put("/api/niggles/:id/resolve", authenticateToken, (req, res) => {
     (err) => {
       if (err)
         return res.status(500).json({ error: "Failed to resolve niggle." });
+      triggerBackgroundSummary(req.user.id);
       res.json({ success: true });
     },
   );
