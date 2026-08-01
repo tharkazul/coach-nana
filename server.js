@@ -45,6 +45,7 @@ const {
 } = require("./services/utils");
 
 const { sseClients } = require("./services/sse");
+const { runWeeklyFeatureOnboardingJob } = require("./services/onboarding");
 const cron = require('node-cron');
 
 // Startup setup
@@ -86,6 +87,14 @@ cron.schedule('0 8 * * *', () => {
 // Schedule daily recovery & degradation job to run every day at 00:05 AM (Europe/Amsterdam timezone)
 cron.schedule('5 0 * * *', () => {
   runDailyRecoveryJob();
+}, {
+  scheduled: true,
+  timezone: "Europe/Amsterdam"
+});
+
+// Schedule weekly feature onboarding check on Sundays at 10:00 AM (Europe/Amsterdam timezone)
+cron.schedule('0 10 * * 0', () => {
+  runWeeklyFeatureOnboardingJob();
 }, {
   scheduled: true,
   timezone: "Europe/Amsterdam"

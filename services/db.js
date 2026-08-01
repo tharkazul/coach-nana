@@ -395,6 +395,16 @@ db.serialize(() => {
       });
     }
   });
+  db.run(`CREATE TABLE IF NOT EXISTS user_feature_onboarding (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        feature_key TEXT NOT NULL,
+        introduced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        first_used_at DATETIME,
+        status TEXT DEFAULT 'introduced',
+        UNIQUE(user_id, feature_key),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )`);
 });
 
 module.exports = db;
