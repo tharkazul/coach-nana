@@ -118,7 +118,7 @@ function getUserLeaderboardString(userId) {
                    (COALESCE(SUM(a.spark_score), 0) + 
                     COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND created_at >= datetime('now', '-7 days')), 0)) as total_spark_score
             FROM users u
-            LEFT JOIN activities a ON a.user_id = u.id AND a.start_date >= datetime('now', '-7 days')
+            LEFT JOIN activities a ON a.user_id = u.id AND a.start_date >= datetime('now', '-7 days') AND (u.spark_start_date IS NULL OR substr(a.start_date, 1, 10) >= substr(u.spark_start_date, 1, 10))
             WHERE (u.id = ? OR u.id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
             GROUP BY u.id
             ORDER BY total_spark_score DESC
@@ -882,36 +882,52 @@ async function getStravaActivity(stravaAthleteId, activityId) {
     }
 
     const tss = data.suffer_score || Math.round((data.moving_time / 3600) * 50);
-    const sparkScore = calculateSparkScore(
-      data.moving_time / 60,
-      data.average_heartrate,
-      tss,
-    );
 
-    db.run(
-      `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
-      [
-        data.id,
-        internalUserId,
-        data.name,
-        data.sport_type,
-        data.distance / 1000,
-        data.total_elevation_gain,
-        data.moving_time / 60,
-        data.average_heartrate || null,
-        data.start_date,
-        tss,
-        sparkScore,
-      ],
-      (err) => {
-        if (!err) {
-          updateUserSparkAndCheckLevel(internalUserId);
-          sendSSEEvent(internalUserId, "sync_complete", {
-            provider: "strava",
-            activityId: data.id,
-          });
+    db.get(
+      `SELECT spark_start_date FROM users WHERE id = ?`,
+      [internalUserId],
+      (err, uRow) => {
+        const userStartDateDay = uRow && uRow.spark_start_date ? uRow.spark_start_date.substring(0, 10) : null;
+        const actStartDateDay = data.start_date ? data.start_date.substring(0, 10) : null;
+
+        let sparkScore = 0;
+        if (!userStartDateDay || (actStartDateDay && actStartDateDay >= userStartDateDay)) {
+          sparkScore = calculateSparkScore(
+            data.moving_time / 60,
+            data.average_heartrate,
+            tss,
+          );
+        }
+
+        db.run(
+          `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
+          [
+            data.id,
+            internalUserId,
+            data.name,
+            data.sport_type,
+            data.distance / 1000,
+            data.total_elevation_gain,
+            data.moving_time / 60,
+            data.average_heartrate || null,
+            data.start_date,
+            tss,
+            sparkScore,
+          ],
+          (err) => {
+            if (!err) {
+              updateUserSparkAndCheckLevel(internalUserId);
+              sendSSEEvent(internalUserId, "sync_complete", {
+                provider: "strava",
+                activityId: data.id,
+              });
+            }
+          },
+        );
+      },
+    );
 
           // Invalidate today's nutrition cache so it incorporates the new workout
           const activityDateStr = data.start_date_local
@@ -1091,7 +1107,7 @@ async function syncAllStravaUsersOnStartup() {
 
       console.log("🔄 Running initial Strava sync for all connected users...");
       db.all(
-        "SELECT id FROM users WHERE strava_refresh_token IS NOT NULL",
+        "SELECT id, spark_start_date FROM users WHERE strava_refresh_token IS NOT NULL",
         [],
         async (err, users) => {
           if (err || !users) return;
@@ -1118,19 +1134,24 @@ async function syncAllStravaUsersOnStartup() {
               const activities = await actRes.json();
 
               if (Array.isArray(activities)) {
+                const userStartDateDay = user.spark_start_date ? user.spark_start_date.substring(0, 10) : null;
                 activities.forEach((act) => {
                   const tss =
                     act.suffer_score ||
                     Math.round((act.moving_time / 3600) * 50);
-                  const sparkScore = calculateSparkScore(
-                    act.moving_time / 60,
-                    act.average_heartrate,
-                    tss,
-                  );
+                  const actStartDateDay = act.start_date ? act.start_date.substring(0, 10) : null;
+                  let sparkScore = 0;
+                  if (!userStartDateDay || (actStartDateDay && actStartDateDay >= userStartDateDay)) {
+                    sparkScore = calculateSparkScore(
+                      act.moving_time / 60,
+                      act.average_heartrate,
+                      tss,
+                    );
+                  }
                   db.run(
                     `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                             ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=COALESCE(activities.spark_score, excluded.spark_score), moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
+                             ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
                     [
                       act.id,
                       user.id,
@@ -1216,16 +1237,22 @@ Keep it extremely concise (under 150 words). Do not include pleasantries. Only o
 
 function updateUserSparkAndCheckLevel(userId) {
   db.get(
-    `SELECT total_spark FROM users WHERE id = ?`,
+    `SELECT total_spark, spark_start_date FROM users WHERE id = ?`,
     [userId],
     (err, userRow) => {
       if (err || !userRow) return;
       const oldSpark = userRow.total_spark || 0;
       const oldLevelInfo = getSparkLevelInfo(oldSpark);
+      const sparkStartDateDay = userRow.spark_start_date ? userRow.spark_start_date.substring(0, 10) : null;
+
+      const query = sparkStartDateDay
+        ? `SELECT SUM(spark_score) as new_total FROM activities WHERE user_id = ? AND substr(start_date, 1, 10) >= ?`
+        : `SELECT SUM(spark_score) as new_total FROM activities WHERE user_id = ?`;
+      const queryParams = sparkStartDateDay ? [userId, sparkStartDateDay] : [userId];
 
       db.get(
-        `SELECT SUM(spark_score) as new_total FROM activities WHERE user_id = ?`,
-        [userId],
+        query,
+        queryParams,
         (err, row) => {
           if (err || !row) return;
           const newSpark = row.new_total || 0;

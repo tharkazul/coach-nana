@@ -201,14 +201,23 @@ router.post("/api/sync-strava", authenticateToken, async (req, res) => {
 
         const activities = await actRes.json();
 
+        const userRow = await new Promise((resolve) =>
+          db.get(`SELECT spark_start_date FROM users WHERE id = ?`, [req.user.id], (err, row) => resolve(row))
+        );
+        const userStartDateDay = userRow && userRow.spark_start_date ? userRow.spark_start_date.substring(0, 10) : null;
+
         activities.forEach((act) => {
           const tss =
             act.suffer_score || Math.round((act.moving_time / 3600) * 50);
-          const sparkScore = calculateSparkScore(
-            act.moving_time / 60,
-            act.average_heartrate,
-            tss,
-          );
+          const actStartDateDay = act.start_date ? act.start_date.substring(0, 10) : null;
+          let sparkScore = 0;
+          if (!userStartDateDay || (actStartDateDay && actStartDateDay >= userStartDateDay)) {
+            sparkScore = calculateSparkScore(
+              act.moving_time / 60,
+              act.average_heartrate,
+              tss,
+            );
+          }
           db.run(
             `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -243,7 +243,7 @@ router.get("/api/social/leaderboard", authenticateToken, async (req, res) => {
                COALESCE((SELECT COUNT(*) FROM user_quests WHERE user_id = u.id AND status = 'completed' AND (completed_at >= datetime('now', '-7 days') OR (completed_at IS NULL AND created_at >= datetime('now', '-7 days')))), 0) as quests_completed_7d,
                COALESCE((SELECT SUM(amount) FROM bonus_points WHERE user_id = u.id AND reason LIKE 'Quest Completed%' AND created_at >= datetime('now', '-7 days')), (SELECT SUM(reward_points) FROM user_quests WHERE user_id = u.id AND status = 'completed' AND (completed_at >= datetime('now', '-7 days') OR (completed_at IS NULL AND created_at >= datetime('now', '-7 days')))), 0) as quest_spark_7d
         FROM users u
-        LEFT JOIN activities a ON a.user_id = u.id AND a.start_date >= datetime('now', '-7 days')
+        LEFT JOIN activities a ON a.user_id = u.id AND a.start_date >= datetime('now', '-7 days') AND (u.spark_start_date IS NULL OR substr(a.start_date, 1, 10) >= substr(u.spark_start_date, 1, 10))
         WHERE (u.id = ? OR u.id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
         GROUP BY u.id
         ORDER BY total_spark_score DESC
@@ -310,7 +310,7 @@ router.get("/api/social/leaderboard", authenticateToken, async (req, res) => {
             FROM activities a
             JOIN users u ON a.user_id = u.id
             WHERE (u.id = ? OR u.id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))
-              AND a.start_date >= datetime('now', '-7 days')
+              AND a.start_date >= datetime('now', '-7 days') AND (u.spark_start_date IS NULL OR substr(a.start_date, 1, 10) >= substr(u.spark_start_date, 1, 10))
             ORDER BY a.spark_score DESC, a.start_date DESC
             LIMIT 3
         `,

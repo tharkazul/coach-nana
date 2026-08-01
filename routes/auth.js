@@ -10,9 +10,10 @@ router.post("/register", async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+    const nowIso = new Date().toISOString();
     db.run(
-      `INSERT INTO users (username, password_hash, athlete_context) VALUES (?, ?, ?)`,
-      [username, hashedPassword, context || "New athlete."],
+      `INSERT INTO users (username, password_hash, athlete_context, spark_start_date) VALUES (?, ?, ?, ?)`,
+      [username, hashedPassword, context || "New athlete.", nowIso],
       function (err) {
         if (err)
           return res

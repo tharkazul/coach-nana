@@ -70,6 +70,7 @@ db.serialize(() => {
     (err) => {},
   );
   db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN spark_start_date TEXT`, (err) => {});
   db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -82,13 +83,16 @@ db.serialize(() => {
     `CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, sport_type TEXT, distance_km REAL, elevation_m INTEGER, moving_time_min REAL, average_heartrate REAL, start_date TEXT, tss REAL)`,
   );
   db.run(`ALTER TABLE activities ADD COLUMN spark_score REAL`, (err) => {
-    // Automatically backfill any activities that have a NULL or 0 spark_score, then sync total_spark
+    // Automatically backfill any activities that have a NULL spark_score, then sync total_spark
     db.all(
-      `SELECT id, moving_time_min, average_heartrate, tss FROM activities WHERE spark_score IS NULL OR spark_score = 0`,
+      `SELECT a.id, a.user_id, a.start_date, a.moving_time_min, a.average_heartrate, a.tss, u.spark_start_date FROM activities a LEFT JOIN users u ON a.user_id = u.id WHERE a.spark_score IS NULL`,
       (err, rows) => {
         const syncUserSpark = () => {
           db.all(
-            `SELECT user_id, SUM(spark_score) as total FROM activities GROUP BY user_id`,
+            `SELECT u.id as user_id, COALESCE(SUM(a.spark_score), 0) as total 
+             FROM users u 
+             LEFT JOIN activities a ON a.user_id = u.id AND (u.spark_start_date IS NULL OR substr(a.start_date, 1, 10) >= substr(u.spark_start_date, 1, 10)) 
+             GROUP BY u.id`,
             (err, userRows) => {
               if (!err && userRows) {
                 const uStmt = db.prepare(
@@ -111,18 +115,23 @@ db.serialize(() => {
             `UPDATE activities SET spark_score = ? WHERE id = ?`,
           );
           rows.forEach((row) => {
-            let bonus = 0;
-            if (row.average_heartrate) {
-              if (row.average_heartrate >= 180) bonus = 1.0;
-              else if (row.average_heartrate >= 160) bonus = 0.4;
-              else if (row.average_heartrate >= 140) bonus = 0.3;
-              else if (row.average_heartrate >= 120) bonus = 0.2;
-              else if (row.average_heartrate >= 100) bonus = 0.0;
-              else if (row.average_heartrate >= 80) bonus = -0.2;
-              else bonus = -0.5;
+            const userStartDateDay = row.spark_start_date ? row.spark_start_date.substring(0, 10) : null;
+            const actStartDateDay = row.start_date ? row.start_date.substring(0, 10) : null;
+            let score = 0;
+            if (!userStartDateDay || (actStartDateDay && actStartDateDay >= userStartDateDay)) {
+              let bonus = 0;
+              if (row.average_heartrate) {
+                if (row.average_heartrate >= 180) bonus = 1.0;
+                else if (row.average_heartrate >= 160) bonus = 0.4;
+                else if (row.average_heartrate >= 140) bonus = 0.3;
+                else if (row.average_heartrate >= 120) bonus = 0.2;
+                else if (row.average_heartrate >= 100) bonus = 0.0;
+                else if (row.average_heartrate >= 80) bonus = -0.2;
+                else bonus = -0.5;
+              }
+              const baseScore = row.moving_time_min || row.tss || 0;
+              score = baseScore > 0 ? baseScore + baseScore * bonus : (row.tss || 0);
             }
-            const baseScore = row.moving_time_min || row.tss || 0;
-            const score = baseScore > 0 ? baseScore + baseScore * bonus : (row.tss || 0);
             stmt.run(score, row.id);
           });
           stmt.finalize(() => {
