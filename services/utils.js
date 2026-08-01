@@ -923,24 +923,21 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                 provider: "strava",
                 activityId: data.id,
               });
+
+              // Invalidate today's nutrition cache so it incorporates the new workout
+              const activityDateStr = data.start_date_local
+                ? data.start_date_local.split("T")[0]
+                : data.start_date.split("T")[0];
+              const todayStr = getAMSDateString();
+              if (activityDateStr === todayStr) {
+                db.run(
+                  `DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`,
+                  [internalUserId, todayStr],
+                );
+              }
             }
           },
         );
-      },
-    );
-
-          // Invalidate today's nutrition cache so it incorporates the new workout
-          const activityDateStr = data.start_date_local
-            ? data.start_date_local.split("T")[0]
-            : data.start_date.split("T")[0];
-          const todayStr = getAMSDateString();
-          if (activityDateStr === todayStr) {
-            db.run(
-              `DELETE FROM nutrition_protocols WHERE user_id = ? AND date = ?`,
-              [internalUserId, todayStr],
-            );
-          }
-        }
       },
     );
 
