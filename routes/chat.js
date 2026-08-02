@@ -492,8 +492,9 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                     }
                     \`\`\`
 
-                    DIET & MEAL LOGGING:
-                    If the athlete shares what they ate or drank today (e.g. "I had a pizza, 2x protein shakes, a chicken sandwich and a banana"), you MUST estimate the approximate macros in grams (carbs, protein, fat) for those items, respond warmly as a supportive coach, and output an additional JSON block at the end of your message. Format it exactly like this inside triple backticks:
+                    DIET & MEAL LOGGING (CRITICAL):
+                    ONLY output a "log_diet" JSON block if the athlete explicitly mentions NEW food/drink items in their LATEST text message. NEVER re-emit a "log_diet" JSON block for meals or items mentioned in earlier conversation history or past turns! If the athlete is asking a general question, do NOT output a "log_diet" block.
+                    Format it exactly like this inside triple backticks:
                     \`\`\`json
                     {
                       "type": "log_diet",
@@ -621,37 +622,46 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                              const carbs = Number(diet.carbs || 0);
                                              const protein = Number(diet.protein || 0);
                                              const fat = Number(diet.fat || 0);
-                                             const summary = String(diet.summary || "");
+                                             const summary = String(diet.summary || "").trim();
 
-                                             // 1. Sync nutrition_intake
-                                             db.run(
-                                               `INSERT INTO nutrition_intake (user_id, date, carbs, protein, fat)
-                                                VALUES (?, ?, ?, ?, ?)
-                                                ON CONFLICT(user_id, date) DO UPDATE SET
-                                                  carbs = carbs + excluded.carbs,
-                                                  protein = protein + excluded.protein,
-                                                  fat = fat + excluded.fat`,
-                                               [req.user.id, todayStr, carbs, protein, fat],
-                                               (err) => {
-                                                 if (err) console.error("Failed to insert nutrition intake:", err);
-                                               }
-                                             );
-
-                                             // 2. Sync daily_diet_logs
+                                             // Sync daily_diet_logs & nutrition_intake with deduplication check
                                              await new Promise((resolveDiet) => {
                                                db.get(
                                                  `SELECT logged_carbs, logged_protein, logged_fat, items_summary FROM daily_diet_logs WHERE user_id = ? AND date = ?`,
                                                  [req.user.id, todayStr],
                                                  (err, existingRow) => {
+                                                   const existingSummary = existingRow ? (existingRow.items_summary || "") : "";
+
+                                                   // Guard: Skip if exact summary item has already been logged today
+                                                   if (summary && existingSummary && existingSummary.includes(summary)) {
+                                                     console.log(`[Diet] Skipping duplicate diet log: "${summary}"`);
+                                                     return resolveDiet();
+                                                   }
+
                                                    const newCarbs = (existingRow ? (existingRow.logged_carbs || 0) : 0) + carbs;
                                                    const newProtein = (existingRow ? (existingRow.logged_protein || 0) : 0) + protein;
                                                    const newFat = (existingRow ? (existingRow.logged_fat || 0) : 0) + fat;
 
-                                                   let newSummary = existingRow ? (existingRow.items_summary || "") : "";
+                                                   let newSummary = existingSummary;
                                                    if (summary) {
                                                      newSummary = newSummary ? `${newSummary}, ${summary}` : summary;
                                                    }
 
+                                                   // 1. Sync nutrition_intake
+                                                   db.run(
+                                                     `INSERT INTO nutrition_intake (user_id, date, carbs, protein, fat)
+                                                      VALUES (?, ?, ?, ?, ?)
+                                                      ON CONFLICT(user_id, date) DO UPDATE SET
+                                                        carbs = excluded.carbs,
+                                                        protein = excluded.protein,
+                                                        fat = excluded.fat`,
+                                                     [req.user.id, todayStr, newCarbs, newProtein, newFat],
+                                                     (err) => {
+                                                       if (err) console.error("Failed to insert nutrition intake:", err);
+                                                     }
+                                                   );
+
+                                                   // 2. Sync daily_diet_logs
                                                    db.run(
                                                      `INSERT INTO daily_diet_logs (user_id, date, logged_carbs, logged_protein, logged_fat, items_summary, updated_at)
                                                       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
