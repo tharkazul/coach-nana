@@ -4288,7 +4288,7 @@ function renderMacroRings(containerEl, summaryData) {
                 <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-1">
                     <span class="text-xs sm:text-sm font-bold text-theme-text">${ring.label}</span>
                     <span class="text-[9px] sm:text-[10px] text-theme-muted font-medium mt-0.5">
-                        ${hasData ? `${ring.loggedGrams}g` : `<span class="opacity-60">${ring.targetGrams}g</span>`}
+                        ${ring.targetGrams}g
                     </span>
                 </div>
             </div>
