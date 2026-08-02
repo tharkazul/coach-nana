@@ -4300,10 +4300,13 @@ function renderMacroRings(containerEl, summaryData) {
 
     if (itemsSummary && hasData) {
         html += `
-        <div class="text-center mt-1">
+        <div class="text-center mt-2 flex flex-wrap items-center justify-center gap-2">
             <span class="text-[10px] sm:text-[11px] text-theme-muted bg-theme-bg/60 px-3 py-1 rounded-full border border-theme-border inline-block">
                 🥗 Logged: <span class="text-theme-text font-medium">${itemsSummary}</span>
             </span>
+            <button onclick="resetDailyDiet()" class="text-[10px] sm:text-[11px] text-red-400 hover:text-red-300 hover:bg-red-500/20 bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 rounded-full transition font-semibold">
+                Reset Log
+            </button>
         </div>
         `;
     }
