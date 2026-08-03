@@ -344,9 +344,14 @@ db.serialize(() => {
         user_id INTEGER,
         title TEXT,
         description TEXT,
+        is_active INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
+  db.run(
+    `ALTER TABLE user_titles ADD COLUMN is_active INTEGER DEFAULT 0`,
+    (err) => {},
+  );
 
   db.run(`CREATE TABLE IF NOT EXISTS system_state (
         key TEXT PRIMARY KEY,

@@ -5021,7 +5021,7 @@ async function openPublicProfile(userId) {
 
     // Reset contents to loading state
     document.getElementById('public-profile-avatar').innerHTML = '';
-    document.getElementById('public-profile-username').innerText = 'Loading...';
+    document.getElementById('public-profile-username').innerHTML = '<span>Loading...</span>';
     document.getElementById('public-profile-highlight').innerHTML = `
         <div class="animate-pulse space-y-2">
             <div class="h-4 bg-theme-border rounded w-3/4"></div>
@@ -5057,7 +5057,16 @@ async function openPublicProfile(userId) {
             ? `<img src="${data.profilePictureUrl}" class="w-full h-full object-cover">`
             : data.username.charAt(0).toUpperCase();
 
-        document.getElementById('public-profile-username').innerText = data.username;
+        const activeTitleBadge = data.activeTitle 
+            ? `<span class="text-xs font-semibold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2 py-0.5 rounded-full inline-flex items-center gap-1">👑 ${data.activeTitle.title}</span>` 
+            : '';
+
+        document.getElementById('public-profile-username').innerHTML = `
+            <div class="flex items-center gap-2 flex-wrap">
+                <span>${data.username}</span>
+                ${activeTitleBadge}
+            </div>
+        `;
         document.getElementById('public-profile-highlight').innerHTML = `<p>${data.highlight}</p>`;
 
         const actContainer = document.getElementById('public-profile-activities');
@@ -5655,18 +5664,34 @@ async function fetchGamificationData() {
         }
 
 
-        // Render Titles
-        const titlesList = document.getElementById('public-profile-titles');
-        if (titlesList) {
+        // Render Personal Titles in Title Cupboard (Profile Settings)
+        const personalTitlesList = document.getElementById('personal-titles-list');
+        if (personalTitlesList) {
             if (data.titles && data.titles.length > 0) {
-                titlesList.innerHTML = data.titles.map(t => `
-                    <div class="bg-theme-bg border border-theme-border px-2 py-1 rounded text-xs">
-                        <span class="font-bold text-theme-accent">👑 ${t.title}</span>
-                        <p class="text-[9px] text-theme-muted mt-0.5">${t.description}</p>
-                    </div>
-                `).join('');
+                personalTitlesList.innerHTML = data.titles.map(t => {
+                    const isActive = t.is_active === 1;
+                    return `
+                        <div class="bg-theme-bg border ${isActive ? 'border-theme-accent/60 shadow-sm' : 'border-theme-border'} p-3 rounded-lg flex justify-between items-center gap-3 transition">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-xs ${isActive ? 'text-theme-accent' : 'text-theme-text'} truncate">${isActive ? '👑 ' : ''}${t.title}</span>
+                                    ${isActive ? '<span class="text-[9px] font-bold bg-theme-accent/20 text-theme-accent px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>' : ''}
+                                </div>
+                                ${t.description ? `<p class="text-[10px] text-theme-muted mt-1 leading-relaxed">${t.description}</p>` : ''}
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <button onclick="equipTitle(${t.id})" class="text-xs font-bold px-3 py-1 rounded transition ${isActive ? 'bg-theme-accent text-white hover:bg-opacity-90' : 'bg-theme-card border border-theme-border text-theme-muted hover:text-theme-text hover:border-theme-accent'}">
+                                    ${isActive ? 'Unequip' : 'Equip'}
+                                </button>
+                                <button onclick="deleteTitle(${t.id})" title="Delete Title" class="text-xs text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-500/10 transition">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             } else {
-                titlesList.innerHTML = '<button onclick="generateTitle()" id="generate-title-btn" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1.5 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition w-full">Generate First Title</button>';
+                personalTitlesList.innerHTML = '<p class="text-xs text-theme-muted italic text-center py-2">No titles earned yet. Click "+ Generate Title" to create your first title!</p>';
             }
         }
 
@@ -5724,14 +5749,40 @@ async function refreshQuest(questId, btnEl) {
 
 async function generateTitle() {
     try {
+        const btn = document.getElementById('generate-title-btn');
+        if (btn) btn.innerText = 'Coach is thinking...';
         const res = await fetch('/api/gamification/generate_title', { method: 'POST', headers: getAuthHeaders() });
         if (res.ok) {
-            const btn = document.getElementById('generate-title-btn');
-            if (btn) btn.innerHTML = 'Coach is thinking...';
-            setTimeout(() => { fetchGamificationData(); }, 1500);
+            fetchGamificationData();
         }
     } catch (e) {
         console.error(e);
+    } finally {
+        const btn = document.getElementById('generate-title-btn');
+        if (btn) btn.innerText = '+ Generate Title';
+    }
+}
+
+async function equipTitle(titleId) {
+    try {
+        const res = await fetch(`/api/titles/${titleId}/equip`, { method: 'POST', headers: getAuthHeaders() });
+        if (res.ok) {
+            fetchGamificationData();
+        }
+    } catch (e) {
+        console.error("Failed to equip title:", e);
+    }
+}
+
+async function deleteTitle(titleId) {
+    if (!confirm("Are you sure you want to delete this title from your cupboard?")) return;
+    try {
+        const res = await fetch(`/api/titles/${titleId}`, { method: 'DELETE', headers: getAuthHeaders() });
+        if (res.ok) {
+            fetchGamificationData();
+        }
+    } catch (e) {
+        console.error("Failed to delete title:", e);
     }
 }
 

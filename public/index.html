@@ -1690,6 +1690,23 @@
                             </div>
                         </div>
 
+                        <!-- Title Cupboard Section -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center flex-wrap gap-2">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Title Cupboard
+                                </h3>
+                                <button onclick="generateTitle()" id="generate-title-btn" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition">
+                                    + Generate Title
+                                </button>
+                            </div>
+                            <div class="p-6">
+                                <div id="personal-titles-list" class="flex flex-col gap-3">
+                                    <p class="text-xs text-theme-muted italic text-center py-2">Loading titles...</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
                             <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
                                 <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
@@ -1799,26 +1816,6 @@
                                 <div id="metrics-status"
                                     class="hidden text-center text-xs font-bold text-theme-accent bg-theme-accent-soft p-2 rounded border border-theme-accent-border mt-2">
                                     Metrics saved successfully!
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- STRAVA AUTOMATIONS -->
-                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
-                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
-                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-[#ff6b6b]"></span> Strava Automations
-                                </h3>
-                            </div>
-                            <div class="p-6 space-y-4">
-                                <p class="text-xs text-theme-muted mb-2">All recorded activities are universally
-                                    analyzed by your AI Coach, earn quest progress, and inform muscle recovery. Use the
-                                    controls below to customize what details Spark shares to your Strava activity
-                                    captions and workout titles.</p>
-                                <div id="strava-automations-container" class="space-y-3">
-                                    <!-- Dynamic toggles injected by JS -->
-                                    <div class="text-[10px] font-bold text-theme-muted animate-pulse">LOADING ACTIVITY
-                                        HISTORY...</div>
                                 </div>
                             </div>
                         </div>
@@ -1963,53 +1960,68 @@
                             </div>
                         </div>
 
-                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-8">
-                            <!-- OAUTH UI FOR STRAVA -->
+                        <!-- OAUTH UI FOR STRAVA -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                             <div
-                                class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-8">
-                                <div
-                                    class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
-                                    <h3 class="text-sm font-bold text-theme-text">Strava Integration</h3>
-                                    <span id="strava-status"
-                                        class="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-600 border border-red-200">Disconnected</span>
-                                </div>
-
-                                <!-- Restored padding wrapper: p-6 space-y-4 -->
-                                <div class="p-6 space-y-4">
-                                    <p class="text-xs text-theme-muted mb-4">Required to pull completed activities and
-                                        update
-                                        Strava descriptions.</p>
-
-                                    <!-- OAUTH UI FOR STRAVA -->
-                                    <div id="strava-connect-ui">
-                                        <label
-                                            class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Authorize
-                                            Spark</label>
-                                        <div class="flex flex-wrap gap-3">
-                                            <button id="strava-connect-btn" onclick="connectStravaOAuth()"
-                                                class="bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-orange-600 transition flex items-center gap-2">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path
-                                                        d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
-                                                </svg>
-                                                Connect with Strava
-                                            </button>
-                                            <button id="strava-disconnect-btn" onclick="disconnectStrava()"
-                                                class="hidden bg-red-600 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-red-700 transition flex items-center gap-2">
-                                                Disconnect Strava
-                                            </button>
-                                            <button onclick="forceStravaSync()"
-                                                class="bg-theme-bg border border-theme-border text-theme-text text-xs font-bold px-4 py-2 rounded shadow-sm hover:bg-theme-border transition">Pull
-                                                Latest Activities</button>
-                                        </div>
-                                        <p id="strava-sync-message"
-                                            class="text-xs font-bold mt-3 text-theme-accent hidden">
-                                        </p>
-                                    </div>
-                                </div>
+                                class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center">
+                                <h3 class="text-sm font-bold text-theme-text">Strava Integration</h3>
+                                <span id="strava-status"
+                                    class="text-[10px] font-bold px-2 py-1 rounded bg-red-100 text-red-600 border border-red-200">Disconnected</span>
                             </div>
 
+                            <!-- Restored padding wrapper: p-6 space-y-4 -->
+                            <div class="p-6 space-y-4">
+                                <p class="text-xs text-theme-muted mb-4">Required to pull completed activities and
+                                    update
+                                    Strava descriptions.</p>
 
+                                <!-- OAUTH UI FOR STRAVA -->
+                                <div id="strava-connect-ui">
+                                    <label
+                                        class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Authorize
+                                        Spark</label>
+                                    <div class="flex flex-wrap gap-3">
+                                        <button id="strava-connect-btn" onclick="connectStravaOAuth()"
+                                            class="bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-orange-600 transition flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                <path
+                                                    d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+                                            </svg>
+                                            Connect with Strava
+                                        </button>
+                                        <button id="strava-disconnect-btn" onclick="disconnectStrava()"
+                                            class="hidden bg-red-600 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-red-700 transition flex items-center gap-2">
+                                            Disconnect Strava
+                                        </button>
+                                        <button onclick="forceStravaSync()"
+                                            class="bg-theme-bg border border-theme-border text-theme-text text-xs font-bold px-4 py-2 rounded shadow-sm hover:bg-theme-border transition">Pull
+                                            Latest Activities</button>
+                                    </div>
+                                    <p id="strava-sync-message"
+                                        class="text-xs font-bold mt-3 text-theme-accent hidden">
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- STRAVA AUTOMATIONS -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-[#ff6b6b]"></span> Strava Automations
+                                </h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <p class="text-xs text-theme-muted mb-2">All recorded activities are universally
+                                    analyzed by your AI Coach, earn quest progress, and inform muscle recovery. Use the
+                                    controls below to customize what details Spark shares to your Strava activity
+                                    captions and workout titles.</p>
+                                <div id="strava-automations-container" class="space-y-3">
+                                    <!-- Dynamic toggles injected by JS -->
+                                    <div class="text-[10px] font-bold text-theme-muted animate-pulse">LOADING ACTIVITY
+                                        HISTORY...</div>
+                                </div>
+                            </div>
                         </div>
 
                     </div> <!-- END CONNECTIONS TAB -->
@@ -2391,17 +2403,6 @@
                             <div class="h-4 bg-theme-border rounded w-3/4"></div>
                             <div class="h-4 bg-theme-border rounded w-full"></div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Title Cupboard -->
-                <div>
-                    <div class="flex justify-between items-end mb-2">
-                        <h4 class="text-xs font-bold text-theme-muted uppercase tracking-wider">Title Cupboard</h4>
-                    </div>
-                    <div id="public-profile-titles" class="flex flex-wrap gap-2">
-                        <!-- Populated by JS -->
-                        <span class="text-xs italic text-theme-muted">No titles earned yet.</span>
                     </div>
                 </div>
 

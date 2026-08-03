@@ -340,6 +340,17 @@ Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep
                       console.error("Highlight generation failed", e);
                     }
 
+                    let activeTitle = null;
+                    try {
+                      activeTitle = await new Promise((res) => {
+                        db.get(
+                          `SELECT id, title, description FROM user_titles WHERE user_id = ? AND is_active = 1 LIMIT 1`,
+                          [targetUserId],
+                          (errT, rowT) => res(!errT && rowT ? rowT : null),
+                        );
+                      });
+                    } catch (e) {}
+
                     const profileData = {
                       username: user.username,
                       profilePictureUrl: user.profile_picture_url,
@@ -347,6 +358,7 @@ Write this from the perspective of their coach (Tone: ${genericCoachTone}). Keep
                       activities: activities,
                       trends: trends,
                       radar: radar,
+                      activeTitle: activeTitle,
                     };
 
                     db.run(

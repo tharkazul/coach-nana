@@ -286,18 +286,31 @@ router.post(
             .trim();
           const titleData = JSON.parse(jsonStr);
 
-          db.run(
-            `INSERT INTO user_titles (user_id, title, description) VALUES (?, ?, ?)`,
-            [userId, titleData.title, titleData.description],
-          );
+          // Check if user currently has an active title
+          db.get(
+            `SELECT COUNT(*) as active_count FROM user_titles WHERE user_id = ? AND is_active = 1`,
+            [userId],
+            (errCount, countRow) => {
+              const shouldBeActive = !errCount && countRow && countRow.active_count === 0 ? 1 : 0;
 
-          // Also award 50 bonus points for a new title
-          db.run(
-            `INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`,
-            [userId, 50, `Earned Title: ${titleData.title}`],
-          );
+              db.run(
+                `INSERT INTO user_titles (user_id, title, description, is_active) VALUES (?, ?, ?, ?)`,
+                [userId, titleData.title, titleData.description, shouldBeActive],
+                function (errInsert) {
+                  // Also award 50 bonus points for a new title
+                  db.run(
+                    `INSERT INTO bonus_points (user_id, amount, reason) VALUES (?, ?, ?)`,
+                    [userId, 50, `Earned Title: ${titleData.title}`],
+                  );
 
-          res.json({ success: true, title: titleData });
+                  // Clear public profile cache so changes reflect on social profile
+                  db.run(`DELETE FROM public_profile_cache WHERE user_id = ?`, [userId]);
+
+                  res.json({ success: true, title: { id: this.lastID, ...titleData, is_active: shouldBeActive } });
+                }
+              );
+            }
+          );
         } catch (e) {
           console.error("Failed to generate title:", e);
           res.status(500).json({ error: "Failed to generate title" });
@@ -305,6 +318,76 @@ router.post(
       },
     );
   },
+);
+
+// Equip / Unequip a title
+router.post(
+  "/api/titles/:id/equip",
+  authenticateToken,
+  (req, res) => {
+    const userId = req.user.id;
+    const titleId = req.params.id;
+
+    db.get(
+      `SELECT is_active FROM user_titles WHERE id = ? AND user_id = ?`,
+      [titleId, userId],
+      (err, titleRow) => {
+        if (err || !titleRow) {
+          return res.status(44).json({ error: "Title not found" });
+        }
+
+        const currentlyActive = titleRow.is_active === 1;
+
+        // Reset all titles for this user to inactive first
+        db.run(
+          `UPDATE user_titles SET is_active = 0 WHERE user_id = ?`,
+          [userId],
+          (errReset) => {
+            if (errReset) {
+              return res.status(500).json({ error: "Failed to update title status" });
+            }
+
+            // If it wasn't active before, set it to active now (toggle behavior)
+            if (!currentlyActive) {
+              db.run(
+                `UPDATE user_titles SET is_active = 1 WHERE id = ? AND user_id = ?`,
+                [titleId, userId],
+                (errEquip) => {
+                  db.run(`DELETE FROM public_profile_cache WHERE user_id = ?`, [userId]);
+                  res.json({ success: true, equipped: true, activeTitleId: titleId });
+                }
+              );
+            } else {
+              db.run(`DELETE FROM public_profile_cache WHERE user_id = ?`, [userId]);
+              res.json({ success: true, equipped: false, activeTitleId: null });
+            }
+          }
+        );
+      }
+    );
+  }
+);
+
+// Delete a title
+router.delete(
+  "/api/titles/:id",
+  authenticateToken,
+  (req, res) => {
+    const userId = req.user.id;
+    const titleId = req.params.id;
+
+    db.run(
+      `DELETE FROM user_titles WHERE id = ? AND user_id = ?`,
+      [titleId, userId],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: "Failed to delete title" });
+        }
+        db.run(`DELETE FROM public_profile_cache WHERE user_id = ?`, [userId]);
+        res.json({ success: true, deletedId: titleId });
+      }
+    );
+  }
 );
 
 
