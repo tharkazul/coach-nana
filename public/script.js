@@ -726,8 +726,13 @@ async function loadSettings() {
         const isFelix = (data.username && data.username.toLowerCase() === 'felixson') ||
             (data.email && data.email.toLowerCase().includes('felixson'));
 
-        if (isRutger || isFelix) {
+        const isAdmin = !!(data.is_admin || data.isAdmin || isRutger || isFelix);
+
+        if (isAdmin) {
             console.log("✅ Admin verified! Unlocking admin features...");
+
+            const themePicker = document.getElementById('theme-picker-overlay');
+            if (themePicker) themePicker.classList.remove('hidden');
 
 
 
@@ -5825,3 +5830,59 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.addEventListener('click', unlockChatInput);
     }
 });
+
+// --- 🎨 LIVE THEME COLOR STUDIO OVERLAY ---
+function toggleThemePicker() {
+    const panel = document.getElementById('theme-picker-panel');
+    if (panel) panel.classList.toggle('hidden');
+}
+
+function updateLiveColor(varName, colorVal, hexLabelId) {
+    document.documentElement.style.setProperty(varName, colorVal);
+    const hexEl = document.getElementById(hexLabelId);
+    if (hexEl) hexEl.innerText = colorVal.toUpperCase();
+
+    // Auto update soft accent tint if accent changed
+    if (varName === '--accent') {
+        const softVal = colorVal + '1A'; // ~10% opacity
+        document.documentElement.style.setProperty('--accent-soft', softVal);
+        document.documentElement.style.setProperty('--accent-hover', colorVal);
+    }
+}
+
+function applyThemePreset(presetKey) {
+    const presets = {
+        solar: { '--bg-main': '#F4F6F9', '--bg-card': '#FFFFFF', '--text-main': '#0F172A', '--text-muted': '#64748B', '--accent': '#FF5A1F', '--border-color': '#E2E8F0' },
+        brick: { '--bg-main': '#C8E0F4', '--bg-card': '#FFFFFF', '--text-main': '#031927', '--text-muted': '#487A99', '--accent': '#BA1200', '--border-color': '#A3D2F2' },
+        volt:  { '--bg-main': '#F3F4F6', '--bg-card': '#FFFFFF', '--text-main': '#111827', '--text-muted': '#6B7280', '--accent': '#10B981', '--border-color': '#E5E5E5' },
+        mint:  { '--bg-main': '#EEF2F6', '--bg-card': '#FFFFFF', '--text-main': '#0B192C', '--text-muted': '#475569', '--accent': '#00B4D8', '--border-color': '#CBD5E1' }
+    };
+    const p = presets[presetKey];
+    if (!p) return;
+
+    Object.keys(p).forEach(varName => {
+        const val = p[varName];
+        document.documentElement.style.setProperty(varName, val);
+        const keyClean = varName.replace('--', '');
+        const picker = document.getElementById(`picker-${keyClean}`);
+        const hex = document.getElementById(`hex-${keyClean}`);
+        if (picker) picker.value = val;
+        if (hex) hex.innerText = val.toUpperCase();
+    });
+}
+
+function copyCurrentColors() {
+    const vars = ['--bg-main', '--bg-card', '--text-main', '--text-muted', '--accent', '--border-color'];
+    let text = "Selected Color Palette:\n";
+    vars.forEach(v => {
+        const val = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+        text += `${v}: ${val}\n`;
+    });
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Color palette copied to clipboard! You can share it directly in chat.");
+    });
+}
+
+function resetThemeColors() {
+    applyThemePreset('solar');
+}

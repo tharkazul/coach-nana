@@ -928,7 +928,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
             tss,
             sparkScore,
           ],
-          (err) => {
+          async (err) => {
             if (!err) {
               updateUserSparkAndCheckLevel(internalUserId);
               sendSSEEvent(internalUserId, "sync_complete", {
@@ -947,138 +947,138 @@ async function getStravaActivity(stravaAthleteId, activityId) {
                   [internalUserId, todayStr],
                 );
               }
-            }
-          },
-        );
-      },
-    );
+              
+              const activityDate = data.start_date_local
+                ? data.start_date_local.split("T")[0]
+                : data.start_date.split("T")[0];
+              const sparkSport = mapStravaSportToSpark(data.sport_type);
+              const shareSettings = await getStravaShareSettings(internalUserId, data.sport_type);
 
-    const activityDate = data.start_date_local
-      ? data.start_date_local.split("T")[0]
-      : data.start_date.split("T")[0];
-    const sparkSport = mapStravaSportToSpark(data.sport_type);
-    const shareSettings = await getStravaShareSettings(internalUserId, data.sport_type);
+              db.get(
+                "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND (LOWER(sport) = LOWER(?) OR LOWER(sport) LIKE '%' || LOWER(?) || '%')",
+                [internalUserId, activityDate, sparkSport, sparkSport.slice(0, 5)],
+                async (err, plan) => {
+                  // Fetch the coach tone
+                  db.get(
+                    "SELECT coach_tone FROM users WHERE id = ?",
+                    [internalUserId],
+                    async (err, userRow) => {
+                      const tone = userRow
+                        ? userRow.coach_tone
+                        : "Friendly and motivating";
 
-    db.get(
-      "SELECT description, target_spark, details, steps_json FROM micro_plan WHERE user_id = ? AND date = ? AND (LOWER(sport) = LOWER(?) OR LOWER(sport) LIKE '%' || LOWER(?) || '%')",
-      [internalUserId, activityDate, sparkSport, sparkSport.slice(0, 5)],
-      async (err, plan) => {
-        // Fetch the coach tone
-        db.get(
-          "SELECT coach_tone FROM users WHERE id = ?",
-          [internalUserId],
-          async (err, userRow) => {
-            const tone = userRow
-              ? userRow.coach_tone
-              : "Friendly and motivating";
+                      let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance / 1000).toFixed(1)}km in ${Math.round(data.moving_time / 60)} minutes, generating ${Math.round(sparkScore)} Spark. `;
+                      const updatePayload = buildStravaUpdatePayload(data.description, plan, sparkScore, shareSettings);
 
-            let prompt = `The user just completed a ${sparkSport} activity: ${data.name}. They covered ${(data.distance / 1000).toFixed(1)}km in ${Math.round(data.moving_time / 60)} minutes, generating ${Math.round(sparkScore)} Spark. `;
-            const updatePayload = buildStravaUpdatePayload(data.description, plan, sparkScore, shareSettings);
+                      if (plan) {
+                        let stepsContent = formatStepsForStrava(plan.steps_json);
+                        const workoutContent = stepsContent
+                          ? stepsContent
+                          : plan.details && plan.details.trim().length > 0
+                            ? plan.details
+                            : plan.description;
+                        prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_spark} Spark. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
+                      } else {
+                        console.log(
+                          `⚠️ No matching ${sparkSport} plan found on ${activityDate}. Generating unplanned reaction.`,
+                        );
+                        prompt += `This was an unplanned activity. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}).`;
+                      }
 
-            if (plan) {
-              let stepsContent = formatStepsForStrava(plan.steps_json);
-              const workoutContent = stepsContent
-                ? stepsContent
-                : plan.details && plan.details.trim().length > 0
-                  ? plan.details
-                  : plan.description;
-              prompt += `The planned workout for today was: "${workoutContent}" with a target of ${plan.target_spark} Spark. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}). Praise them if they hit the target or give constructive advice if they missed it.`;
-            } else {
-              console.log(
-                `⚠️ No matching ${sparkSport} plan found on ${activityDate}. Generating unplanned reaction.`,
-              );
-              prompt += `This was an unplanned activity. Give a short, 1-2 sentence coach reaction based on your persona tone (${tone}).`;
-            }
+                      // QUEST EVALUATION
+                      try {
+                        const completedQuests = await evaluateQuestsAgainstActivity(
+                          internalUserId,
+                          {
+                            distance_km: data.distance / 1000,
+                            moving_time_min: data.moving_time / 60,
+                            spark_score: sparkScore,
+                          },
+                        );
 
-            // QUEST EVALUATION
-            try {
-              const completedQuests = await evaluateQuestsAgainstActivity(
-                internalUserId,
-                {
-                  distance_km: data.distance / 1000,
-                  moving_time_min: data.moving_time / 60,
-                  spark_score: sparkScore,
-                },
-              );
+                        if (completedQuests && completedQuests.length > 0) {
+                          const newQuest = await generateQuestForUser(internalUserId);
 
-              if (completedQuests && completedQuests.length > 0) {
-                const newQuest = await generateQuestForUser(internalUserId);
+                          prompt += `\n\nCRITICAL INFO: The user ALSO just completed their active quest: "${completedQuests[0].description}" and earned ${completedQuests[0].reward_points} Spark points! `;
 
-                prompt += `\n\nCRITICAL INFO: The user ALSO just completed their active quest: "${completedQuests[0].description}" and earned ${completedQuests[0].reward_points} Spark points! `;
+                          if (newQuest) {
+                            prompt += `I (the system) have automatically assigned them a NEW quest: "${newQuest.description}" (Target: ${newQuest.target_value} ${newQuest.target_metric}, Reward: ${newQuest.reward_points} Spark). You MUST enthusiastically celebrate their completed quest AND announce their brand new quest to keep them motivated!`;
+                          } else {
+                            prompt += `You MUST enthusiastically celebrate their completed quest!`;
+                          }
+                        }
+                      } catch (e) {
+                        console.error(
+                          "Quest evaluation failed during Strava sync:",
+                          e,
+                        );
+                      }
 
-                if (newQuest) {
-                  prompt += `I (the system) have automatically assigned them a NEW quest: "${newQuest.description}" (Target: ${newQuest.target_value} ${newQuest.target_metric}, Reward: ${newQuest.reward_points} Spark). You MUST enthusiastically celebrate their completed quest AND announce their brand new quest to keep them motivated!`;
-                } else {
-                  prompt += `You MUST enthusiastically celebrate their completed quest!`;
-                }
-              }
-            } catch (e) {
-              console.error(
-                "Quest evaluation failed during Strava sync:",
-                e,
-              );
-            }
+                      // AI MUSCLE IMPACT ANALYSIS
+                      try {
+                         analyzeMuscleImpact(internalUserId, data, sparkSport, activityDate);
+                      } catch(e) {
+                         console.error("AI Muscle Impact Analysis failed:", e);
+                      }
 
-            // AI MUSCLE IMPACT ANALYSIS
-            try {
-               analyzeMuscleImpact(internalUserId, data, sparkSport, activityDate);
-            } catch(e) {
-               console.error("AI Muscle Impact Analysis failed:", e);
-            }
+                      // 1. Generate AI Coach Response
+                      try {
+                        const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
+                        const aiReply = await generateWithFallback(
+                          prompt,
+                          systemPrompt,
+                        );
+                        db.run(
+                          `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`,
+                          [internalUserId, aiReply],
+                          (err) => {
+                            if (err) {
+                              console.error("Error inserting proactive coach message:", err);
+                              return;
+                            }
+                            sendSSEEvent(internalUserId, "unread_message", {
+                              message: aiReply,
+                              mood: "hype",
+                            });
+                            console.log(
+                              `🤖 Sent proactive coach update for activity ${activityId}`,
+                            );
+                          }
+                        );
+                      } catch (e) {
+                        console.error("Proactive coach activity update failed:", e);
+                      }
 
-            // 1. Generate AI Coach Response
-            try {
-              const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${tone}. Act like a real human in a continuous text message thread.`;
-              const aiReply = await generateWithFallback(
-                prompt,
-                systemPrompt,
-              );
-              db.run(
-                `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'hype')`,
-                [internalUserId, aiReply],
-                (err) => {
-                  if (err) {
-                    console.error("Error inserting proactive coach message:", err);
-                    return;
-                  }
-                  sendSSEEvent(internalUserId, "unread_message", {
-                    message: aiReply,
-                    mood: "hype",
-                  });
-                  console.log(
-                    `🤖 Sent proactive coach update for activity ${activityId}`,
+                      // 2. Update Strava Activity (title / description if enabled in settings)
+                      if (updatePayload) {
+                        const updateRes = await fetch(
+                          `https://www.strava.com/api/v3/activities/${activityId}`,
+                          {
+                            method: "PUT",
+                            headers: {
+                              Authorization: `Bearer ${accessToken}`,
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify(updatePayload),
+                          },
+                        );
+
+                        if (updateRes.ok) {
+                          console.log(
+                            `✅ Strava activity updated for activity ${activityId}!`,
+                          );
+                        } else {
+                          const errorData = await updateRes.json();
+                          console.error(
+                            `❌ Strava Activity Update Failed:`,
+                            errorData,
+                          );
+                        }
+                      }
+                    },
                   );
-                }
-              );
-            } catch (e) {
-              console.error("Proactive coach activity update failed:", e);
-            }
-
-            // 2. Update Strava Activity (title / description if enabled in settings)
-            if (updatePayload) {
-              const updateRes = await fetch(
-                `https://www.strava.com/api/v3/activities/${activityId}`,
-                {
-                  method: "PUT",
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify(updatePayload),
                 },
               );
-
-              if (updateRes.ok) {
-                console.log(
-                  `✅ Strava activity updated for activity ${activityId}!`,
-                );
-              } else {
-                const errorData = await updateRes.json();
-                console.error(
-                  `❌ Strava Activity Update Failed:`,
-                  errorData,
-                );
-              }
             }
           },
         );
