@@ -3550,7 +3550,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
     }
 
     const payload = { message, imagesBase64: imagesToUse };
-    chatWindow.scrollTop = chatWindow.scrollHeight;
+    setTimeout(() => { if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight; }, 50);
 
     const loadId = 'loading-' + Date.now();
     let thinkingAvatar = getCoachAvatar('thinking');
@@ -3567,7 +3567,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
                         <span class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
                     </div>
                 </div>`);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
+    setTimeout(() => { if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight; }, 50);
 
     // Progressive loading indicator for long requests
     const originalDots = `
@@ -3578,17 +3578,26 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
 
     setTimeout(() => {
         const bubble = document.getElementById(`bubble-${loadId}`);
-        if (bubble) bubble.innerHTML = `<span class="italic opacity-70">Thinking deeply...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+        if (bubble) {
+            bubble.innerHTML = `<span class="italic opacity-70">Thinking deeply...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
     }, 6000);
 
     setTimeout(() => {
         const bubble = document.getElementById(`bubble-${loadId}`);
-        if (bubble) bubble.innerHTML = `<span class="italic opacity-70">Generating complex plan...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+        if (bubble) {
+            bubble.innerHTML = `<span class="italic opacity-70">Generating complex plan...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
     }, 15000);
 
     setTimeout(() => {
         const bubble = document.getElementById(`bubble-${loadId}`);
-        if (bubble) bubble.innerHTML = `<span class="italic opacity-70">Almost there, finalizing...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+        if (bubble) {
+            bubble.innerHTML = `<span class="italic opacity-70">Almost there, finalizing...</span> <div class="flex items-center gap-1 ml-2">${originalDots}</div>`;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
     }, 30000);
 
 

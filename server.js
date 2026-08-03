@@ -61,9 +61,6 @@ db.serialize(() => {
   // Reset tokens for any overdue accounts on startup
   resetDailyTokensForAllUsers();
   resetDailyNutritionForAllUsers();
-
-  // Generate public profiles for all active users on boot
-  generateAllPublicProfiles();
 });
 
 // Periodic Jobs
@@ -92,6 +89,14 @@ cron.schedule('5 0 * * *', () => {
   timezone: "Europe/Amsterdam"
 });
 
+// Schedule public profile generation daily at 03:00 AM (Europe/Amsterdam timezone)
+cron.schedule('0 3 * * *', () => {
+  generateAllPublicProfiles();
+}, {
+  scheduled: true,
+  timezone: "Europe/Amsterdam"
+});
+
 // Schedule weekly feature onboarding check on Sundays at 10:00 AM (Europe/Amsterdam timezone)
 cron.schedule('0 10 * * 0', () => {
   runWeeklyFeatureOnboardingJob();
@@ -104,17 +109,6 @@ setInterval(() => {
   // Sync all Strava users every 2 hours
   syncAllStravaUsersOnStartup();
 }, 2 * 60 * 60 * 1000);
-
-setInterval(() => {
-  // Update Leaderboard Profiles Daily at 3 AM AMS time
-  const amsDate = new Date().toLocaleTimeString("en-CA", {
-    timeZone: "Europe/Amsterdam",
-    hour12: false,
-  });
-  if (amsDate.startsWith("03:00:")) {
-    generateAllPublicProfiles();
-  }
-}, 60 * 1000);
 
 setInterval(() => {
   // Update Leaderboard Stats every 6 hours
