@@ -687,6 +687,38 @@ router.post("/api/activities/:id/comments", authenticateToken, (req, res) => {
         `SELECT c.*, u.username, u.profile_picture_url FROM activity_comments c JOIN users u ON c.user_id = u.id WHERE c.id = ?`,
         [commentId],
         (errGet, newComment) => {
+          // Notify activity owner if different from commenter
+          db.get(
+            `SELECT user_id, name FROM activities WHERE id = ?`,
+            [activityId],
+            (errAct, act) => {
+              if (act && act.user_id !== req.user.id) {
+                const commenterName = req.user.username || "Someone";
+                const activityName = act.name || "activity";
+                const coachMsg = `${commenterName} left a comment on your "${activityName}": "${comment.trim()}"`;
+
+                db.run(
+                  `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`,
+                  [act.user_id, coachMsg],
+                  (errChat) => {
+                    if (!errChat) {
+                      sendSSEEvent(act.user_id, "unread_message", {
+                        message: coachMsg,
+                        mood: "support",
+                      });
+                    }
+                  }
+                );
+
+                sendSSEEvent(act.user_id, "comment_received", {
+                  activityName: activityName,
+                  fromUsername: commenterName,
+                  comment: comment.trim(),
+                });
+              }
+            }
+          );
+
           res.json({ success: true, comment: newComment });
         }
       );

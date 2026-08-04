@@ -593,6 +593,13 @@ function initSSE() {
         }
     });
 
+    sseConnection.addEventListener('comment_received', (e) => {
+        const data = JSON.parse(e.data);
+        if (!document.getElementById('view-social').classList.contains('hidden')) {
+            loadSocialFeed();
+        }
+    });
+
     sseConnection.onerror = (err) => {
         console.error("SSE Connection Error:", err);
         sseConnection.close();
