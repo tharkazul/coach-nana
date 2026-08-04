@@ -94,6 +94,8 @@ router.get("/api/user/settings", authenticateToken, (req, res) => {
         sparkLevel: sparkLevelInfo,
         dailyTokenUsage: dailyUsage,
         dailyTokenLimit: currentLimit,
+        subscriptionTier: row.subscription_tier || 'free',
+        subscription_tier: row.subscription_tier || 'free',
       });
     },
   );

@@ -790,25 +790,50 @@ async function loadSettings() {
             (data.email && data.email.toLowerCase().includes('felixson'));
 
         const isAdmin = !!(data.is_admin || data.isAdmin || isRutger || isFelix);
-        currentSubscriptionTier = data.subscription_tier || 'free';
+        currentSubscriptionTier = data.subscriptionTier || data.subscription_tier || 'free';
 
-        // --- FREE TIER RESTRICTIONS ---
+        // --- SUBSCRIPTION TIER FEATURE TOGGLES ---
+        const dashNutritionCard = document.querySelector('#dash-nutrition-content')?.parentElement;
+        const activeQuests = document.getElementById('active-quests-container');
+        const progNutrition = document.getElementById('prog-tab-nutrition');
+        const navSocial = document.getElementById('nav-btn-social');
+
+        const sparkPlusTitle = document.getElementById('spark-plus-card-title');
+        const sparkPlusDesc = document.getElementById('spark-plus-card-desc');
+        const sparkPlusBtn = document.getElementById('spark-plus-card-btn');
+
         if (currentSubscriptionTier === 'free') {
             // Hide Nutrition in Dashboard
-            const dashNutritionCard = document.querySelector('#dash-nutrition-content')?.parentElement;
             if (dashNutritionCard) dashNutritionCard.classList.add('hidden');
             
             // Hide Active Quests in Dashboard
-            const activeQuests = document.getElementById('active-quests-container');
             if (activeQuests) activeQuests.classList.add('hidden');
 
             // Hide Nutrition Subtab in Progress
-            const progNutrition = document.getElementById('prog-tab-nutrition');
             if (progNutrition) progNutrition.classList.add('hidden');
 
             // Hide Social Tab (Leaderboard & Quests Log)
-            const navSocial = document.getElementById('nav-btn-social');
             if (navSocial) navSocial.classList.add('hidden');
+
+            if (sparkPlusTitle) sparkPlusTitle.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Upgrade to Spark+`;
+            if (sparkPlusDesc) sparkPlusDesc.innerText = `Unlock 50,000 daily coach tokens, priority analysis, and deeper athletic insights.`;
+            if (sparkPlusBtn) {
+                sparkPlusBtn.innerText = "View Premium Benefits";
+                sparkPlusBtn.onclick = () => trackSparkPlusClick();
+            }
+        } else {
+            // Unhide all premium features for Spark+ / Paid members
+            if (dashNutritionCard) dashNutritionCard.classList.remove('hidden');
+            if (activeQuests) activeQuests.classList.remove('hidden');
+            if (progNutrition) progNutrition.classList.remove('hidden');
+            if (navSocial) navSocial.classList.remove('hidden');
+
+            if (sparkPlusTitle) sparkPlusTitle.innerHTML = `<svg class="w-6 h-6 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Spark+ Active ⚡`;
+            if (sparkPlusDesc) sparkPlusDesc.innerText = `You are on the Spark+ tier. Enjoy 50,000 daily AI tokens, priority analysis, and full access to all features!`;
+            if (sparkPlusBtn) {
+                sparkPlusBtn.innerText = "Spark+ Member Active";
+                sparkPlusBtn.onclick = null;
+            }
         }
         // -------------------------------
 
