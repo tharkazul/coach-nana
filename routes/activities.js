@@ -647,6 +647,9 @@ router.post("/api/generate-plan", authenticateToken, async (req, res) => {
           ); // End activities fetch
         },
       ); // End metrics fetch
+    },
+  ); // End users fetch
+});
 // --- ACTIVITY COMMENTS API ---
 router.get("/api/activities/:id/comments", authenticateToken, (req, res) => {
   const activityId = req.params.id;
@@ -702,5 +705,7 @@ router.delete("/api/activities/:id/comments/:commentId", authenticateToken, (req
     }
   );
 });
+
+module.exports = router;
 
 module.exports = router;
