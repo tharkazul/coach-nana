@@ -5598,8 +5598,14 @@ function renderQuestCard(q) {
     const isActive = q.status === 'active';
     const isCompleted = q.status === 'completed';
     const isVoid = q.status === 'void';
+    const isClosed = q.status === 'closed';
 
-    const statusText = isActive ? 'Active' : (isCompleted ? 'Completed 🏆' : 'Expired ⏳');
+    let statusText = 'Expired ⏳';
+    if (isActive) statusText = 'Active';
+    else if (isCompleted) statusText = 'Completed 🏆';
+    else if (isVoid) statusText = 'Replaced 🔄';
+    else if (isClosed) statusText = 'Closed 🛑';
+
     const statusBg = isActive ? 'bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-bold' : (isCompleted ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-bold' : 'bg-gray-500/10 border border-gray-500/30 text-gray-500 font-semibold');
     const dotColor = isActive ? 'bg-red-500 animate-pulse' : (isCompleted ? 'bg-emerald-500' : 'bg-gray-400');
 

@@ -1436,31 +1436,22 @@ async function generateQuestForUser(userId, poolType = "personal", previousQuest
           const questData = JSON.parse(jsonStr);
           const daysLimit = Math.max(1, Math.min(7, parseInt(questData.time_limit_days) || 3));
 
-          // Close any existing active quest for this user to ensure only one active quest at a time
           db.run(
-            `UPDATE user_quests SET status = 'closed' WHERE user_id = ? AND status = 'active'`,
-            [userId],
-            (updateErr) => {
-              if (updateErr) console.error("Error closing existing active quest:", updateErr);
-
-              db.run(
-                `INSERT INTO user_quests (user_id, description, target_metric, target_value, target_sport, is_accumulative, reward_points, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+' || ? || ' days'))`,
-                [
-                  userId,
-                  questData.description,
-                  questData.target_metric,
-                  questData.target_value,
-                  questData.target_sport || "Any",
-                  questData.is_accumulative ? 1 : 0,
-                  questData.reward_points,
-                  daysLimit,
-                ],
-                function (err) {
-                  if (err) return reject(err);
-                  resolve(questData);
-                },
-              );
-            }
+            `INSERT INTO user_quests (user_id, description, target_metric, target_value, target_sport, is_accumulative, reward_points, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+' || ? || ' days'))`,
+            [
+              userId,
+              questData.description,
+              questData.target_metric,
+              questData.target_value,
+              questData.target_sport || "Any",
+              questData.is_accumulative ? 1 : 0,
+              questData.reward_points,
+              daysLimit,
+            ],
+            function (err) {
+              if (err) return reject(err);
+              resolve(questData);
+            },
           );
         } catch (e) {
           console.error("Failed to generate quest:", e);

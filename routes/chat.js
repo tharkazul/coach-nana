@@ -775,17 +775,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                                 completedQuests &&
                                                 completedQuests.length > 0
                                               ) {
-                                                const newQuest =
-                                                  await generateQuestForUser(
-                                                    req.user.id,
-                                                    "common",
-                                                  );
-                                                let appendPrompt = `The user just manually logged an activity and ALSO completed their active quest: "${completedQuests[0].description}" earning ${completedQuests[0].reward_points} Spark points! `;
-                                                if (newQuest) {
-                                                  appendPrompt += `I (the system) have assigned them a NEW quest: "${newQuest.description}". Give a short 1-2 sentence highly motivating response celebrating their completed quest and announcing their new quest!`;
-                                                } else {
-                                                  appendPrompt += `Give a short 1-2 sentence motivating response celebrating their completed quest!`;
-                                                }
+                                                let appendPrompt = `The user just manually logged an activity and ALSO completed their active quest: "${completedQuests[0].description}" earning ${completedQuests[0].reward_points} Spark points! Give a short 1-2 sentence highly motivating response celebrating their completed quest!`;
                                                 const coachAddendum =
                                                   await generateWithFallback(
                                                     appendPrompt,
