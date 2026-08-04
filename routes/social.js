@@ -196,7 +196,8 @@ router.get("/api/social/feed", authenticateToken, (req, res) => {
     `
         SELECT a.*, u.username, u.profile_picture_url, u.total_spark,
                (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) as kudos_count,
-               (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id AND k.user_id = ?) as has_kudosed
+               (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id AND k.user_id = ?) as has_kudosed,
+               (SELECT COUNT(*) FROM activity_comments c WHERE c.activity_id = a.id) as comment_count
         FROM activities a
         JOIN users u ON a.user_id = u.id
         WHERE a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted')

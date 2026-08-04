@@ -4,6 +4,7 @@ let pmcChartInstance = null;
 let activityMap = null;
 let globalHistoryData = [];
 let currentCoachTone = "Empathetic but demanding elite endurance coach."; // NEW Tracker
+let currentSubscriptionTier = 'free';
 
 // --- SCHEDULE BOUNDARIES LOGIC ---
 let trainingAvailability = {
@@ -706,6 +707,68 @@ function logout() {
     window.location.reload();
 }
 
+async function requestAccountData() {
+    const btn = document.getElementById('request-data-btn');
+    const statusEl = document.getElementById('request-data-status');
+    if (btn) btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/request-account-data', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('nana_token')}`
+            }
+        });
+        const data = await response.json();
+        if (response.ok) {
+            if (statusEl) {
+                statusEl.innerText = "Request received! We will process your account data export shortly.";
+                statusEl.classList.remove('hidden');
+            } else {
+                alert("Request received! We will process your account data export shortly.");
+            }
+        } else {
+            alert(data.error || "Failed to request account data.");
+        }
+    } catch (error) {
+        console.error("Data request error:", error);
+        alert("Error requesting account data.");
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function confirmDeleteAccount() {
+    const confirmed = confirm("Are you sure you want to delete your account?\n\nThis action will PERMANENTLY erase all your activities, workout plans, metrics, chat history, and connections. This cannot be undone.");
+    if (!confirmed) return;
+
+    const secondConfirm = prompt("To confirm deletion, please type 'DELETE' below:");
+    if (secondConfirm !== 'DELETE') {
+        alert("Account deletion cancelled (confirmation text did not match).");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/user/account', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('nana_token')}`
+            }
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+            alert("Your account and all associated data have been permanently deleted.");
+            localStorage.removeItem('nana_token');
+            window.location.reload();
+        } else {
+            alert(data.error || "Failed to delete account.");
+        }
+    } catch (error) {
+        console.error("Delete account error:", error);
+        alert("An error occurred while deleting your account.");
+    }
+}
+
 // --- SETTINGS LOGIC ---
 async function loadSettings() {
     try {
@@ -727,6 +790,27 @@ async function loadSettings() {
             (data.email && data.email.toLowerCase().includes('felixson'));
 
         const isAdmin = !!(data.is_admin || data.isAdmin || isRutger || isFelix);
+        currentSubscriptionTier = data.subscription_tier || 'free';
+
+        // --- FREE TIER RESTRICTIONS ---
+        if (currentSubscriptionTier === 'free') {
+            // Hide Nutrition in Dashboard
+            const dashNutritionCard = document.querySelector('#dash-nutrition-content')?.parentElement;
+            if (dashNutritionCard) dashNutritionCard.classList.add('hidden');
+            
+            // Hide Active Quests in Dashboard
+            const activeQuests = document.getElementById('active-quests-container');
+            if (activeQuests) activeQuests.classList.add('hidden');
+
+            // Hide Nutrition Subtab in Progress
+            const progNutrition = document.getElementById('prog-tab-nutrition');
+            if (progNutrition) progNutrition.classList.add('hidden');
+
+            // Hide Social Tab (Leaderboard & Quests Log)
+            const navSocial = document.getElementById('nav-btn-social');
+            if (navSocial) navSocial.classList.add('hidden');
+        }
+        // -------------------------------
 
         if (isAdmin) {
             console.log("✅ Admin verified! Unlocking admin features...");
@@ -2589,7 +2673,10 @@ async function openActivityModal(id) {
             document.getElementById('modal-kudos').classList.add('hidden');
         }
 
-        let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--'; let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--'; let sufferStr = data.suffer_score || '--';
+        currentModalActivityId = id;
+        let hrStr = data.has_heartrate ? `${Math.round(data.average_heartrate)} bpm` : '--';
+        let elevStr = data.total_elevation_gain ? `${Math.round(data.total_elevation_gain)} m` : '--';
+        let sparkScoreStr = Math.round(data.spark_score || data.suffer_score || 0) || '--';
         let distStr = '--';
         if (data.distance) {
             distStr = data.type === 'Swim' ? `${Math.round(data.distance)} m` : `${(data.distance / 1000).toFixed(2)} km`;
@@ -2673,10 +2760,12 @@ async function openActivityModal(id) {
                         <div class="text-sm md:text-base font-medium text-theme-text font-barlow">${cadenceStr}</div>
                     </div>
                     <div class="bg-theme-bg px-3 py-2 border border-theme-border rounded-sm shadow-sm text-center">
-                        <div class="text-[8px] md:text-[9px] text-theme-muted uppercase font-bold tracking-wider mb-1">Suffer Score</div>
-                        <div class="text-sm md:text-base font-medium text-theme-text font-barlow">${sufferStr}</div>
+                        <div class="text-[8px] md:text-[9px] text-theme-muted uppercase font-bold tracking-wider mb-1">Spark Score</div>
+                        <div class="text-sm md:text-base font-medium text-theme-text font-barlow text-theme-accent">${sparkScoreStr}</div>
                     </div>
                 </div>`;
+
+        fetchModalComments(id);
 
         if (data.laps && data.laps.length > 0) {
             document.getElementById('modal-laps-container').classList.remove('hidden');
@@ -2807,6 +2896,96 @@ function closeModal() {
     setTimeout(() => {
         modal.classList.add('hidden');
     }, 300);
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function fetchModalComments(activityId) {
+    const listEl = document.getElementById('modal-comments-list');
+    const countEl = document.getElementById('modal-comments-count');
+    if (!listEl) return;
+
+    try {
+        const res = await fetch(`/api/activities/${activityId}/comments`, { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error("Failed to load comments");
+        const data = await res.json();
+        const comments = data.comments || [];
+
+        if (countEl) countEl.innerText = `(${comments.length})`;
+
+        if (comments.length === 0) {
+            listEl.innerHTML = '<p class="text-xs text-theme-muted italic text-center py-2">No comments yet. Be the first to leave a comment!</p>';
+            return;
+        }
+
+        listEl.innerHTML = comments.map(c => `
+            <div class="flex items-start gap-2.5 bg-theme-card p-2.5 rounded-lg border border-theme-border/60">
+                <div class="w-6 h-6 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-[10px] overflow-hidden shrink-0 mt-0.5">
+                    ${c.profile_picture_url 
+                        ? `<img src="${c.profile_picture_url}" class="w-full h-full object-cover">` 
+                        : (c.username ? c.username.charAt(0).toUpperCase() : '?')}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-bold text-theme-text truncate">${escapeHTML(c.username)}</span>
+                        <span class="text-[9px] text-theme-muted shrink-0">${new Date(c.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p class="text-xs text-theme-text mt-0.5 leading-relaxed break-words">${escapeHTML(c.comment)}</p>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error(e);
+        if (listEl) listEl.innerHTML = '<p class="text-xs text-red-400 italic text-center py-2">Error loading comments.</p>';
+    }
+}
+
+async function postModalComment() {
+    if (!currentModalActivityId) return;
+    const inputEl = document.getElementById('modal-comment-input');
+    const submitBtn = document.getElementById('modal-comment-submit-btn');
+    if (!inputEl) return;
+
+    const commentText = inputEl.value.trim();
+    if (!commentText) return;
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Posting...';
+    }
+
+    try {
+        const res = await fetch(`/api/activities/${currentModalActivityId}/comments`, {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ comment: commentText })
+        });
+        if (res.ok) {
+            inputEl.value = '';
+            fetchModalComments(currentModalActivityId);
+            if (typeof loadSocialFeed === 'function') loadSocialFeed();
+        } else {
+            alert('Failed to post comment.');
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Post';
+        }
+    }
 }
 
 async function loadHistory() {
@@ -4555,46 +4734,69 @@ async function loadSocialFeed() {
             return;
         }
 
-        container.innerHTML = data.activities.map(act => `
-            <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden p-4">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
-                            ${act.profile_picture_url
-                ? `<img src="${act.profile_picture_url}" onclick="enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
-                : act.username.charAt(0).toUpperCase()}
+        container.innerHTML = data.activities.map(act => {
+            let movingTimeStr = '-';
+            if (act.moving_time_min) {
+                let h = Math.floor(act.moving_time_min / 60);
+                let m = Math.round(act.moving_time_min % 60);
+                movingTimeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+            }
+            let hrStr = act.average_heartrate && act.average_heartrate > 0 ? `${Math.round(act.average_heartrate)} bpm` : '-';
+
+            return `
+                <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden p-4 cursor-pointer hover:border-theme-accent/50 transition" onclick="openActivityModal('${act.id}')">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-theme-accent-soft text-theme-accent font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+                                ${act.profile_picture_url
+                    ? `<img src="${act.profile_picture_url}" onclick="event.stopPropagation(); enlargeAvatar(this.src)" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition">`
+                    : act.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="event.stopPropagation(); openPublicProfile(${act.user_id})">
+                                    ${act.username} 
+                                    <span class="bg-theme-accent/20 text-theme-accent text-[9px] px-1.5 py-0.5 rounded ml-1 uppercase font-bold tracking-wider">Lvl ${act.spark_level || 1}</span>
+                                </p>
+                                <p class="text-[10px] text-theme-muted">${new Date(act.start_date).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="shrink-0 ml-2">
+                            ${getSportBadge(act.sport_type)}
+                        </div>
+                    </div>
+                    <h3 class="text-sm font-bold text-theme-text mt-2 hover:text-theme-accent transition">${act.name}</h3>
+                    <div class="flex flex-wrap gap-4 mt-3 bg-theme-bg/50 p-2.5 rounded-lg border border-theme-border/40">
+                        <div>
+                            <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Dist</p>
+                            <p class="text-xs font-bold text-theme-text">${act.distance_km ? parseFloat(act.distance_km).toFixed(2) + ' km' : '-'}</p>
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-theme-text cursor-pointer hover:underline hover:text-theme-accent transition" onclick="openPublicProfile(${act.user_id})">
-                                ${act.username} 
-                                <span class="bg-theme-accent/20 text-theme-accent text-[9px] px-1.5 py-0.5 rounded ml-1 uppercase font-bold tracking-wider">Lvl ${act.spark_level || 1}</span>
-                            </p>
-                            <p class="text-[10px] text-theme-muted">${new Date(act.start_date).toLocaleString()}</p>
+                            <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Time</p>
+                            <p class="text-xs font-bold text-theme-text">${movingTimeStr}</p>
+                        </div>
+                        ${act.average_heartrate && act.average_heartrate > 0 ? `
+                        <div>
+                            <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Avg HR</p>
+                            <p class="text-xs font-bold text-theme-text">${hrStr}</p>
+                        </div>
+                        ` : ''}
+                        <div>
+                            <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Spark</p>
+                            <p class="text-xs font-bold text-theme-accent">${Math.round(act.spark_score || 0)}</p>
                         </div>
                     </div>
-                    <div class="shrink-0 ml-2">
-                        ${getSportBadge(act.sport_type)}
+                    <div class="mt-4 pt-3 border-t border-theme-border flex items-center justify-between">
+                        <button onclick="event.stopPropagation(); toggleKudos('${act.id}', this)" class="text-xs font-bold flex items-center gap-1.5 transition ${act.has_kudosed ? 'text-red-500' : 'text-theme-muted hover:text-red-500'}">
+                            <svg class="w-4 h-4 ${act.has_kudosed ? 'fill-current' : 'fill-none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                            <span class="kudos-count">${act.kudos_count}</span>
+                        </button>
+                        <div class="text-xs text-theme-muted font-medium flex items-center gap-1 hover:text-theme-text transition">
+                            <span>💬</span> <span>${act.comment_count || 0}</span>
+                        </div>
                     </div>
                 </div>
-                <h3 class="text-sm font-bold text-theme-text mt-2">${act.name}</h3>
-                <div class="flex gap-4 mt-3">
-                    <div>
-                        <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Dist</p>
-                        <p class="text-xs font-bold text-theme-text">${act.distance_km ? parseFloat(act.distance_km).toFixed(2) + ' km' : '-'}</p>
-                    </div>
-                    <div>
-                        <p class="text-[10px] text-theme-muted uppercase font-bold tracking-wider mb-0.5">Spark</p>
-                        <p class="text-xs font-bold text-theme-text">${Math.round(act.spark_score || 0)}</p>
-                    </div>
-                </div>
-                <div class="mt-4 pt-3 border-t border-theme-border flex items-center gap-2">
-                    <button onclick="toggleKudos('${act.id}', this)" class="text-xs font-bold flex items-center gap-1.5 transition ${act.has_kudosed ? 'text-red-500' : 'text-theme-muted hover:text-red-500'}">
-                        <svg class="w-4 h-4 ${act.has_kudosed ? 'fill-current' : 'fill-none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                        <span class="kudos-count">${act.kudos_count}</span>
-                    </button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (e) {
         console.error("Failed to load feed", e);
     }

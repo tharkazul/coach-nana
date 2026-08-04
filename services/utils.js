@@ -1835,7 +1835,7 @@ function resetDailyTokensForAllUsers() {
        daily_token_usage = 0, 
        common_token_usage = 0, 
        last_token_reset_date = ?, 
-       daily_token_limit = CASE WHEN subscription_tier = 'spark_plus' THEN 50000 ELSE 10000 END
+       daily_token_limit = CASE WHEN subscription_tier = 'spark_plus' THEN 50000 ELSE 5000 END
      WHERE last_token_reset_date != ? OR last_token_reset_date IS NULL`,
     [todayStr, todayStr],
     function (err) {
@@ -1854,9 +1854,9 @@ function resetDailyNutritionForAllUsers() {
 }
 
 function getEffectiveTokenLimit(user) {
-  let expectedLimit = user.subscription_tier === 'spark_plus' ? 50000 : 10000;
+  let expectedLimit = user.subscription_tier === 'spark_plus' ? 50000 : 5000;
   let dbLimit = user.daily_token_limit;
-  if (dbLimit === 50000 && expectedLimit === 10000) dbLimit = 10000;
+  if (dbLimit === 50000 && expectedLimit === 5000) dbLimit = 5000;
   return dbLimit || expectedLimit;
 }
 

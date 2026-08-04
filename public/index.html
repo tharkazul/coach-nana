@@ -591,7 +591,31 @@
                                 </tbody>
                             </table>
                         </div>
+                    <!-- Comments Container -->
+                    <div id="modal-comments-container" class="flex flex-col shrink-0 mt-4 bg-theme-bg border border-theme-border rounded-lg p-4 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs md:text-sm font-bold text-theme-text uppercase tracking-wider flex items-center gap-2">
+                                <span>💬</span> Comments <span id="modal-comments-count" class="text-xs text-theme-muted font-normal">(0)</span>
+                            </h3>
+                        </div>
+
+                        <!-- Comments List -->
+                        <div id="modal-comments-list" class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                            <p class="text-xs text-theme-muted italic text-center py-2">Loading comments...</p>
+                        </div>
+
+                        <!-- Add Comment Input Form -->
+                        <div class="flex gap-2 pt-2 border-t border-theme-border/50">
+                            <input type="text" id="modal-comment-input" placeholder="Add a comment..." 
+                                onkeypress="if(event.key === 'Enter') postModalComment()"
+                                class="flex-1 px-3 py-2 text-xs bg-theme-card border border-theme-border rounded-lg text-theme-text placeholder-theme-muted focus:outline-none focus:border-theme-accent">
+                            <button onclick="postModalComment()" id="modal-comment-submit-btn" 
+                                class="bg-theme-accent text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 transition shrink-0">
+                                Post
+                            </button>
+                        </div>
                     </div>
+
                     <!-- Physical spacer to ensure scroll clears the nav bar -->
                     <div class="h-28 shrink-0 w-full block"></div>
                 </div>
@@ -1132,14 +1156,16 @@
                                     class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
                                     Health
                                 </button>
+                                <!--
                                 <button onclick="switchProgressTab('dailylog')" id="prog-tab-dailylog"
                                     class="prog-tab-btn flex-1 text-center relative z-10 cursor-pointer py-3 px-1 md:px-4 text-sm font-bold text-theme-muted hover:text-theme-text transition-colors">
                                     Daily Log
                                 </button>
+                                -->
                                 <!-- Animated Underline Indicator -->
                                 <div id="progress-tab-indicator"
                                     class="absolute bottom-0 h-0.5 bg-theme-accent transition-all duration-300 ease-out z-10"
-                                    style="left: 0; width: 25%;"></div>
+                                    style="left: 0; width: 33.33%;"></div>
                             </nav>
                         </div>
                     </div>
@@ -2067,6 +2093,47 @@
                                 class="bg-white text-theme-accent font-bold py-2 px-6 rounded-full text-sm shadow-sm">
                                 View Premium Benefits
                             </button>
+                        </div>
+
+                        <!-- DATA & PRIVACY SECTION -->
+                        <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-slate-500"></span> Account Data & Privacy
+                                </h3>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <!-- Data Request -->
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-theme-border">
+                                    <div>
+                                        <h4 class="text-xs font-bold text-theme-text uppercase tracking-wider">Request Account Data</h4>
+                                        <p class="text-xs text-theme-muted mt-1">Request a full export of your personal workout data, metrics, and chat history.</p>
+                                    </div>
+                                    <button onclick="requestAccountData()" id="request-data-btn"
+                                        class="shrink-0 bg-theme-bg hover:bg-theme-border border border-theme-border text-theme-text text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
+                                        <svg class="w-4 h-4 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        </svg>
+                                        Request Account Data
+                                    </button>
+                                </div>
+                                <div id="request-data-status" class="hidden text-xs font-bold text-theme-accent bg-theme-accent-soft p-3 rounded-lg border border-theme-accent-border text-center"></div>
+
+                                <!-- Delete Account -->
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <h4 class="text-xs font-bold text-red-500 uppercase tracking-wider">Delete Account</h4>
+                                        <p class="text-xs text-theme-muted mt-1">Permanently remove your account and erase all associated workouts, metrics, and history.</p>
+                                    </div>
+                                    <button onclick="confirmDeleteAccount()" id="delete-account-btn"
+                                        class="shrink-0 bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/30 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                        Delete Account
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- LOG OUT SECTION -->

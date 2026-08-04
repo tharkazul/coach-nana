@@ -525,6 +525,18 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                         "summary": "Pizza, 2x protein shakes, chicken sandwich, banana"
                       }
                     }
+                    \`\`\`
+
+                    WEIGHT LOGGING:
+                    If the athlete mentions their current weight, you MUST log it by outputting an additional JSON block. Format it exactly like this inside triple backticks:
+                    \`\`\`json
+                    {
+                      "type": "log_weight",
+                      "data": {
+                        "weight_kg": 75.5,
+                        "body_fat_percent": 15.0
+                      }
+                    }
                     \`\`\``;
 
                                       let aiReply = await generateWithFallback(
@@ -632,6 +644,23 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                               },
                                             );
                                             planUpdated = true;
+                                          } else if (
+                                            parsedData &&
+                                            parsedData.type === "log_weight" &&
+                                            parsedData.data &&
+                                            parsedData.data.weight_kg
+                                          ) {
+                                            const weightKg = parseFloat(parsedData.data.weight_kg);
+                                            const bodyFat = parsedData.data.body_fat_percent !== undefined ? parseFloat(parsedData.data.body_fat_percent) : null;
+                                            const todayStr = getAMSDateString();
+                                            db.run(
+                                              `INSERT INTO weight_log (user_id, date, weight_kg, body_fat_percent) VALUES (?, ?, ?, ?)
+                                               ON CONFLICT(user_id, date) DO UPDATE SET weight_kg=excluded.weight_kg, body_fat_percent=COALESCE(excluded.body_fat_percent, weight_log.body_fat_percent)`,
+                                              [req.user.id, todayStr, weightKg, bodyFat],
+                                              (err) => {
+                                                if (err) console.error("Failed to log weight:", err);
+                                              }
+                                            );
                                           } else if (
                                              parsedData &&
                                              (parsedData.type === "log_nutrition" || parsedData.type === "log_diet") &&

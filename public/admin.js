@@ -59,12 +59,16 @@ function renderTable(users) {
         const clicks = u.spark_plus_clicks || 0;
         const clicksDisplay = clicks > 0 ? `<span class="text-green-600 font-bold">${clicks} <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></span>` : '<span class="text-gray-400">0</span>';
 
+        const dataReq = u.data_request_clicks || 0;
+        const dataReqDisplay = dataReq > 0 ? `<span class="text-blue-600 font-bold flex items-center gap-1">${dataReq} <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></span>` : '<span class="text-gray-400">0</span>';
+
         tr.innerHTML = `
             <td class="p-4 font-medium text-gray-900">${u.username}</td>
             <td class="p-4 text-gray-600">${u.login_count || 0}</td>
             <td class="p-4 text-gray-600">${u.chat_count || 0}</td>
             <td class="p-4">${tierSelect}</td>
             <td class="p-4">${clicksDisplay}</td>
+            <td class="p-4">${dataReqDisplay}</td>
             <td class="p-4 ${personalTokenClass}">${personalTokens.toLocaleString()} / ${(currentLimit/1000)}k</td>
             <td class="p-4 text-gray-600">${commonTokens.toLocaleString()}</td>
             <td class="p-4">

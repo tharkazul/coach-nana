@@ -70,6 +70,7 @@ router.get("/api/admin/usage", authenticateToken, (req, res) => {
             u.subscription_tier,
             u.last_token_reset_date,
             u.spark_plus_clicks,
+            u.data_request_clicks,
             CASE WHEN u.strava_refresh_token IS NOT NULL AND u.strava_refresh_token != '' THEN 1 ELSE 0 END as strava_connected,
             CASE WHEN u.garmin_username IS NOT NULL AND u.garmin_username != '' THEN 1 ELSE 0 END as garmin_connected,
             (SELECT COUNT(*) FROM activities WHERE user_id = u.id) as activities_count

@@ -864,6 +864,31 @@
                             </button>
                         </div>
 
+                        <!-- Data & Privacy Card -->
+                        <div class="bg-theme-card border border-theme-border rounded-3xl p-6 space-y-4">
+                            <h3 class="text-sm font-bold text-theme-text font-display">Account Data & Privacy</h3>
+                            <div class="flex items-center justify-between gap-4 pt-2 border-t border-theme-border/50">
+                                <div>
+                                    <p class="text-xs font-bold text-theme-text">Request Account Data</p>
+                                    <p class="text-[10px] text-theme-muted">Export personal workouts and chat logs</p>
+                                </div>
+                                <button onclick="requestAccountData()" id="request-data-btn" class="px-4 py-2 bg-theme-bg hover:bg-theme-border text-theme-text font-bold text-xs rounded-xl border border-theme-border transition">
+                                    Request Data
+                                </button>
+                            </div>
+                            <div id="request-data-status" class="hidden text-xs font-bold text-theme-accent bg-theme-accent-soft p-3 rounded-xl border border-theme-accent-border text-center"></div>
+
+                            <div class="flex items-center justify-between gap-4 pt-4 border-t border-theme-border/50">
+                                <div>
+                                    <p class="text-xs font-bold text-red-500">Delete Account</p>
+                                    <p class="text-[10px] text-theme-muted">Permanently wipe all workouts & data</p>
+                                </div>
+                                <button onclick="confirmDeleteAccount()" class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 font-bold text-xs rounded-xl border border-red-500/20 transition">
+                                    Delete Account
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="pt-4 border-t border-theme-border">
                             <button onclick="logout()" class="w-full py-3 bg-theme-purple-soft text-theme-purple hover:bg-theme-purple hover:text-white font-bold text-xs rounded-2xl transition border border-theme-purple/20">
                                 Sign Out of Account

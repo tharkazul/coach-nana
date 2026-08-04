@@ -146,8 +146,10 @@ router.get("/api/activity/:id", authenticateToken, (req, res) => {
 
   const fallbackToLocalDB = (defaultStatus = 404, defaultError = "Activity not found on Strava or local database.") => {
     db.get(
-      "SELECT * FROM activities WHERE id = ? AND user_id = ?",
-      [activityId, req.user.id],
+      `SELECT a.*, (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) as kudos_count 
+       FROM activities a 
+       WHERE a.id = ? AND (a.user_id = ? OR a.user_id IN (SELECT friend_id FROM connections WHERE user_id = ? AND status = 'accepted'))`,
+      [activityId, req.user.id, req.user.id],
       (dbErr, row) => {
         if (dbErr || !row) {
           return res.status(defaultStatus).json({ error: defaultError });
@@ -171,12 +173,12 @@ router.get("/api/activity/:id", authenticateToken, (req, res) => {
           total_elevation_gain: row.elevation_m || 0,
           average_heartrate: row.average_heartrate || 0,
           has_heartrate: row.average_heartrate > 0,
-          suffer_score: row.tss || null,
-          spark_score: row.spark_score || 0,
+          suffer_score: Math.round(row.spark_score || row.tss || 0),
+          spark_score: Math.round(row.spark_score || row.tss || 0),
           start_date: row.start_date,
           start_date_local: row.start_date,
           sets_json: sets,
-          kudos_count: 0
+          kudos_count: row.kudos_count || 0
         };
         return res.json(fallbackData);
       }
@@ -645,7 +647,59 @@ router.post("/api/generate-plan", authenticateToken, async (req, res) => {
           ); // End activities fetch
         },
       ); // End metrics fetch
-    },
+// --- ACTIVITY COMMENTS API ---
+router.get("/api/activities/:id/comments", authenticateToken, (req, res) => {
+  const activityId = req.params.id;
+  db.all(
+    `
+    SELECT c.*, u.username, u.profile_picture_url
+    FROM activity_comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.activity_id = ?
+    ORDER BY c.created_at ASC
+    `,
+    [activityId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch comments" });
+      res.json({ comments: rows || [] });
+    }
+  );
+});
+
+router.post("/api/activities/:id/comments", authenticateToken, (req, res) => {
+  const activityId = req.params.id;
+  const { comment } = req.body;
+  if (!comment || !comment.trim()) {
+    return res.status(400).json({ error: "Comment text cannot be empty" });
+  }
+
+  db.run(
+    `INSERT INTO activity_comments (activity_id, user_id, comment) VALUES (?, ?, ?)`,
+    [activityId, req.user.id, comment.trim()],
+    function (err) {
+      if (err) return res.status(500).json({ error: "Failed to add comment" });
+      const commentId = this.lastID;
+
+      db.get(
+        `SELECT c.*, u.username, u.profile_picture_url FROM activity_comments c JOIN users u ON c.user_id = u.id WHERE c.id = ?`,
+        [commentId],
+        (errGet, newComment) => {
+          res.json({ success: true, comment: newComment });
+        }
+      );
+    }
+  );
+});
+
+router.delete("/api/activities/:id/comments/:commentId", authenticateToken, (req, res) => {
+  const commentId = req.params.commentId;
+  db.run(
+    `DELETE FROM activity_comments WHERE id = ? AND user_id = ?`,
+    [commentId, req.user.id],
+    function (err) {
+      if (err) return res.status(500).json({ error: "Failed to delete comment" });
+      res.json({ success: true, deletedId: commentId });
+    }
   );
 });
 
