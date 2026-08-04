@@ -147,6 +147,9 @@ db.serialize(() => {
   db.run(`ALTER TABLE activities ADD COLUMN sets_json TEXT`, (err) => {
     if (!err) console.log("Added sets_json column to activities table.");
   });
+  db.run(`ALTER TABLE activities ADD COLUMN laps_json TEXT`, (err) => {
+    if (!err) console.log("Added laps_json column to activities table.");
+  });
   db.run(
     `CREATE TABLE IF NOT EXISTS micro_plan (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, sport TEXT, description TEXT, target_spark REAL, details TEXT, steps_json TEXT, FOREIGN KEY(user_id) REFERENCES users(id))`,
   );

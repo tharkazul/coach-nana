@@ -194,15 +194,35 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
           const phase = await getUserMacroPhase(req.user.id);
           try {
             db.all(
-              `SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`,
+              `SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date, laps_json FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`,
               [req.user.id],
               async (err, recentActivities) => {
                 const recentActivitiesText =
                   recentActivities && recentActivities.length > 0
                     ? recentActivities
                         .map(
-                          (a) =>
-                            `- ${getAMSDateString(a.start_date)} at ${new Date(a.start_date).toLocaleTimeString("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" })}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`,
+                          (a) => {
+                            let lapStr = "";
+                            if (a.laps_json) {
+                              try {
+                                const laps = JSON.parse(a.laps_json);
+                                if (laps && laps.length > 0) {
+                                  lapStr = " | Laps: " + laps.map(l => {
+                                    let pace = "";
+                                    if (l.average_speed > 0) {
+                                      const paceSecs = 1000 / l.average_speed;
+                                      const m = Math.floor(paceSecs / 60);
+                                      const s = Math.floor(paceSecs % 60);
+                                      pace = `, ${m}:${s.toString().padStart(2, '0')}/km`;
+                                    }
+                                    const hr = l.average_heartrate ? `, ${Math.round(l.average_heartrate)}bpm` : "";
+                                    return `[${l.name || 'Lap'}: ${(l.distance/1000).toFixed(1)}km in ${Math.round(l.moving_time/60)}m${pace}${hr}]`;
+                                  }).join(" ");
+                                }
+                              } catch (e) {}
+                            }
+                            return `- ${getAMSDateString(a.start_date)} at ${new Date(a.start_date).toLocaleTimeString("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" })}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark${lapStr}`;
+                          }
                         )
                         .join("\n                    ")
                     : "No recent activities recorded.";
@@ -952,15 +972,35 @@ router.post("/api/chat/checkin", authenticateToken, async (req, res) => {
           .json({ error: "Failed to load athlete context." });
 
       db.all(
-        `SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`,
+        `SELECT name, sport_type, distance_km, moving_time_min, spark_score, start_date, laps_json FROM activities WHERE user_id = ? ORDER BY start_date DESC LIMIT 3`,
         [req.user.id],
         async (err, recentActivities) => {
           const recentActivitiesText =
             recentActivities && recentActivities.length > 0
               ? recentActivities
                   .map(
-                    (a) =>
-                      `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark`,
+                    (a) => {
+                      let lapStr = "";
+                      if (a.laps_json) {
+                        try {
+                          const laps = JSON.parse(a.laps_json);
+                          if (laps && laps.length > 0) {
+                            lapStr = " | Laps: " + laps.map(l => {
+                              let pace = "";
+                              if (l.average_speed > 0) {
+                                const paceSecs = 1000 / l.average_speed;
+                                const m = Math.floor(paceSecs / 60);
+                                const s = Math.floor(paceSecs % 60);
+                                pace = `, ${m}:${s.toString().padStart(2, '0')}/km`;
+                              }
+                              const hr = l.average_heartrate ? `, ${Math.round(l.average_heartrate)}bpm` : "";
+                              return `[${l.name || 'Lap'}: ${(l.distance/1000).toFixed(1)}km in ${Math.round(l.moving_time/60)}m${pace}${hr}]`;
+                            }).join(" ");
+                          }
+                        } catch (e) {}
+                      }
+                      return `- ${getAMSDateString(a.start_date)}: ${a.name} (${a.sport_type}) | ${parseFloat(a.distance_km).toFixed(1)}km | ${Math.round(a.moving_time_min)}min | ${Math.round(a.spark_score || 0)} Spark${lapStr}`;
+                    }
                   )
                   .join("\n")
               : "No recent activities recorded.";

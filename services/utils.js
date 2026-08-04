@@ -911,10 +911,23 @@ async function getStravaActivity(stravaAthleteId, activityId) {
           );
         }
 
+        let lapsJson = null;
+        if (data.laps && Array.isArray(data.laps) && data.laps.length > 0) {
+          const minimalLaps = data.laps.map(l => ({
+            name: l.name,
+            distance: l.distance,
+            moving_time: l.moving_time,
+            average_speed: l.average_speed,
+            average_heartrate: l.average_heartrate,
+            split: l.split
+          }));
+          lapsJson = JSON.stringify(minimalLaps);
+        }
+
         db.run(
-          `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate`,
+          `INSERT INTO activities (id, user_id, name, sport_type, distance_km, elevation_m, moving_time_min, average_heartrate, start_date, tss, spark_score, laps_json) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET tss=excluded.tss, spark_score=excluded.spark_score, moving_time_min=excluded.moving_time_min, average_heartrate=excluded.average_heartrate, laps_json=excluded.laps_json`,
           [
             data.id,
             internalUserId,
@@ -927,6 +940,7 @@ async function getStravaActivity(stravaAthleteId, activityId) {
             data.start_date,
             tss,
             sparkScore,
+            lapsJson,
           ],
           async (err) => {
             if (!err) {
