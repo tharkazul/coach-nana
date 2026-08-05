@@ -671,7 +671,7 @@ async function attemptAuth(action) {
         const data = await res.json();
 
         if (res.ok) {
-            if (action === 'login') {
+            if (action === 'login' || data.token) {
                 localStorage.setItem('nana_token', data.token);
                 window.location.reload();
             } else {
@@ -929,12 +929,22 @@ async function loadSettings() {
         }
 
         // --- ONBOARDING TRIGGER ---
-        // In server.js, new users default to 'New athlete.'
-        if (data.athleteContext === 'New athlete.' || localStorage.getItem('resumeOnboardingStep')) {
+        // Checks if user is new or has unconfigured athleteContext
+        const isNewAthlete = !data.athleteContext || 
+                             data.athleteContext === 'New athlete.' || 
+                             data.athleteContext === 'No context provided yet.' || 
+                             data.athleteContext.trim() === '';
+
+        if (isNewAthlete || localStorage.getItem('resumeOnboardingStep')) {
             const overlay = document.getElementById('onboarding-overlay');
             if (overlay) {
                 overlay.classList.remove('hidden');
                 overlay.classList.add('flex');
+
+                if (!localStorage.getItem('resumeOnboardingStep')) {
+                    currentOnboardingStep = 1;
+                    updateOnboardingStep();
+                }
 
                 // Resume state if coming back from Strava auth
                 if (localStorage.getItem('resumeOnboardingStep')) {
@@ -1051,6 +1061,32 @@ async function uploadProfilePicture(event) {
         statusEl.classList.add('hidden');
     }, 3000);
 }
+
+async function changeAppLanguage(lang) {
+    if (window.i18n) {
+        window.i18n.setLanguage(lang);
+    }
+    const selectEl = document.getElementById('app-language-select');
+    if (selectEl) selectEl.value = lang;
+
+    try {
+        await fetch('/api/user/settings/language', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ language: lang })
+        });
+    } catch (e) {
+        console.error('Failed to sync language preference:', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.i18n) {
+        const currentLang = window.i18n.getLanguage();
+        const selectEl = document.getElementById('app-language-select');
+        if (selectEl) selectEl.value = currentLang;
+    }
+});
 
 async function saveSettings(type) {
     const statusEl = document.getElementById('settings-status');
@@ -3765,7 +3801,7 @@ async function sendMessage(retryMessage = null, retryImages = null, errorBubbleT
         clearImageSelection();
     }
 
-    const payload = { message, imagesBase64: imagesToUse };
+    const payload = { message, imagesBase64: imagesToUse, language: window.i18n ? window.i18n.getLanguage() : 'en' };
     setTimeout(() => { if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight; }, 50);
 
     const loadId = 'loading-' + Date.now();
@@ -4041,6 +4077,50 @@ function selectTone(element, tone) {
     // Highlight selected card
     element.classList.remove('border-theme-border', 'bg-theme-bg');
     element.classList.add('border-theme-accent', 'bg-theme-accent-soft');
+}
+
+let ctlEstimateTimeout = null;
+function handleOnboardRaceNameInput(input) {
+    const text = input.value.trim();
+    const ctlEl = document.getElementById('onboard-race-ctl');
+    if (!ctlEl) return;
+
+    if (!text) {
+        ctlEl.value = '';
+        return;
+    }
+
+    // Show thinking indicator
+    ctlEl.placeholder = "Spark Thinking...";
+    if (ctlEstimateTimeout) clearTimeout(ctlEstimateTimeout);
+
+    ctlEstimateTimeout = setTimeout(() => {
+        const lower = text.toLowerCase();
+        let estimated = 75;
+
+        if (lower.includes('140.6') || lower.includes('ironman 140') || (lower.includes('ironman') && !lower.includes('70.3'))) {
+            estimated = 105;
+        } else if (lower.includes('70.3') || lower.includes('half ironman')) {
+            estimated = 80;
+        } else if (lower.includes('100k') || lower.includes('100m') || lower.includes('ultra')) {
+            estimated = 100;
+        } else if (lower.includes('marathon') || lower.includes('42k') || lower.includes('42.2')) {
+            estimated = 70;
+        } else if (lower.includes('half marathon') || lower.includes('21k') || lower.includes('21.1')) {
+            estimated = 55;
+        } else if (lower.includes('10k')) {
+            estimated = 42;
+        } else if (lower.includes('5k')) {
+            estimated = 35;
+        } else if (lower.includes('fondo') || lower.includes('century')) {
+            estimated = 75;
+        } else if (lower.includes('triathlon') || lower.includes('olympic')) {
+            estimated = 60;
+        }
+
+        ctlEl.value = estimated;
+        ctlEl.placeholder = "Target CTL";
+    }, 600);
 }
 
 let currentOnboardingStep = 1;

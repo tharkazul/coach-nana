@@ -146,7 +146,7 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
   }
 
   db.get(
-    `SELECT coach_tone, athlete_context, gender, long_term_memory, daily_token_usage, common_token_usage, last_token_reset_date, daily_token_limit, subscription_tier FROM users WHERE id = ?`,
+    `SELECT coach_tone, athlete_context, gender, long_term_memory, daily_token_usage, common_token_usage, last_token_reset_date, daily_token_limit, subscription_tier, language FROM users WHERE id = ?`,
     [req.user.id],
     async (err, user) => {
       if (err) {
@@ -364,11 +364,20 @@ router.post("/api/chat", authenticateToken, async (req, res) => {
                                           req.user.id,
                                         );
 
-                                      const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
+                                       const activeLang = req.body.language || req.headers['x-app-language'] || user.language || 'en';
+                                       const langNames = { en: 'English', nl: 'Dutch (Nederlands)', de: 'German', es: 'Spanish', fr: 'French' };
+                                       const targetLangName = langNames[activeLang] || 'English';
+
+                                       const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
                     Name coach: Spark
                     Tone: ${user.coach_tone}
                     Current Training Phase: ${phase || user.training_phase || "Base/General"}
                     
+                    LANGUAGE DIRECTIVE (CRITICAL):
+                    - The athlete's preferred language is ${targetLangName} (${activeLang}).
+                    - You MUST write your entire response to the athlete in ${targetLangName}.
+                    - Keep standard English keys for JSON blocks (e.g. "sport", "description", "steps_json"), but write all human-readable workout description text and instructions in ${targetLangName}.
+
                     TIME CONTEXT:
                     Current Date & Time: ${todayStr} at ${new Date().toLocaleTimeString("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" })}
                     The upcoming week mapping is:

@@ -76,6 +76,7 @@ db.serialize(() => {
   );
   db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {});
   db.run(`ALTER TABLE users ADD COLUMN spark_start_date TEXT`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
   db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -425,6 +426,15 @@ db.serialize(() => {
         first_used_at DATETIME,
         status TEXT DEFAULT 'introduced',
         UNIQUE(user_id, feature_key),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS push_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        push_token TEXT NOT NULL UNIQUE,
+        platform TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`);
 });

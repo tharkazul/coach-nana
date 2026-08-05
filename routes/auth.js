@@ -19,11 +19,20 @@ router.post("/register", async (req, res) => {
           return res
             .status(400)
             .json({ error: "Username might already exist." });
+        
+        const newUserId = this.lastID;
+        const token = jwt.sign(
+          { id: newUserId, username },
+          process.env.JWT_SECRET,
+          { expiresIn: "30d" }
+        );
+
         res
           .status(201)
           .json({
             message: "Athlete registered successfully!",
-            userId: this.lastID,
+            userId: newUserId,
+            token,
           });
       },
     );

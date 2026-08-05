@@ -35,6 +35,24 @@ router.post("/api/settings/privacy", authenticateToken, (req, res) => {
   );
 });
 
+router.post("/api/notifications/register-push-token", authenticateToken, (req, res) => {
+  const { pushToken, platform } = req.body;
+  if (!pushToken) return res.status(400).json({ error: "Missing pushToken" });
+
+  db.run(
+    `INSERT INTO push_tokens (user_id, push_token, platform) VALUES (?, ?, ?)
+     ON CONFLICT(push_token) DO UPDATE SET user_id = excluded.user_id, platform = excluded.platform`,
+    [req.user.id, pushToken, platform || 'expo'],
+    function (err) {
+      if (err) {
+        console.error("Push token save error:", err);
+        return res.status(500).json({ error: "DB_ERROR" });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
 router.post(
   "/api/settings/profile-picture",
   authenticateToken,
@@ -130,6 +148,19 @@ router.post("/api/user/settings/coach", authenticateToken, (req, res) => {
           .json({ error: "Failed to update coach settings." });
       res.json({ message: "Coach updated successfully!" });
     },
+  );
+});
+
+router.post("/api/user/settings/language", authenticateToken, (req, res) => {
+  const { language } = req.body;
+  if (!language) return res.status(400).json({ error: "Language required" });
+  db.run(
+    `UPDATE users SET language = ? WHERE id = ?`,
+    [language, req.user.id],
+    function (err) {
+      if (err) return res.status(500).json({ error: "Failed to update language setting." });
+      res.json({ success: true, language });
+    }
   );
 });
 
