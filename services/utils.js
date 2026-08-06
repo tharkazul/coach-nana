@@ -1462,9 +1462,15 @@ async function generateQuestForUser(userId, poolType = "personal", previousQuest
   });
 }
 
+const evaluateQuestsLocks = new Set();
 async function evaluateAndProgressQuests(userId) {
-  // Ensure existing active quests without expires_at get a default expiration date
-  await new Promise((resolve) => {
+  while (evaluateQuestsLocks.has(userId)) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  evaluateQuestsLocks.add(userId);
+  try {
+    // Ensure existing active quests without expires_at get a default expiration date
+    await new Promise((resolve) => {
     db.run(
       `UPDATE user_quests SET expires_at = datetime(created_at, '+3 days') WHERE user_id = ? AND expires_at IS NULL AND status = 'active'`,
       [userId],
@@ -1629,11 +1635,20 @@ async function evaluateAndProgressQuests(userId) {
   }
 
   return quests;
+  } finally {
+    evaluateQuestsLocks.delete(userId);
+  }
 }
 
 async function evaluateQuestsAgainstActivity(userId, activityData) {
   const allQuests = await evaluateAndProgressQuests(userId);
-  return allQuests.filter((q) => q.status === "completed");
+  const now = Date.now();
+  return allQuests.filter((q) => {
+    if (q.status !== "completed" || !q.completed_at) return false;
+    const completedIso = q.completed_at.replace(" ", "T") + "Z";
+    const completedTs = new Date(completedIso).getTime();
+    return (now - completedTs) < 2 * 60 * 1000;
+  });
 }
 
 async function calculateQuestProgress(userId, quest) {

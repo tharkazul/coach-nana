@@ -90,11 +90,47 @@ router.post("/webhook/strava", (req, res) => {
     "📥 STRAVA WEBHOOK INCOMING PAYLOAD:",
     JSON.stringify(req.body, null, 2),
   );
-  const { aspect_type, object_id, owner_id, object_type } = req.body;
+  const { aspect_type, object_id, owner_id, object_type, updates } = req.body;
 
   if (aspect_type === "create" && object_type === "activity") {
     console.log(`🏃‍♂️ New Strava activity detected! Fetching ID: ${object_id}`);
     getStravaActivity(owner_id, object_id);
+  } else if (
+    object_type === "athlete" &&
+    updates &&
+    (updates.authorized === "false" || updates.authorized === false)
+  ) {
+    const stravaAthleteId = String(owner_id || object_id);
+    console.log(
+      `🔒 Strava deauthorization webhook received for athlete ID: ${stravaAthleteId}`,
+    );
+
+    db.get(
+      `SELECT user_id FROM strava_tokens WHERE strava_id = ?`,
+      [stravaAthleteId],
+      (err, row) => {
+        if (row && row.user_id) {
+          db.run(`UPDATE users SET strava_refresh_token = NULL WHERE id = ?`, [
+            row.user_id,
+          ]);
+          db.run(
+            `DELETE FROM strava_tokens WHERE user_id = ?`,
+            [row.user_id],
+            (deleteErr) => {
+              if (!deleteErr) {
+                console.log(
+                  `✅ Revoked Strava connection for user_id ${row.user_id}`,
+                );
+              }
+            },
+          );
+        } else {
+          db.run(`DELETE FROM strava_tokens WHERE strava_id = ?`, [
+            stravaAthleteId,
+          ]);
+        }
+      },
+    );
   }
 
   res.status(200).send("EVENT_RECEIVED");
