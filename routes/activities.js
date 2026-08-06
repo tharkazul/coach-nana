@@ -38,7 +38,11 @@ const {
 
 router.get("/api/micro-plan", authenticateToken, (req, res) => {
   db.all(
-    `SELECT * FROM micro_plan WHERE user_id = ? ORDER BY date ASC`,
+    `SELECT m.*, 
+            (SELECT COUNT(*) FROM event_invitations e WHERE e.micro_plan_id = m.id AND e.status = 'accepted') as accepted_invites 
+     FROM micro_plan m 
+     WHERE m.user_id = ? 
+     ORDER BY m.date ASC`,
     [req.user.id],
     (err, rows) => {
       res.json(rows || []);

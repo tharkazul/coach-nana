@@ -53,6 +53,7 @@ function renderTable(users) {
             <select onchange="setTier('${u.username}', this.value)" class="text-xs bg-gray-50 border border-gray-200 rounded p-1">
                 <option value="free" ${tier === 'free' ? 'selected' : ''}>Free</option>
                 <option value="spark_plus" ${tier === 'spark_plus' ? 'selected' : ''}>Spark+</option>
+                <option value="admin" ${tier === 'admin' ? 'selected' : ''}>Admin</option>
             </select>
         `;
 

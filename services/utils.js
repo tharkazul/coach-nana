@@ -1353,12 +1353,17 @@ function triggerLevelUpCoachPrompt(userId, newLevel) {
       if (!statsStr) statsStr = "No recorded stats yet.";
 
       db.get(
-        `SELECT coach_tone FROM users WHERE id = ?`,
+        `SELECT coach_tone, coach_name, coach_context FROM users WHERE id = ?`,
         [userId],
         async (err, user) => {
           if (err || !user) return;
 
-          const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${user.coach_tone || "Empathetic but demanding"}. Act like a real human in a continuous text message thread.`;
+          const coachName = user.coach_name || "Spark";
+          let toneText = user.coach_tone || "Empathetic but demanding";
+          if (user.coach_tone === "custom" || user.coach_tone === "Configure own coach") {
+            toneText = user.coach_context ? `Custom tone: ${user.coach_context}` : "Custom coach persona";
+          }
+          const systemPrompt = `You are ${coachName}, an elite endurance coach. Your tone is: ${toneText}. ${user.coach_context ? `Coach Custom Context: ${user.coach_context}` : ""} Act like a real human in a continuous text message thread.`;
           const prompt = `The athlete just leveled up to Spark Level ${newLevel}! Here are their all-time stats so far: ${statsStr}. Write a short, highly motivating congratulatory message (1-3 sentences). Acknowledge their hard work.`;
 
           try {
@@ -1850,7 +1855,7 @@ function resetDailyTokensForAllUsers() {
        daily_token_usage = 0, 
        common_token_usage = 0, 
        last_token_reset_date = ?, 
-       daily_token_limit = CASE WHEN subscription_tier = 'spark_plus' THEN 50000 ELSE 5000 END
+       daily_token_limit = CASE WHEN subscription_tier = 'admin' THEN 100000 WHEN subscription_tier = 'spark_plus' THEN 50000 ELSE 5000 END
      WHERE last_token_reset_date != ? OR last_token_reset_date IS NULL`,
     [todayStr, todayStr],
     function (err) {
@@ -1869,10 +1874,14 @@ function resetDailyNutritionForAllUsers() {
 }
 
 function getEffectiveTokenLimit(user) {
-  let expectedLimit = user.subscription_tier === 'spark_plus' ? 50000 : 5000;
+  let expectedLimit = 5000;
+  if (user.subscription_tier === 'admin') expectedLimit = 100000;
+  else if (user.subscription_tier === 'spark_plus') expectedLimit = 50000;
+  
   let dbLimit = user.daily_token_limit;
   if (dbLimit === 50000 && expectedLimit === 5000) dbLimit = 5000;
-  return dbLimit || expectedLimit;
+  if (dbLimit === 10000 && expectedLimit === 5000) dbLimit = 5000;
+  return Math.max(dbLimit || 0, expectedLimit);
 }
 
 module.exports = {
@@ -1915,7 +1924,7 @@ module.exports = {
     
     // Find all users and any workouts they have planned for today
     db.all(
-      `SELECT u.id, u.coach_tone, m.sport, m.description, m.details 
+      `SELECT u.id, u.coach_tone, u.coach_name, u.coach_context, m.sport, m.description, m.details 
        FROM users u 
        LEFT JOIN micro_plan m ON u.id = m.user_id AND m.date = ?`,
       [todayStr],
@@ -1929,6 +1938,8 @@ module.exports = {
             usersMap.set(r.id, {
               id: r.id,
               coach_tone: r.coach_tone,
+              coach_name: r.coach_name,
+              coach_context: r.coach_context,
               workouts: []
             });
           }
@@ -1952,7 +1963,12 @@ module.exports = {
             }
             prompt += `Keep it under 3 sentences. DO NOT wrap it in JSON.`;
             
-            const systemPrompt = `You are Spark, an elite endurance coach. Your tone is: ${user.coach_tone || "Friendly"}. Act like a real human in a continuous text message thread.`;
+            const coachName = user.coach_name || "Spark";
+            let toneText = user.coach_tone || "Friendly";
+            if (user.coach_tone === "custom" || user.coach_tone === "Configure own coach") {
+              toneText = user.coach_context ? `Custom tone: ${user.coach_context}` : "Custom coach persona";
+            }
+            const systemPrompt = `You are ${coachName}, an elite endurance coach. Your tone is: ${toneText}. ${user.coach_context ? `Coach Custom Context: ${user.coach_context}` : ""} Act like a real human in a continuous text message thread.`;
             
             // Generate the message
             const aiReply = await generateWithFallback(prompt, systemPrompt);

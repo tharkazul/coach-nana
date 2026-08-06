@@ -77,6 +77,12 @@ db.serialize(() => {
   db.run(`ALTER TABLE users ADD COLUMN total_spark REAL DEFAULT 0`, (err) => {});
   db.run(`ALTER TABLE users ADD COLUMN spark_start_date TEXT`, (err) => {});
   db.run(`ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN coach_name TEXT DEFAULT 'Spark'`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN coach_context TEXT DEFAULT ''`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN coach_avatar_neutral TEXT`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN coach_avatar_hype TEXT`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN coach_avatar_disappointed TEXT`, (err) => {});
+  db.run(`ALTER TABLE users ADD COLUMN coach_avatar_horny TEXT`, (err) => {});
   db.run(`CREATE TABLE IF NOT EXISTS strava_tokens (
         user_id INTEGER PRIMARY KEY,
         access_token TEXT NOT NULL,
@@ -436,6 +442,20 @@ db.serialize(() => {
         platform TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
+    )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS event_invitations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        inviter_id INTEGER NOT NULL,
+        invitee_id INTEGER NOT NULL,
+        micro_plan_id INTEGER NOT NULL,
+        location TEXT,
+        time TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(inviter_id) REFERENCES users(id),
+        FOREIGN KEY(invitee_id) REFERENCES users(id),
+        FOREIGN KEY(micro_plan_id) REFERENCES micro_plan(id)
     )`);
 });
 

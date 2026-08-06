@@ -828,6 +828,19 @@ async function loadSettings() {
                 sparkPlusBtn.innerText = "View Premium Benefits";
                 sparkPlusBtn.onclick = () => trackSparkPlusClick();
             }
+        } else if (currentSubscriptionTier === 'admin') {
+            // Unhide all premium features for Admin
+            if (dashNutritionCard) dashNutritionCard.classList.remove('hidden');
+            if (activeQuests) activeQuests.classList.remove('hidden');
+            if (progNutrition) progNutrition.classList.remove('hidden');
+            if (navSocial) navSocial.classList.remove('hidden');
+
+            if (sparkPlusTitle) sparkPlusTitle.innerHTML = `<svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Admin Active 👑`;
+            if (sparkPlusDesc) sparkPlusDesc.innerText = `You are on the Admin tier. Enjoy 100,000 daily AI tokens, full access, and the ability to create your own coach!`;
+            if (sparkPlusBtn) {
+                sparkPlusBtn.innerText = "Admin Member Active";
+                sparkPlusBtn.onclick = null;
+            }
         } else {
             // Unhide all premium features for Spark+ / Paid members
             if (dashNutritionCard) dashNutritionCard.classList.remove('hidden');
@@ -879,7 +892,62 @@ async function loadSettings() {
 
         currentCoachTone = data.coachTone || ''; // Save to global memory
 
-        document.getElementById('set-coach-tone').value = data.coachTone || '';
+        window.userCoachAvatars = {
+            neutral: data.coachAvatarNeutral || null,
+            hype: data.coachAvatarHype || null,
+            disappointed: data.coachAvatarDisappointed || null,
+            horny: data.coachAvatarHorny || null
+        };
+
+        const renderAvatarPreview = (mood, url) => {
+            const el = document.getElementById(`preview-avatar-${mood}`);
+            if (el && url) {
+                el.innerHTML = `<img src="${url}" class="w-full h-full object-cover" alt="Coach Avatar ${mood}">`;
+            }
+        };
+        renderAvatarPreview('neutral', data.coachAvatarNeutral);
+        renderAvatarPreview('hype', data.coachAvatarHype);
+        renderAvatarPreview('disappointed', data.coachAvatarDisappointed);
+        renderAvatarPreview('horny', data.coachAvatarHorny);
+
+        const toneSelect = document.getElementById('set-coach-tone');
+        if (toneSelect) {
+            const hasOption = Array.from(toneSelect.options).some(o => o.value === data.coachTone);
+            if (hasOption) {
+                toneSelect.value = data.coachTone;
+            } else if (data.coachTone === 'custom' || data.coachTone === 'Configure own coach' || (data.coachName && data.coachName !== 'Spark') || data.coachContext) {
+                toneSelect.value = 'custom';
+            } else {
+                toneSelect.value = data.coachTone || 'Empathetic but demanding elite endurance coach.';
+            }
+            
+            // Ensure Free / Spark+ tiers cannot select "custom"
+            const customOpt = Array.from(toneSelect.options).find(o => o.value === 'custom');
+            if (currentSubscriptionTier !== 'admin') {
+                if (customOpt) {
+                    customOpt.style.display = 'none';
+                    customOpt.disabled = true;
+                }
+                if (toneSelect.value === 'custom') {
+                    toneSelect.value = 'Empathetic but demanding elite endurance coach.';
+                }
+            } else {
+                if (customOpt) {
+                    customOpt.style.display = '';
+                    customOpt.disabled = false;
+                }
+            }
+
+            toneSelect.addEventListener('change', toggleCustomCoachFields);
+        }
+        toggleCustomCoachFields();
+
+        const nameInput = document.getElementById('set-coach-name');
+        if (nameInput) nameInput.value = data.coachName || '';
+
+        const contextInput = document.getElementById('set-coach-context');
+        if (contextInput) contextInput.value = data.coachContext || '';
+
         document.getElementById('set-athlete-context').value = data.athleteContext || '';
         document.getElementById('set-gender').value = data.gender || 'Prefer not to say';
         document.getElementById('set-last-cycle-start').value = data.lastCycleStart || '';
@@ -1096,6 +1164,8 @@ async function saveSettings(type) {
     if (type === 'coach') {
         payload = {
             coachTone: document.getElementById('set-coach-tone').value,
+            coachName: document.getElementById('set-coach-name')?.value || '',
+            coachContext: document.getElementById('set-coach-context')?.value || '',
             athleteContext: document.getElementById('set-athlete-context').value,
             gender: document.getElementById('set-gender').value,
             lastCycleStart: document.getElementById('set-last-cycle-start').value,
@@ -2246,6 +2316,7 @@ function openEditWorkoutModal(workoutData, dateStr) {
         wbSteps = [];
         document.getElementById('btn-edit-workout-delete').style.display = 'none';
         document.getElementById('btn-edit-workout-garmin').style.display = 'none';
+        document.getElementById('btn-edit-workout-invite').style.display = 'none';
     } else {
         const p = typeof workoutData === 'string' ? JSON.parse(decodeURIComponent(workoutData)) : workoutData;
         wbCurrentWorkoutId = p.id;
@@ -2256,15 +2327,19 @@ function openEditWorkoutModal(workoutData, dateStr) {
 
         try {
             wbSteps = (p.steps_json && p.steps_json !== 'null') ? JSON.parse(p.steps_json) : [];
+            if (!Array.isArray(wbSteps)) wbSteps = [];
         } catch (e) {
             wbSteps = [];
         }
+
         if (p.id) {
             document.getElementById('btn-edit-workout-delete').style.display = 'block';
             document.getElementById('btn-edit-workout-garmin').style.display = p.sport !== 'Rest' ? 'flex' : 'none';
+            document.getElementById('btn-edit-workout-invite').style.display = 'flex';
         } else {
             document.getElementById('btn-edit-workout-delete').style.display = 'none';
             document.getElementById('btn-edit-workout-garmin').style.display = 'none';
+            document.getElementById('btn-edit-workout-invite').style.display = 'none';
         }
     }
 
@@ -3161,33 +3236,97 @@ function togglePassword(id) {
     if (el.type === "password") { el.type = "text"; } else { el.type = "password"; }
 }
 
+window.userCoachAvatars = { neutral: null, hype: null, disappointed: null, horny: null };
+
+function toggleCustomCoachFields() {
+    const toneSelect = document.getElementById('set-coach-tone');
+    const customContainer = document.getElementById('custom-coach-container');
+    if (!toneSelect || !customContainer) return;
+
+    if (toneSelect.value === 'custom' || toneSelect.value === 'Configure own coach') {
+        customContainer.classList.remove('hidden');
+    } else {
+        customContainer.classList.add('hidden');
+    }
+}
+
+async function uploadCoachAvatar(mood) {
+    const fileInput = document.getElementById(`upload-coach-${mood}`);
+    const statusEl = document.getElementById('avatar-upload-status');
+    const previewEl = document.getElementById(`preview-avatar-${mood}`);
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('mood', mood);
+
+    if (statusEl) {
+        statusEl.innerText = `Uploading ${mood} avatar...`;
+        statusEl.classList.remove('hidden');
+    }
+
+    try {
+        const token = localStorage.getItem('nana_token');
+        const res = await fetch('/api/settings/coach-avatar', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await res.json();
+        if (data.success && data.url) {
+            if (!window.userCoachAvatars) window.userCoachAvatars = {};
+            window.userCoachAvatars[mood] = data.url;
+            if (previewEl) {
+                previewEl.innerHTML = `<img src="${data.url}" class="w-full h-full object-cover" alt="Coach Avatar ${mood}">`;
+            }
+            if (statusEl) statusEl.innerText = `Uploaded ${mood} avatar successfully!`;
+        } else {
+            if (statusEl) statusEl.innerText = "Upload failed. Please try again.";
+        }
+    } catch (e) {
+        if (statusEl) statusEl.innerText = "Error uploading image.";
+    }
+
+    setTimeout(() => {
+        if (statusEl) statusEl.classList.add('hidden');
+    }, 3000);
+}
+
 function getCoachAvatar(mood) {
+    const normMood = (!mood || mood === 'default') ? 'neutral' : mood.toLowerCase();
+    if (window.userCoachAvatars) {
+        if (window.userCoachAvatars[normMood]) {
+            return window.userCoachAvatars[normMood];
+        }
+        if (normMood === 'neutral' && window.userCoachAvatars.neutral) {
+            return window.userCoachAvatars.neutral;
+        }
+        if (normMood === 'hype' && (window.userCoachAvatars.hype || window.userCoachAvatars.neutral)) {
+            return window.userCoachAvatars.hype || window.userCoachAvatars.neutral;
+        }
+        if (normMood === 'disappointed' && (window.userCoachAvatars.disappointed || window.userCoachAvatars.neutral)) {
+            return window.userCoachAvatars.disappointed || window.userCoachAvatars.neutral;
+        }
+        if (normMood === 'horny' && (window.userCoachAvatars.horny || window.userCoachAvatars.neutral)) {
+            return window.userCoachAvatars.horny || window.userCoachAvatars.neutral;
+        }
+    }
+
     // Determine the active persona category
     let persona = 'empathetic';
-    const toneCheck = currentCoachTone.toLowerCase();
+    const toneCheck = (currentCoachTone || '').toLowerCase();
     if (toneCheck.includes('liana') || toneCheck.includes('madison')) persona = 'liana';
     else if (toneCheck.includes('jenny')) persona = 'old';
     else if (toneCheck.includes('strict')) persona = 'strict';
     else if (toneCheck.includes('cheerleader')) persona = 'cheer';
 
-    // IMPORTANT: Create a folder in your 'public' directory called 'avatars'.
-    // Save your 12 images there using this naming convention:
-    // e.g., 'empathetic-default.png', 'madison-hype.png', 'strict-disappointed.png'
-
     const validMoods = ['default', 'hype', 'disappointed', 'horny'];
     const moodKey = validMoods.includes(mood) ? mood : 'default';
     const imagePath = `/avatars/${persona}-${moodKey}.png`;
-
-    // Optional Fallback logic if the real images are missing
-    const fallbackColors = {
-        'empathetic': { default: '14b8a6', hype: '10b981', disappointed: 'f43f5e', horny: '10b981' },
-        'strict': { default: '3b82f6', hype: '2563eb', disappointed: 'dc2626', horny: '2563eb' },
-        'cheer': { default: 'ec4899', hype: 'd946ef', disappointed: 'f43f5e', horny: 'd946ef' },
-        'liana': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' },
-        'old': { default: '374151', hype: '111827', disappointed: '7f1d1d', horny: '111827' }
-    };
-    const c = fallbackColors[persona][moodKey] || fallbackColors[persona].default;
-    const fallbackUrl = `https://ui-avatars.com/api/?name=Coach&background=${c}&color=fff&size=128`;
 
     return imagePath;
 }
@@ -6201,6 +6340,157 @@ function copyCurrentColors() {
     navigator.clipboard.writeText(text).then(() => {
         alert("Color palette copied to clipboard! You can share it directly in chat.");
     });
+}
+
+// ==========================================
+// Event Invitations
+// ==========================================
+let currentInviteMicroPlanId = null;
+
+async function openInviteModal(microPlanId) {
+    currentInviteMicroPlanId = microPlanId;
+    document.getElementById('invite-time').value = '09:00';
+    document.getElementById('invite-location').value = '';
+    
+    const listEl = document.getElementById('invite-connections-list');
+    listEl.innerHTML = '<div class="text-xs text-theme-muted">Loading connections...</div>';
+    document.getElementById('invite-event-modal').classList.remove('hidden');
+
+    try {
+        const [connRes, invRes] = await Promise.all([
+            fetch('/api/social/connections', { headers: getAuthHeaders() }),
+            fetch(`/api/social/invite/${microPlanId}`, { headers: getAuthHeaders() })
+        ]);
+        const data = await connRes.json();
+        const invData = await invRes.json();
+        const connections = data.connections || [];
+        const existingInvites = invData.invites || [];
+        
+        if (connections.length === 0) {
+            listEl.innerHTML = '<div class="text-xs text-theme-muted italic">No connections found. Connect with other athletes first!</div>';
+            return;
+        }
+
+        let html = '';
+        connections.forEach(c => {
+            if (c.status === 'accepted') {
+                const existing = existingInvites.find(i => i.invitee_id === c.friend_id);
+                if (existing) {
+                    const statusHtml = existing.status === 'accepted' 
+                        ? '<span class="text-green-500 text-xs ml-auto font-bold flex items-center gap-1">✅ Accepted</span>' 
+                        : (existing.status === 'declined' ? '<span class="text-red-500 text-xs ml-auto">Declined</span>' : '<span class="text-theme-muted text-xs ml-auto">⏳ Pending</span>');
+                    
+                    html += `
+                        <div class="flex items-center gap-2 p-2 rounded border border-transparent">
+                            <span class="text-sm font-medium text-theme-text opacity-50">${c.username}</span>
+                            ${statusHtml}
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <label class="flex items-center gap-2 p-2 rounded hover:bg-theme-bg cursor-pointer transition border border-transparent hover:border-theme-border">
+                            <input type="checkbox" class="invitee-checkbox" value="${c.friend_id}">
+                            <span class="text-sm font-medium text-theme-text">${c.username}</span>
+                        </label>
+                    `;
+                }
+            }
+        });
+        
+        listEl.innerHTML = html || '<div class="text-xs text-theme-muted italic">No accepted connections found.</div>';
+    } catch (e) {
+        listEl.innerHTML = '<div class="text-xs text-red-500">Failed to load connections</div>';
+    }
+}
+
+function closeInviteModal() {
+    document.getElementById('invite-event-modal').classList.add('hidden');
+    currentInviteMicroPlanId = null;
+}
+
+async function submitEventInvite() {
+    if (!currentInviteMicroPlanId) return;
+    
+    const time = document.getElementById('invite-time').value;
+    const location = document.getElementById('invite-location').value.trim();
+    
+    if (!time || !location) {
+        alert("Please enter a time and location.");
+        return;
+    }
+
+    const checkboxes = document.querySelectorAll('.invitee-checkbox:checked');
+    const inviteeIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+    if (inviteeIds.length === 0) {
+        alert("Please select at least one connection.");
+        return;
+    }
+
+    const btn = document.getElementById('btn-submit-invite');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Sending...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/social/invite', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                micro_plan_id: currentInviteMicroPlanId,
+                invitee_ids: inviteeIds,
+                time: time,
+                location: location
+            })
+        });
+
+        if (res.ok) {
+            closeInviteModal();
+            closeEditWorkoutModal();
+        } else {
+            alert("Failed to send invitations.");
+        }
+    } catch (e) {
+        alert("Error sending invitations.");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function acceptEvent(eventId) {
+    try {
+        const res = await fetch(`/api/social/invite/${eventId}/accept`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        if (res.ok) {
+            const btnDiv = document.getElementById(`invite-buttons-${eventId}`);
+            if (btnDiv) btnDiv.innerHTML = `<span class="bg-theme-bg border border-theme-border text-theme-muted px-3 py-1 rounded text-xs">Accepted</span>`;
+            loadMicroPlan(); // refresh if they are on dashboard
+        } else {
+            alert("Failed to accept invitation or it was already processed.");
+        }
+    } catch (e) {
+        alert("Error accepting invitation.");
+    }
+}
+
+async function declineEvent(eventId) {
+    try {
+        const res = await fetch(`/api/social/invite/${eventId}/decline`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        if (res.ok) {
+            const btnDiv = document.getElementById(`invite-buttons-${eventId}`);
+            if (btnDiv) btnDiv.innerHTML = `<span class="bg-theme-bg border border-theme-border text-theme-muted px-3 py-1 rounded text-xs">Declined</span>`;
+        } else {
+            alert("Failed to decline invitation or it was already processed.");
+        }
+    } catch (e) {
+        alert("Error declining invitation.");
+    }
 }
 
 function resetThemeColors() {

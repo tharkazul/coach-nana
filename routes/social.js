@@ -175,6 +175,129 @@ router.post("/api/social/accept", authenticateToken, (req, res) => {
     },
   );
 });
+router.post("/api/social/invite", authenticateToken, (req, res) => {
+  console.log("Received invite request:", req.body);
+  const { micro_plan_id, invitee_ids, location, time } = req.body;
+  if (!micro_plan_id || !invitee_ids || !invitee_ids.length) {
+    console.log("Missing fields in invite request");
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // Look up the micro_plan item
+  db.get(`SELECT * FROM micro_plan WHERE id = ? AND user_id = ?`, [micro_plan_id, req.user.id], (err, plan) => {
+    if (err || !plan) {
+      console.log("Workout not found in DB. ID:", micro_plan_id, "UserID:", req.user.id, "Err:", err);
+      return res.status(404).json({ error: "Workout not found" });
+    }
+
+    invitee_ids.forEach(inviteeId => {
+      // Create invitation
+      db.run(
+        `INSERT INTO event_invitations (inviter_id, invitee_id, micro_plan_id, location, time) VALUES (?, ?, ?, ?, ?)`,
+        [req.user.id, inviteeId, micro_plan_id, location, time],
+        function(err) {
+          if (err) {
+            console.error(err);
+            return;
+          }
+          const inviteId = this.lastID;
+          
+          // Send Coach Message to invitee
+          db.get(`SELECT username FROM users WHERE id = ?`, [req.user.id], (err, inviterUser) => {
+            const htmlButtons = `<br><div id="invite-buttons-${inviteId}" class="mt-2 flex gap-2"><button onclick="acceptEvent(${inviteId})" class="bg-theme-accent text-white px-3 py-1 rounded text-xs hover:opacity-90">Accept</button><button onclick="declineEvent(${inviteId})" class="border border-theme-border text-theme-text px-3 py-1 rounded text-xs hover:bg-theme-bg">Decline</button></div>`;
+            const inviteeMsg = `Hey! **${req.user.username}** has invited you to join their upcoming **${plan.sport}** workout: **${plan.description || 'Workout'}**.\n\n📅 Date: ${plan.date}\n📍 Location: ${location}\n🕒 Time: ${time}\n\nDo you want to accept this invitation and add it to your plan?${htmlButtons}`;
+
+            db.run(
+              `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`,
+              [inviteeId, inviteeMsg]
+            );
+            sendSSEEvent(inviteeId, "unread_message", { message: inviteeMsg, mood: "support" });
+          });
+        }
+      );
+    });
+    res.json({ success: true });
+  });
+});
+
+router.get("/api/social/invite/:plan_id", authenticateToken, (req, res) => {
+  db.all(`SELECT invitee_id, status FROM event_invitations WHERE micro_plan_id = ? AND inviter_id = ?`, [req.params.plan_id, req.user.id], (err, invites) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ invites: invites || [] });
+  });
+});
+
+router.post("/api/social/invite/:id/accept", authenticateToken, (req, res) => {
+  const inviteId = req.params.id;
+  db.get(`SELECT * FROM event_invitations WHERE id = ? AND invitee_id = ?`, [inviteId, req.user.id], (err, invite) => {
+    if (err || !invite) return res.status(404).json({ error: "Invite not found" });
+    if (invite.status !== 'pending') return res.status(400).json({ error: "Invite already processed" });
+
+    db.run(`UPDATE event_invitations SET status = 'accepted' WHERE id = ?`, [inviteId]);
+
+    db.get(`SELECT id, content FROM chat_history WHERE user_id = ? AND content LIKE ?`, [req.user.id, '%invite-buttons-' + inviteId + '%'], (err, chatRow) => {
+        if (chatRow) {
+            const newContent = chatRow.content.replace(/<div id="invite-buttons-\d+".*?<\/div>/, `<div id="invite-buttons-${inviteId}" class="mt-2"><span class="bg-theme-bg border border-theme-border text-theme-muted px-3 py-1 rounded text-xs">Accepted</span></div>`);
+            db.run(`UPDATE chat_history SET content = ? WHERE id = ?`, [newContent, chatRow.id]);
+        }
+    });
+
+    // Copy micro_plan
+    db.get(`SELECT * FROM micro_plan WHERE id = ?`, [invite.micro_plan_id], (err, plan) => {
+      if (plan) {
+        db.run(
+          `INSERT INTO micro_plan (user_id, date, sport, description, target_spark, details, steps_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [req.user.id, plan.date, plan.sport, plan.description, plan.target_spark, plan.details, plan.steps_json]
+        );
+
+        // Notify Inviter
+        db.get(`SELECT username FROM users WHERE id = ?`, [req.user.id], (err, acceptor) => {
+          const acceptorName = acceptor ? acceptor.username : 'Someone';
+          const inviterMsg = `${acceptorName} accepted your invitation for the ${plan.sport} on ${plan.date}!`;
+          db.run(
+            `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'default')`,
+            [invite.inviter_id, inviterMsg]
+          );
+          sendSSEEvent(invite.inviter_id, "unread_message", { message: inviterMsg, mood: "default" });
+        });
+
+        // Trigger background AI check for invitee
+        db.all(`SELECT * FROM micro_plan WHERE user_id = ? AND date >= date(?, '-2 days') AND date <= date(?, '+2 days')`, [req.user.id, plan.date, plan.date], async (err, contextPlans) => {
+          const sysPrompt = "You are an AI endurance coach. Review this athlete's schedule around an event they just accepted. Keep your response extremely brief (1-2 sentences). If there is a massive conflict (like two heavy workouts on the same day), warn them nicely. If it's fine, just encourage them.";
+          const userPrompt = `I just accepted an invite for a ${plan.sport} on ${plan.date}. My surrounding schedule is: ${JSON.stringify(contextPlans)}. Is this okay?`;
+          try {
+            const aiMsg = await generateWithFallback(userPrompt, sysPrompt);
+            db.run(`INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`, [req.user.id, aiMsg]);
+            sendSSEEvent(req.user.id, "unread_message", { message: aiMsg, mood: "support" });
+          } catch(e) {
+            console.error("AI Check Error:", e);
+          }
+        });
+      }
+    });
+
+    res.json({ success: true });
+  });
+});
+
+router.post("/api/social/invite/:id/decline", authenticateToken, (req, res) => {
+  const inviteId = req.params.id;
+  db.get(`SELECT * FROM event_invitations WHERE id = ? AND invitee_id = ?`, [inviteId, req.user.id], (err, invite) => {
+    if (err || !invite) return res.status(404).json({ error: "Invite not found" });
+    if (invite.status !== 'pending') return res.status(400).json({ error: "Invite already processed" });
+
+    db.run(`UPDATE event_invitations SET status = 'declined' WHERE id = ?`, [inviteId]);
+
+    db.get(`SELECT id, content FROM chat_history WHERE user_id = ? AND content LIKE ?`, [req.user.id, '%invite-buttons-' + inviteId + '%'], (err, chatRow) => {
+        if (chatRow) {
+            const newContent = chatRow.content.replace(/<div id="invite-buttons-\d+".*?<\/div>/, `<div id="invite-buttons-${inviteId}" class="mt-2"><span class="bg-theme-bg border border-theme-border text-theme-muted px-3 py-1 rounded text-xs">Declined</span></div>`);
+            db.run(`UPDATE chat_history SET content = ? WHERE id = ?`, [newContent, chatRow.id]);
+        }
+    });
+
+    res.json({ success: true });
+  });
+});
 
 router.get("/api/social/connections", authenticateToken, (req, res) => {
   db.all(
