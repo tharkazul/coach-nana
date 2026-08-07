@@ -400,7 +400,8 @@
                     </div>
 
                     <div class="mt-3 bg-theme-bg border border-theme-border rounded-lg p-3">
-                        <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Main Target Event</label>
+                        <label class="block text-[10px] font-bold text-theme-muted uppercase tracking-wider mb-2">Main
+                            Target Event</label>
                         <div class="flex flex-col md:flex-row gap-2">
                             <input type="text" id="onboard-race-name" oninput="handleOnboardRaceNameInput(this)"
                                 class="flex-1 p-2 border border-theme-border rounded text-xs bg-theme-card text-theme-text focus:border-theme-accent outline-none"
@@ -492,27 +493,27 @@
                         </div>
                     </div>
 
-                    </div>
                 </div>
-
-                <!-- Navigation Controls -->
-                <div class="flex justify-between items-center pt-4 border-t border-theme-border mt-4">
-                    <button onclick="prevOnboardingStep()" id="btn-onboard-back"
-                        class="text-theme-muted hover:text-theme-text font-bold text-xs px-4 py-2 hidden transition">Back</button>
-                    <div class="flex-1"></div>
-                    <button onclick="nextOnboardingStep()" id="btn-onboard-next"
-                        class="bg-theme-accent hover:bg-theme-accent-hover text-white font-bold px-6 py-2 rounded-lg transition shadow-sm">Next</button>
-                    <button onclick="completeOnboarding()" id="btn-complete-setup"
-                        class="bg-theme-accent hover:bg-theme-accent-hover text-white font-bold px-6 py-2 rounded-lg transition shadow-sm hidden">Complete
-                        Setup</button>
-                </div>
-
-                <button onclick="logout()"
-                    class="w-full text-red-500/70 hover:text-red-500 text-xs font-semibold p-2 mt-2 transition text-center">
-                    Log out
-                </button>
             </div>
+
+            <!-- Navigation Controls -->
+            <div class="flex justify-between items-center pt-4 border-t border-theme-border mt-4">
+                <button onclick="prevOnboardingStep()" id="btn-onboard-back"
+                    class="text-theme-muted hover:text-theme-text font-bold text-xs px-4 py-2 hidden transition">Back</button>
+                <div class="flex-1"></div>
+                <button onclick="nextOnboardingStep()" id="btn-onboard-next"
+                    class="bg-theme-accent hover:bg-theme-accent-hover text-white font-bold px-6 py-2 rounded-lg transition shadow-sm">Next</button>
+                <button onclick="completeOnboarding()" id="btn-complete-setup"
+                    class="bg-theme-accent hover:bg-theme-accent-hover text-white font-bold px-6 py-2 rounded-lg transition shadow-sm hidden">Complete
+                    Setup</button>
+            </div>
+
+            <button onclick="logout()"
+                class="w-full text-red-500/70 hover:text-red-500 text-xs font-semibold p-2 mt-2 transition text-center">
+                Log out
+            </button>
         </div>
+    </div>
     <!-- ACTIVITY MODAL (Maps & Telemetry) -->
     <div id="activity-modal"
         class="fixed inset-0 bg-black/60 z-[20000] hidden flex items-end p-0 md:items-center md:justify-center md:p-8 backdrop-blur-sm transition-opacity duration-300 opacity-0">
@@ -603,10 +604,13 @@
                         </div>
                     </div>
                     <!-- Comments Container -->
-                    <div id="modal-comments-container" class="flex flex-col shrink-0 mt-4 bg-theme-bg border border-theme-border rounded-lg p-4 space-y-4">
+                    <div id="modal-comments-container"
+                        class="flex flex-col shrink-0 mt-4 bg-theme-bg border border-theme-border rounded-lg p-4 space-y-4">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-xs md:text-sm font-bold text-theme-text uppercase tracking-wider flex items-center gap-2">
-                                <span>💬</span> Comments <span id="modal-comments-count" class="text-xs text-theme-muted font-normal">(0)</span>
+                            <h3
+                                class="text-xs md:text-sm font-bold text-theme-text uppercase tracking-wider flex items-center gap-2">
+                                <span>💬</span> Comments <span id="modal-comments-count"
+                                    class="text-xs text-theme-muted font-normal">(0)</span>
                             </h3>
                         </div>
 
@@ -617,10 +621,15 @@
 
                         <!-- Add Comment Input Form -->
                         <div class="flex gap-2 pt-2 border-t border-theme-border/50">
-                            <input type="text" id="modal-comment-input" placeholder="Add a comment..." 
-                                onkeypress="if(event.key === 'Enter') postModalComment()"
-                                class="flex-1 px-3 py-2 text-xs bg-theme-card border border-theme-border rounded-lg text-theme-text placeholder-theme-muted focus:outline-none focus:border-theme-accent">
-                            <button onclick="postModalComment()" id="modal-comment-submit-btn" 
+                            <div class="relative flex-1">
+                                <input type="text" id="modal-comment-input" placeholder="Add a comment..."
+                                    onkeypress="if(event.key === 'Enter') postModalComment()"
+                                    class="w-full px-3 py-2 text-xs bg-theme-card border border-theme-border rounded-lg text-theme-text placeholder-theme-muted focus:outline-none focus:border-theme-accent">
+                                <div id="mention-autocomplete"
+                                    class="hidden absolute bottom-full mb-1 left-0 w-64 bg-theme-card border border-theme-border rounded-md shadow-lg max-h-48 overflow-y-auto z-50">
+                                </div>
+                            </div>
+                            <button onclick="postModalComment()" id="modal-comment-submit-btn"
                                 class="bg-theme-accent text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 transition shrink-0">
                                 Post
                             </button>
@@ -766,7 +775,8 @@
                                     </h3>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="resetDailyDiet()" class="text-xs text-theme-muted hover:text-red-400 border border-theme-border/60 hover:border-red-400/50 bg-theme-bg/40 px-2.5 py-1 rounded-lg transition font-medium">
+                                    <button onclick="resetDailyDiet()"
+                                        class="text-xs text-theme-muted hover:text-red-400 border border-theme-border/60 hover:border-red-400/50 bg-theme-bg/40 px-2.5 py-1 rounded-lg transition font-medium">
                                         Reset Today's Diet
                                     </button>
                                     <span id="dash-nutrition-loading"
@@ -1278,7 +1288,8 @@
                                     </h3>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="resetDailyDiet()" class="text-xs text-theme-muted hover:text-red-400 border border-theme-border/60 hover:border-red-400/50 bg-theme-bg/40 px-2.5 py-1 rounded-lg transition font-medium">
+                                    <button onclick="resetDailyDiet()"
+                                        class="text-xs text-theme-muted hover:text-red-400 border border-theme-border/60 hover:border-red-400/50 bg-theme-bg/40 px-2.5 py-1 rounded-lg transition font-medium">
                                         Reset Today's Diet
                                     </button>
                                     <span id="nutrition-loading"
@@ -1729,11 +1740,13 @@
 
                         <!-- Title Cupboard Section -->
                         <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
-                            <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center flex-wrap gap-2">
+                            <div
+                                class="px-6 py-4 border-b border-theme-border bg-theme-bg/50 flex justify-between items-center flex-wrap gap-2">
                                 <h3 class="text-sm font-bold text-theme-text flex items-center gap-2">
                                     <span class="w-2 h-2 rounded-full bg-theme-accent"></span> Title Cupboard
                                 </h3>
-                                <button onclick="generateTitle()" id="generate-title-btn" class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition">
+                                <button onclick="generateTitle()" id="generate-title-btn"
+                                    class="text-xs font-bold text-theme-accent bg-theme-bg px-3 py-1 rounded border border-theme-accent hover:bg-theme-accent hover:text-white transition">
                                     + Generate Title
                                 </button>
                             </div>
@@ -1747,13 +1760,16 @@
                         <!-- Language Settings Section -->
                         <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden mb-6">
                             <div class="px-6 py-4 border-b border-theme-border bg-theme-bg/50">
-                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2" data-i18n="settings.language">
+                                <h3 class="text-sm font-bold text-theme-text flex items-center gap-2"
+                                    data-i18n="settings.language">
                                     <span class="w-2 h-2 rounded-full bg-theme-accent"></span> App Language
                                 </h3>
                             </div>
                             <div class="p-6 space-y-4">
                                 <div>
-                                    <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2" data-i18n="settings.language">Select Language</label>
+                                    <label
+                                        class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2"
+                                        data-i18n="settings.language">Select Language</label>
                                     <select id="app-language-select" onchange="changeAppLanguage(this.value)"
                                         class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text">
                                         <option value="en">English 🇬🇧</option>
@@ -1796,61 +1812,99 @@
                                         <option value="custom">Configure own coach</option>
                                     </select>
 
-                                    <div id="custom-coach-container" class="hidden space-y-4 pt-3 border-t border-theme-border/40 mt-3">
+                                    <div id="custom-coach-container"
+                                        class="hidden space-y-4 pt-3 border-t border-theme-border/40 mt-3">
                                         <div>
-                                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach Name</label>
+                                            <label
+                                                class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach
+                                                Name</label>
                                             <input type="text" id="set-coach-name"
                                                 class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text"
                                                 placeholder="Coach Name (e.g. Coach Alex)">
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach Context</label>
+                                            <label
+                                                class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach
+                                                Context</label>
                                             <textarea id="set-coach-context"
                                                 class="w-full p-3 border border-theme-border rounded-md text-sm focus:outline-none focus:border-theme-accent bg-theme-bg text-theme-text min-h-[80px]"
                                                 placeholder="Coach Context: e.g. Aggressive motivator, focuses on cycling power"></textarea>
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach Avatars (4 Moods)</label>
-                                            <p class="text-[10px] text-theme-muted mb-3">Upload custom images for your coach's expressions during chat:</p>
+                                            <label
+                                                class="block text-xs font-bold text-theme-muted uppercase tracking-wider mb-2">Coach
+                                                Avatars (4 Moods)</label>
+                                            <p class="text-[10px] text-theme-muted mb-3">Upload custom images for your
+                                                coach's expressions during chat:</p>
                                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                                 <!-- Neutral Image -->
-                                                <div class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
-                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">1. Neutral</span>
-                                                    <div id="preview-avatar-neutral" class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
+                                                <div
+                                                    class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
+                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">1.
+                                                        Neutral</span>
+                                                    <div id="preview-avatar-neutral"
+                                                        class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
                                                         <span>Neutral</span>
                                                     </div>
-                                                    <input type="file" id="upload-coach-neutral" accept="image/*" class="hidden" onchange="uploadCoachAvatar('neutral')">
-                                                    <button type="button" onclick="document.getElementById('upload-coach-neutral').click()" class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload Neutral</button>
+                                                    <input type="file" id="upload-coach-neutral" accept="image/*"
+                                                        class="hidden" onchange="uploadCoachAvatar('neutral')">
+                                                    <button type="button"
+                                                        onclick="document.getElementById('upload-coach-neutral').click()"
+                                                        class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload
+                                                        Neutral</button>
                                                 </div>
                                                 <!-- Hype Image -->
-                                                <div class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
-                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">2. Hype</span>
-                                                    <div id="preview-avatar-hype" class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
+                                                <div
+                                                    class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
+                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">2.
+                                                        Hype</span>
+                                                    <div id="preview-avatar-hype"
+                                                        class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
                                                         <span>Hype</span>
                                                     </div>
-                                                    <input type="file" id="upload-coach-hype" accept="image/*" class="hidden" onchange="uploadCoachAvatar('hype')">
-                                                    <button type="button" onclick="document.getElementById('upload-coach-hype').click()" class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload Hype</button>
+                                                    <input type="file" id="upload-coach-hype" accept="image/*"
+                                                        class="hidden" onchange="uploadCoachAvatar('hype')">
+                                                    <button type="button"
+                                                        onclick="document.getElementById('upload-coach-hype').click()"
+                                                        class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload
+                                                        Hype</button>
                                                 </div>
                                                 <!-- Disappointed Image -->
-                                                <div class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
-                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">3. Disappointed</span>
-                                                    <div id="preview-avatar-disappointed" class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
+                                                <div
+                                                    class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
+                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">3.
+                                                        Disappointed</span>
+                                                    <div id="preview-avatar-disappointed"
+                                                        class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
                                                         <span>Disappointed</span>
                                                     </div>
-                                                    <input type="file" id="upload-coach-disappointed" accept="image/*" class="hidden" onchange="uploadCoachAvatar('disappointed')">
-                                                    <button type="button" onclick="document.getElementById('upload-coach-disappointed').click()" class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload Disappointed</button>
+                                                    <input type="file" id="upload-coach-disappointed" accept="image/*"
+                                                        class="hidden" onchange="uploadCoachAvatar('disappointed')">
+                                                    <button type="button"
+                                                        onclick="document.getElementById('upload-coach-disappointed').click()"
+                                                        class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload
+                                                        Disappointed</button>
                                                 </div>
                                                 <!-- Horny Image -->
-                                                <div class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
-                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">4. Horny</span>
-                                                    <div id="preview-avatar-horny" class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
+                                                <div
+                                                    class="border border-theme-border rounded-lg p-3 text-center bg-theme-bg/50">
+                                                    <span class="block text-[11px] font-bold text-theme-text mb-2">4.
+                                                        Horny</span>
+                                                    <div id="preview-avatar-horny"
+                                                        class="w-16 h-16 rounded-full mx-auto mb-2 overflow-hidden bg-theme-card border border-theme-border flex items-center justify-center text-xs font-bold text-theme-muted">
                                                         <span>Horny</span>
                                                     </div>
-                                                    <input type="file" id="upload-coach-horny" accept="image/*" class="hidden" onchange="uploadCoachAvatar('horny')">
-                                                    <button type="button" onclick="document.getElementById('upload-coach-horny').click()" class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload Horny</button>
+                                                    <input type="file" id="upload-coach-horny" accept="image/*"
+                                                        class="hidden" onchange="uploadCoachAvatar('horny')">
+                                                    <button type="button"
+                                                        onclick="document.getElementById('upload-coach-horny').click()"
+                                                        class="text-[11px] bg-theme-accent-soft text-theme-accent border border-theme-accent-border font-bold px-3 py-1 rounded hover:opacity-80 transition w-full">Upload
+                                                        Horny</button>
                                                 </div>
                                             </div>
-                                            <div id="avatar-upload-status" class="hidden text-center text-xs font-bold text-theme-accent mt-2"></div>
+                                            <div id="avatar-upload-status"
+                                                class="hidden text-center text-xs font-bold text-theme-accent mt-2">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2118,8 +2172,7 @@
                                             class="bg-theme-bg border border-theme-border text-theme-text text-xs font-bold px-4 py-2 rounded shadow-sm hover:bg-theme-border transition">Pull
                                             Latest Activities</button>
                                     </div>
-                                    <p id="strava-sync-message"
-                                        class="text-xs font-bold mt-3 text-theme-accent hidden">
+                                    <p id="strava-sync-message" class="text-xs font-bold mt-3 text-theme-accent hidden">
                                     </p>
                                 </div>
                             </div>
@@ -2173,7 +2226,8 @@
                         </div>
 
                         <!-- SPARK+ UPGRADE PLACEHOLDER -->
-                        <div id="spark-plus-upgrade-card" class="bg-gradient-to-r from-theme-accent to-purple-600 rounded-xl shadow-md overflow-hidden mb-6 text-white p-6 flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+                        <div id="spark-plus-upgrade-card"
+                            class="bg-gradient-to-r from-theme-accent to-purple-600 rounded-xl shadow-md overflow-hidden mb-6 text-white p-6 flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
                             <h3 id="spark-plus-card-title" class="text-xl font-bold mb-2 flex items-center gap-2">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2181,7 +2235,8 @@
                                 </svg>
                                 Upgrade to Spark+
                             </h3>
-                            <p id="spark-plus-card-desc" class="text-sm opacity-90 mb-4">Unlock 50,000 daily coach tokens, priority analysis, and
+                            <p id="spark-plus-card-desc" class="text-sm opacity-90 mb-4">Unlock 50,000 daily coach
+                                tokens, priority analysis, and
                                 deeper athletic insights.</p>
                             <button id="spark-plus-card-btn" onclick="trackSparkPlusClick()"
                                 class="bg-white text-theme-accent font-bold py-2 px-6 rounded-full text-sm shadow-sm">
@@ -2198,31 +2253,43 @@
                             </div>
                             <div class="p-6 space-y-6">
                                 <!-- Data Request -->
-                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-theme-border">
+                                <div
+                                    class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-theme-border">
                                     <div>
-                                        <h4 class="text-xs font-bold text-theme-text uppercase tracking-wider">Request Account Data</h4>
-                                        <p class="text-xs text-theme-muted mt-1">Request a full export of your personal workout data, metrics, and chat history.</p>
+                                        <h4 class="text-xs font-bold text-theme-text uppercase tracking-wider">Request
+                                            Account Data</h4>
+                                        <p class="text-xs text-theme-muted mt-1">Request a full export of your personal
+                                            workout data, metrics, and chat history.</p>
                                     </div>
                                     <button onclick="requestAccountData()" id="request-data-btn"
                                         class="shrink-0 bg-theme-bg hover:bg-theme-border border border-theme-border text-theme-text text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
-                                        <svg class="w-4 h-4 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        <svg class="w-4 h-4 text-theme-accent" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4">
+                                            </path>
                                         </svg>
                                         Request Account Data
                                     </button>
                                 </div>
-                                <div id="request-data-status" class="hidden text-xs font-bold text-theme-accent bg-theme-accent-soft p-3 rounded-lg border border-theme-accent-border text-center"></div>
+                                <div id="request-data-status"
+                                    class="hidden text-xs font-bold text-theme-accent bg-theme-accent-soft p-3 rounded-lg border border-theme-accent-border text-center">
+                                </div>
 
                                 <!-- Delete Account -->
                                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
-                                        <h4 class="text-xs font-bold text-red-500 uppercase tracking-wider">Delete Account</h4>
-                                        <p class="text-xs text-theme-muted mt-1">Permanently remove your account and erase all associated workouts, metrics, and history.</p>
+                                        <h4 class="text-xs font-bold text-red-500 uppercase tracking-wider">Delete
+                                            Account</h4>
+                                        <p class="text-xs text-theme-muted mt-1">Permanently remove your account and
+                                            erase all associated workouts, metrics, and history.</p>
                                     </div>
                                     <button onclick="confirmDeleteAccount()" id="delete-account-btn"
                                         class="shrink-0 bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/30 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                            </path>
                                         </svg>
                                         Delete Account
                                     </button>
@@ -2507,9 +2574,14 @@
                         </svg>
                         Garmin
                     </button>
-                    <button id="btn-edit-workout-invite" onclick="if(typeof wbCurrentWorkoutId !== 'undefined' && wbCurrentWorkoutId) openInviteModal(wbCurrentWorkoutId);"
+                    <button id="btn-edit-workout-invite"
+                        onclick="if(typeof wbCurrentWorkoutId !== 'undefined' && wbCurrentWorkoutId) openInviteModal(wbCurrentWorkoutId);"
                         class="flex-1 px-4 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white rounded text-sm transition flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                            </path>
+                        </svg>
                         Invite
                     </button>
                 </div>
@@ -2518,7 +2590,8 @@
                     <button id="btn-edit-workout-delete"
                         class="flex-1 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded text-sm transition">Delete</button>
                     <button id="btn-edit-workout-save"
-                        class="flex-1 px-6 py-2 bg-theme-accent hover:bg-theme-accent-hover text-white rounded text-sm font-medium transition shadow-sm">Save Changes</button>
+                        class="flex-1 px-6 py-2 bg-theme-accent hover:bg-theme-accent-hover text-white rounded text-sm font-medium transition shadow-sm">Save
+                        Changes</button>
                 </div>
             </div>
         </div>
@@ -2686,7 +2759,7 @@
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- App Logic -->
-    <script src="/script.js?v=85"></script>
+    <script src="/script.js?v=86"></script>
     <script>
         // TEMPORARY — force any existing service worker + caches to clear out
         if ('serviceWorker' in navigator) {
@@ -2710,115 +2783,154 @@
         </button>
 
         <!-- Color Studio Card Panel -->
-        <div id="theme-picker-panel" class="hidden mt-2 w-80 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-4 text-white space-y-3">
+        <div id="theme-picker-panel"
+            class="hidden mt-2 w-80 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-4 text-white space-y-3">
             <div class="flex justify-between items-center pb-2 border-b border-slate-800">
                 <div class="flex items-center gap-2">
                     <span class="text-base">🎨</span>
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">Live Color Studio</h3>
                 </div>
-                <button onclick="toggleThemePicker()" class="text-slate-400 hover:text-white text-base px-1">&times;</button>
+                <button onclick="toggleThemePicker()"
+                    class="text-slate-400 hover:text-white text-base px-1">&times;</button>
             </div>
 
             <!-- Presets Row -->
             <div>
-                <label class="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">Presets</label>
+                <label
+                    class="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">Presets</label>
                 <div class="grid grid-cols-2 gap-1.5">
-                    <button onclick="applyThemePreset('solar')" class="text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/40 px-2 py-1 rounded hover:bg-orange-500/30 transition">Solar Velocity</button>
-                    <button onclick="applyThemePreset('brick')" class="text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-1 rounded hover:bg-red-500/30 transition">Brick Ember</button>
-                    <button onclick="applyThemePreset('volt')" class="text-[10px] font-bold bg-lime-500/20 text-lime-400 border border-lime-500/40 px-2 py-1 rounded hover:bg-lime-500/30 transition">Electric Volt</button>
-                    <button onclick="applyThemePreset('mint')" class="text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 px-2 py-1 rounded hover:bg-cyan-500/30 transition">Nordic Mint</button>
+                    <button onclick="applyThemePreset('solar')"
+                        class="text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/40 px-2 py-1 rounded hover:bg-orange-500/30 transition">Solar
+                        Velocity</button>
+                    <button onclick="applyThemePreset('brick')"
+                        class="text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-1 rounded hover:bg-red-500/30 transition">Brick
+                        Ember</button>
+                    <button onclick="applyThemePreset('volt')"
+                        class="text-[10px] font-bold bg-lime-500/20 text-lime-400 border border-lime-500/40 px-2 py-1 rounded hover:bg-lime-500/30 transition">Electric
+                        Volt</button>
+                    <button onclick="applyThemePreset('mint')"
+                        class="text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 px-2 py-1 rounded hover:bg-cyan-500/30 transition">Nordic
+                        Mint</button>
                 </div>
             </div>
 
             <!-- Color Pickers Grid -->
             <div class="space-y-2 text-xs">
                 <!-- Page Background -->
-                <div class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
+                <div
+                    class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
                     <span class="text-[11px] font-semibold text-slate-300">Page Canvas</span>
                     <div class="flex items-center gap-2">
                         <span id="hex-bg-main" class="font-mono text-[10px] text-slate-400">#F4F6F9</span>
-                        <input type="color" id="picker-bg-main" value="#F4F6F9" oninput="updateLiveColor('--bg-main', this.value, 'hex-bg-main')" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
+                        <input type="color" id="picker-bg-main" value="#F4F6F9"
+                            oninput="updateLiveColor('--bg-main', this.value, 'hex-bg-main')"
+                            class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
                     </div>
                 </div>
 
                 <!-- Card Background -->
-                <div class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
+                <div
+                    class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
                     <span class="text-[11px] font-semibold text-slate-300">Card Surface</span>
                     <div class="flex items-center gap-2">
                         <span id="hex-bg-card" class="font-mono text-[10px] text-slate-400">#FFFFFF</span>
-                        <input type="color" id="picker-bg-card" value="#FFFFFF" oninput="updateLiveColor('--bg-card', this.value, 'hex-bg-card')" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
+                        <input type="color" id="picker-bg-card" value="#FFFFFF"
+                            oninput="updateLiveColor('--bg-card', this.value, 'hex-bg-card')"
+                            class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
                     </div>
                 </div>
 
                 <!-- Primary Text -->
-                <div class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
+                <div
+                    class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
                     <span class="text-[11px] font-semibold text-slate-300">Text Main</span>
                     <div class="flex items-center gap-2">
                         <span id="hex-text-main" class="font-mono text-[10px] text-slate-400">#0F172A</span>
-                        <input type="color" id="picker-text-main" value="#0F172A" oninput="updateLiveColor('--text-main', this.value, 'hex-text-main')" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
+                        <input type="color" id="picker-text-main" value="#0F172A"
+                            oninput="updateLiveColor('--text-main', this.value, 'hex-text-main')"
+                            class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
                     </div>
                 </div>
 
                 <!-- Muted Text -->
-                <div class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
+                <div
+                    class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
                     <span class="text-[11px] font-semibold text-slate-300">Text Muted</span>
                     <div class="flex items-center gap-2">
                         <span id="hex-text-muted" class="font-mono text-[10px] text-slate-400">#64748B</span>
-                        <input type="color" id="picker-text-muted" value="#64748B" oninput="updateLiveColor('--text-muted', this.value, 'hex-text-muted')" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
+                        <input type="color" id="picker-text-muted" value="#64748B"
+                            oninput="updateLiveColor('--text-muted', this.value, 'hex-text-muted')"
+                            class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
                     </div>
                 </div>
 
                 <!-- Accent Pop -->
-                <div class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
+                <div
+                    class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
                     <span class="text-[11px] font-bold text-orange-400">Accent POP 🔥</span>
                     <div class="flex items-center gap-2">
                         <span id="hex-accent" class="font-mono text-[10px] text-orange-400 font-bold">#FF5A1F</span>
-                        <input type="color" id="picker-accent" value="#FF5A1F" oninput="updateLiveColor('--accent', this.value, 'hex-accent')" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
+                        <input type="color" id="picker-accent" value="#FF5A1F"
+                            oninput="updateLiveColor('--accent', this.value, 'hex-accent')"
+                            class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
                     </div>
                 </div>
 
                 <!-- Border Color -->
-                <div class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
+                <div
+                    class="flex justify-between items-center bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50">
                     <span class="text-[11px] font-semibold text-slate-300">Border Lines</span>
                     <div class="flex items-center gap-2">
                         <span id="hex-border-color" class="font-mono text-[10px] text-slate-400">#E2E8F0</span>
-                        <input type="color" id="picker-border-color" value="#E2E8F0" oninput="updateLiveColor('--border-color', this.value, 'hex-border-color')" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
+                        <input type="color" id="picker-border-color" value="#E2E8F0"
+                            oninput="updateLiveColor('--border-color', this.value, 'hex-border-color')"
+                            class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
                     </div>
                 </div>
             </div>
 
             <!-- Actions Footer -->
             <div class="pt-2 border-t border-slate-800 flex gap-2">
-                <button onclick="copyCurrentColors()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-1.5 rounded-lg text-xs transition shadow">Copy Palette</button>
-                <button onclick="resetThemeColors()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3 py-1.5 rounded-lg text-xs transition">Reset</button>
+                <button onclick="copyCurrentColors()"
+                    class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-1.5 rounded-lg text-xs transition shadow">Copy
+                    Palette</button>
+                <button onclick="resetThemeColors()"
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3 py-1.5 rounded-lg text-xs transition">Reset</button>
             </div>
         </div>
     </div>
     <!-- Invite Friends Modal -->
-    <div id="invite-event-modal" class="fixed inset-0 z-[10000] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-theme-card rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-theme-border flex flex-col max-h-[90vh]">
+    <div id="invite-event-modal"
+        class="fixed inset-0 z-[10000] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300">
+        <div
+            class="bg-theme-card rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-theme-border flex flex-col max-h-[90vh]">
             <div class="px-5 py-4 border-b border-theme-border flex justify-between items-center bg-theme-bg/50">
                 <h3 class="font-bold text-lg text-theme-text flex items-center gap-2">
                     <span>✉️</span> Invite Friends
                 </h3>
                 <button onclick="closeInviteModal()" class="text-theme-muted hover:text-theme-text transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
                 </button>
             </div>
-            
+
             <div class="p-5 flex-1 overflow-y-auto space-y-4">
                 <div class="text-sm text-theme-muted mb-2">Open up this workout to your connections!</div>
-                
+
                 <div>
                     <label class="block text-xs font-bold uppercase text-theme-muted mb-1">Time</label>
-                    <input type="time" id="invite-time" class="w-full bg-theme-bg border border-theme-border rounded px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent">
+                    <input type="time" id="invite-time"
+                        class="w-full bg-theme-bg border border-theme-border rounded px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent">
                 </div>
-                
+
                 <div>
                     <label class="block text-xs font-bold uppercase text-theme-muted mb-1">Location</label>
-                    <input type="text" id="invite-location" placeholder="e.g. Vondelpark, Amsterdam" class="w-full bg-theme-bg border border-theme-border rounded px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent">
+                    <input type="text" id="invite-location" placeholder="e.g. Vondelpark, Amsterdam"
+                        class="w-full bg-theme-bg border border-theme-border rounded px-3 py-2 text-theme-text focus:outline-none focus:border-theme-accent">
                 </div>
-                
+
                 <div>
                     <label class="block text-xs font-bold uppercase text-theme-muted mb-2">Select Connections</label>
                     <div id="invite-connections-list" class="space-y-2 max-h-40 overflow-y-auto pr-1">
@@ -2826,10 +2938,12 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="p-4 border-t border-theme-border bg-theme-bg/30 flex justify-end gap-2 shrink-0">
-                <button onclick="closeInviteModal()" class="px-4 py-2 rounded text-sm text-theme-muted hover:text-theme-text font-medium transition">Cancel</button>
-                <button onclick="submitEventInvite()" id="btn-submit-invite" class="px-4 py-2 bg-theme-accent text-white rounded text-sm font-bold shadow-md hover:bg-theme-accent-hover transition flex items-center gap-2">
+                <button onclick="closeInviteModal()"
+                    class="px-4 py-2 rounded text-sm text-theme-muted hover:text-theme-text font-medium transition">Cancel</button>
+                <button onclick="submitEventInvite()" id="btn-submit-invite"
+                    class="px-4 py-2 bg-theme-accent text-white rounded text-sm font-bold shadow-md hover:bg-theme-accent-hover transition flex items-center gap-2">
                     Send Invites
                 </button>
             </div>

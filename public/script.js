@@ -2765,6 +2765,7 @@ async function openActivityModal(id) {
 
     document.getElementById('modal-loader').classList.remove('hidden');
     document.getElementById('modal-content').classList.add('hidden');
+    initMentionAutocomplete();
     document.getElementById('modal-title').innerText = "Connecting to Strava...";
     try {
         const res = await fetch(`/api/activity/${id}`, { headers: getAuthHeaders() });
@@ -3129,6 +3130,148 @@ async function postModalComment() {
             submitBtn.innerText = 'Post';
         }
     }
+}
+
+// --- MENTIONS AUTOCOMPLETE ---
+let cachedConnections = null;
+let autocompleteSelectedIndex = -1;
+let currentMentionSearch = null;
+
+async function initMentionAutocomplete() {
+    const inputEl = document.getElementById('modal-comment-input');
+    const autocompleteContainer = document.getElementById('mention-autocomplete');
+    
+    if (!inputEl || !autocompleteContainer) return;
+    
+    // Only add listeners once
+    if (inputEl.dataset.autocompleteInitialized) return;
+    inputEl.dataset.autocompleteInitialized = 'true';
+
+    inputEl.addEventListener('input', async (e) => {
+        const text = inputEl.value;
+        const cursorPos = inputEl.selectionStart;
+        
+        // Find the word before cursor
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const match = textBeforeCursor.match(/(?:^|\\s)@([a-zA-Z0-9_.-]*)$/);
+        
+        if (match) {
+            const searchTerm = match[1].toLowerCase();
+            currentMentionSearch = {
+                term: searchTerm,
+                start: match.index + (textBeforeCursor.charAt(match.index) === '@' ? 0 : 1), // start of @
+                end: cursorPos
+            };
+            
+            if (!cachedConnections) {
+                try {
+                    const res = await fetch('/api/social/connections', { headers: getAuthHeaders() });
+                    if (res.ok) {
+                        const data = await res.json();
+                        cachedConnections = data.connections.map(c => ({
+                            id: c.friend_id,
+                            username: c.username,
+                            profile_picture: c.profile_picture_url || `https://ui-avatars.com/api/?name=${c.username}&background=random`
+                        }));
+                    }
+                } catch(e) {}
+            }
+            
+            if (cachedConnections) {
+                const filtered = cachedConnections.filter(c => c.username && c.username.toLowerCase().includes(searchTerm));
+                renderAutocomplete(filtered);
+            }
+        } else {
+            hideAutocomplete();
+        }
+    });
+    
+    inputEl.addEventListener('keydown', (e) => {
+        if (autocompleteContainer.classList.contains('hidden')) return;
+        
+        const items = autocompleteContainer.querySelectorAll('.mention-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            autocompleteSelectedIndex = (autocompleteSelectedIndex + 1) % items.length;
+            updateAutocompleteSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            autocompleteSelectedIndex = (autocompleteSelectedIndex - 1 + items.length) % items.length;
+            updateAutocompleteSelection(items);
+        } else if (e.key === 'Enter') {
+            if (autocompleteSelectedIndex >= 0) {
+                e.preventDefault();
+                items[autocompleteSelectedIndex].click();
+            }
+        } else if (e.key === 'Escape') {
+            hideAutocomplete();
+        }
+    });
+    
+    // Hide when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!inputEl.contains(e.target) && !autocompleteContainer.contains(e.target)) {
+            hideAutocomplete();
+        }
+    });
+}
+
+function renderAutocomplete(users) {
+    const container = document.getElementById('mention-autocomplete');
+    if (!users || users.length === 0) {
+        hideAutocomplete();
+        return;
+    }
+    
+    autocompleteSelectedIndex = -1;
+    container.innerHTML = users.map((u, i) => `
+        <div class="mention-item flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-theme-bg/50 transition border-b border-theme-border/50 last:border-0"
+             onclick="selectMention('${u.username}')" data-index="${i}">
+            <img src="${u.profile_picture}" class="w-6 h-6 rounded-full object-cover">
+            <span class="text-xs font-bold text-theme-text">${u.username}</span>
+        </div>
+    `).join('');
+    container.classList.remove('hidden');
+}
+
+function updateAutocompleteSelection(items) {
+    items.forEach((item, idx) => {
+        if (idx === autocompleteSelectedIndex) {
+            item.classList.add('bg-theme-bg/50', 'border-l-2', 'border-theme-accent');
+        } else {
+            item.classList.remove('bg-theme-bg/50', 'border-l-2', 'border-theme-accent');
+        }
+    });
+}
+
+function selectMention(username) {
+    const inputEl = document.getElementById('modal-comment-input');
+    if (!inputEl || !currentMentionSearch) return;
+    
+    const text = inputEl.value;
+    const before = text.substring(0, currentMentionSearch.start);
+    const after = text.substring(currentMentionSearch.end);
+    
+    const newText = before + '@' + username + ' ' + after;
+    inputEl.value = newText;
+    inputEl.focus();
+    
+    // Set cursor position after the inserted username and space
+    const newCursorPos = currentMentionSearch.start + username.length + 2; 
+    setTimeout(() => {
+        inputEl.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+    
+    hideAutocomplete();
+}
+
+function hideAutocomplete() {
+    const container = document.getElementById('mention-autocomplete');
+    if (container) container.classList.add('hidden');
+    currentMentionSearch = null;
+    autocompleteSelectedIndex = -1;
 }
 
 async function loadHistory() {

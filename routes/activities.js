@@ -696,10 +696,12 @@ router.post("/api/activities/:id/comments", authenticateToken, (req, res) => {
             `SELECT user_id, name FROM activities WHERE id = ?`,
             [activityId],
             (errAct, act) => {
+              const commenterName = req.user.username || "Someone";
+              const activityName = act ? (act.name || "activity") : "activity";
+              const htmlButton = `<br><div class="mt-2"><button onclick="openActivityModal(${activityId})" class="bg-theme-accent text-white px-3 py-1 rounded text-xs hover:opacity-90">View Comment</button></div>`;
+
               if (act && act.user_id !== req.user.id) {
-                const commenterName = req.user.username || "Someone";
-                const activityName = act.name || "activity";
-                const coachMsg = `${commenterName} left a comment on your "${activityName}": "${comment.trim()}"`;
+                const coachMsg = `${commenterName} left a comment on your "${activityName}": "${comment.trim()}"${htmlButton}`;
 
                 db.run(
                   `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`,
@@ -719,6 +721,43 @@ router.post("/api/activities/:id/comments", authenticateToken, (req, res) => {
                   fromUsername: commenterName,
                   comment: comment.trim(),
                 });
+              }
+
+              // Process @mentions
+              const mentionRegex = /@([a-zA-Z0-9_.-]+)/g;
+              let match;
+              const mentionedUsernames = [];
+              while ((match = mentionRegex.exec(comment.trim())) !== null) {
+                  mentionedUsernames.push(match[1]);
+              }
+              
+              if (mentionedUsernames.length > 0) {
+                  const placeholders = mentionedUsernames.map(() => '?').join(',');
+                  db.all(`SELECT id, username FROM users WHERE username IN (${placeholders})`, mentionedUsernames, (errUsers, users) => {
+                      if (!errUsers && users) {
+                          users.forEach(u => {
+                              // Skip if the user tagged themselves
+                              if (u.id === req.user.id) return;
+                              // Skip if the tagged user is the activity owner (already notified above)
+                              if (act && u.id === act.user_id) return;
+
+                              const mentionMsg = `${commenterName} mentioned you in a comment on an activity: "${comment.trim()}"${htmlButton}`;
+
+                              db.run(
+                                `INSERT INTO chat_history (user_id, role, content, mood) VALUES (?, 'coach', ?, 'support')`,
+                                [u.id, mentionMsg],
+                                (errChat) => {
+                                  if (!errChat) {
+                                    sendSSEEvent(u.id, "unread_message", {
+                                      message: mentionMsg,
+                                      mood: "support",
+                                    });
+                                  }
+                                }
+                              );
+                          });
+                      }
+                  });
               }
             }
           );
