@@ -6208,9 +6208,9 @@ function renderQuestCard(q) {
     const cardOpacity = isActive ? 'opacity-100 shadow-sm' : 'opacity-80';
 
     return `
-        <div class="p-4 bg-slate-50 dark:bg-theme-bg/40 rounded-xl border border-slate-200/90 dark:border-theme-border flex flex-col justify-between ${cardOpacity} transition-all duration-200">
+        <div class="p-4 bg-slate-50 dark:bg-theme-bg rounded-xl border border-slate-200/90 dark:border-theme-border flex flex-col justify-between ${cardOpacity} transition-all duration-200">
             <!-- Top Metadata Row -->
-            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/80 dark:border-theme-border/40 flex-wrap sm:flex-nowrap">
+            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/80 dark:border-theme-border flex-wrap sm:flex-nowrap">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full ${statusBg} whitespace-nowrap shrink-0">
                         <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
