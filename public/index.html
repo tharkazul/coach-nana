@@ -1026,6 +1026,10 @@
                                     class="w-2 h-2 rounded-full bg-theme-accent animate-pulse"></span> Spark
                                 Online</span>
                             <div class="flex items-center gap-2">
+                                <button id="workout-toggle-btn" onclick="toggleCoachWorkoutBar()"
+                                    class="hover:text-theme-accent-hover transition flex items-center gap-1 text-[10px] font-medium px-2.5 py-1 rounded-full border bg-theme-bg border-theme-border text-theme-muted">
+                                    <span>🏃</span> <span id="workout-toggle-text">Today's Plan</span>
+                                </button>
                                 <button id="macro-toggle-btn" onclick="toggleCoachMacroBar()"
                                     class="hover:text-theme-accent-hover transition flex items-center gap-1 text-[10px] font-medium px-2.5 py-1 rounded-full border bg-theme-bg border-theme-border text-theme-muted">
                                     <span>🥗</span> <span id="macro-toggle-text">Diet Rings</span>
@@ -1044,6 +1048,19 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        <!-- Daily Workout Bar in Coach View (Hidden by default, toggleable via Today's Plan button) -->
+                        <div id="coach-workout-bar"
+                            class="hidden px-4 py-3 bg-theme-bg/60 border-b border-theme-border flex flex-col gap-2 transition-all">
+                            <div class="flex items-center justify-between">
+                                <span
+                                    class="text-[11px] font-bold uppercase tracking-wider text-theme-muted flex items-center gap-1.5">
+                                    🏃 Today's Workout
+                                </span>
+                            </div>
+                            <div id="coach-workout-container" class="mt-2 text-sm text-theme-text empty:hidden"></div>
+                        </div>
+
                         <!-- Daily Macro Rings Header Bar in Coach View (Hidden by default, toggleable via Diet Rings button) -->
                         <div id="coach-macro-bar"
                             class="hidden px-4 py-3 bg-theme-bg/60 border-b border-theme-border flex flex-col gap-2 transition-all">

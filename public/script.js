@@ -2295,6 +2295,15 @@ async function loadMicroPlan() {
                 dashTodayWrapper.classList.remove('flex');
             }
         }
+        
+        const coachWorkoutContainer = document.getElementById('coach-workout-container');
+        if (coachWorkoutContainer) {
+            if (todayHtml) {
+                coachWorkoutContainer.innerHTML = todayHtml;
+            } else {
+                coachWorkoutContainer.innerHTML = "<p class='text-xs text-theme-muted'>No workout planned for today.</p>";
+            }
+        }
     } catch (e) { console.error("Micro Plan Load Error:", e); }
 }
 
@@ -4938,13 +4947,24 @@ async function resetDailyDiet() {
     }
 }
 
+function toggleCoachWorkoutBar() {
+    const bar = document.getElementById('coach-workout-bar');
+    const txt = document.getElementById('workout-toggle-text');
+    if (bar) {
+        bar.classList.toggle('hidden');
+        if (txt) {
+            txt.innerText = bar.classList.contains('hidden') ? "Today's Plan" : 'Hide Plan';
+        }
+    }
+}
+
 function toggleCoachMacroBar() {
     const bar = document.getElementById('coach-macro-bar');
     const txt = document.getElementById('macro-toggle-text');
     if (bar) {
         bar.classList.toggle('hidden');
         if (txt) {
-            txt.innerText = bar.classList.contains('hidden') ? 'Show Rings' : 'Hide Rings';
+            txt.innerText = bar.classList.contains('hidden') ? 'Diet Rings' : 'Hide Rings';
         }
     }
 }
