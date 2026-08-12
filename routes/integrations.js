@@ -290,6 +290,37 @@ router.post("/api/sync-strava", authenticateToken, async (req, res) => {
   );
 });
 
+router.get("/oauthredirect", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Strava Connected - Spark</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d1117; color: #f0f6fc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+          .card { background: #161b22; border: 1px solid #30363d; border-radius: 16px; padding: 32px; max-width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+          h2 { color: #FC4C02; margin-top: 0; }
+          p { color: #8b949e; font-size: 14px; }
+        </style>
+        <script>
+          const search = window.location.search;
+          window.location.href = "sparknative://oauthredirect" + search;
+          setTimeout(function() {
+            window.location.href = "spark://oauthredirect" + search;
+          }, 300);
+        </script>
+      </head>
+      <body>
+        <div class="card">
+          <h2>⚡️ Strava Authorization</h2>
+          <p>Redirecting back to Spark...</p>
+        </div>
+      </body>
+    </html>
+  `);
+});
+
 router.post(
   "/api/user/settings/strava-exchange",
   authenticateToken,

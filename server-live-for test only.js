@@ -605,6 +605,38 @@ app.get('/api/events', authenticateToken, (req, res) => {
     });
 });
 
+// --- STRAVA OAUTH REDIRECT BOUNCE ---
+app.get('/oauthredirect', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Strava Connected - Spark</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d1117; color: #f0f6fc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+              .card { background: #161b22; border: 1px solid #30363d; border-radius: 16px; padding: 32px; max-width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+              h2 { color: #FC4C02; margin-top: 0; }
+              p { color: #8b949e; font-size: 14px; }
+            </style>
+            <script>
+              const search = window.location.search;
+              window.location.href = "sparknative://oauthredirect" + search;
+              setTimeout(function() {
+                window.location.href = "spark://oauthredirect" + search;
+              }, 300);
+            </script>
+          </head>
+          <body>
+            <div class="card">
+              <h2>⚡️ Strava Authorization</h2>
+              <p>Redirecting back to Spark...</p>
+            </div>
+          </body>
+        </html>
+    `);
+});
+
 // --- STRAVA WEBHOOK VERIFICATION (HANDSHAKE) ---
 app.get('/webhook/strava', (req, res) => {
     const VERIFY_TOKEN = process.env.STRAVA_VERIFY_TOKEN || "STRAVA";
@@ -790,7 +822,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                         }).join(', ');
 
                         const systemPrompt = `You are a real, highly experienced endurance coach sending text messages to an athlete.
-                    Name: Coach Nana
+                    Name: Spark
                     Tone: ${user.coach_tone}
                     Current Training Phase: ${phase || user.training_phase || 'Base/General'}
                     
@@ -2660,7 +2692,7 @@ wss.on('connection', (ws, request, user) => {
                                     console.log('Connected to Gemini Live API');
                                     
                                     const systemPrompt = `You are a highly experienced elite endurance coach talking to your athlete over a voice call.
-Name: Coach Nana
+Name: Spark
 Tone: ${tone}
 Current Training Phase: ${phase}
 
